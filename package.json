@@ -1,0 +1,10 @@
+{
+  "name": "widget-utils",
+  "version": "0.0.1",
+  "dependencies": {
+    "gulp-umd": "~0.2.0",
+    "del": "~2.2.0",
+    "gulp": "~3.9.1",
+    "gulp-load-plugins": "~1.2.2"
+  }
+}
