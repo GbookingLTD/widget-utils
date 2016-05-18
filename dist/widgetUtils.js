@@ -64,7 +64,7 @@ var startBusinessTZDay = function(businessData, utcDate) {
 };
 
 var getDateLikeUTC = function(date) {
-  return moment.utc(date).add(date.utcOffset(), 'minute');
+  return moment.utc(date).add(utcOffset(date), 'minute');
 };
 
 var busySlotsDate = function(date) {
