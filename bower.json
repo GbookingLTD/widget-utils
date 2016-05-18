@@ -4,9 +4,7 @@
     "swvitaliy <sw.vitaliy@gmail.com>"
   ],
   "description": "",
-  "main": [
-    "widget-utils.min.js"
-  ],
+  "main": "dist/widgetUtils.js",
   "moduleType": [],
   "license": "MIT",
   "homepage": "",
