@@ -71,24 +71,38 @@ var busySlotsDate = function(date) {
   return getDateLikeUTC(date).startOf('day').toISOString();
 };
 
+/**
+ * Convert date to business timezone like it UTC
+ *
+ * @param date
+ * @param businessData
+ */
+var getBusinessDateLikeUTC = function(date, businessData) {
+  setBusinessDateTZ(businessData, date);
+  return getDateLikeUTC(date);
+};
+
 var busySlotsInterval = function(date, businessData, daysToFetch) {
   if (!date) {
     date = moment.utc();
   }
 
-  setBusinessDateTZ(businessData, date);
-
-  var minBookingTime = moment.utc();
+  date = getBusinessDateLikeUTC(date, businessData);
+  var minBookingTime = getBusinessDateLikeUTC(moment.utc(), businessData);
   businessData.business.general_info.min_booking_time &&
     minBookingTime.add('hours', businessData.business.general_info.min_booking_time);
 
+  var startDate;
   if (date < minBookingTime) {
     date = minBookingTime;
+    startDate = date.toISOString();
+  } else {
+    startDate = busySlotsDate(date);
   }
 
   var then = moment(date).add('days', daysToFetch);
   return {
-    startDate: busySlotsDate(date),
+    startDate: startDate,
     endDate: busySlotsDate(then)
   };
 };
