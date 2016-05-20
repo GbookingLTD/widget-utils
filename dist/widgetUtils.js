@@ -109,6 +109,8 @@
   /**
    * Calculates whether the busy day.
    *
+   * For calendar mode not need setup slot size because need to use service duration
+   *
    * Не предусматривает случай, когда дискаунт кампания как-то влияет на занятость дня.
    *
    * @param day
@@ -121,6 +123,17 @@
   function calculateDaySlotsV1(day, taxonomy, slotSize, busySlots, businessData) {
     var slots = [];
     var finish = moment.utc(day.end_time);
+
+    var businessNow = moment.utc();
+    setBusinessDateTZ(businessData, businessNow);
+    var businessNowLikeUTC = getDateLikeUTC(businessNow);
+
+    if (businessNowLikeUTC.isSame(day.date, 'day')) {
+      if (businessData.business.general_info.min_booking_time) {
+        finish.add(-businessData.business.general_info.min_booking_time, 'hours');
+      }
+    }
+
     for (var slot_time = moment.utc(day.start_time); slot_time.isBefore(finish);) {
       var dateCheck = checkDate(day.slots, slot_time.toDate(), slotSize);
       var space = dateCheck[0],
@@ -146,9 +159,6 @@
 
       var actualSlot = moment(slot_time);
 
-      var businessNow = moment.utc();
-      setBusinessDateTZ(businessData, businessNow);
-      var businessNowLikeUTC = getDateLikeUTC(businessNow);
       busy = businessNowLikeUTC.isAfter(actualSlot) || space === 0 || day.forceAllSlotsBusy;
 
       slots.push({
