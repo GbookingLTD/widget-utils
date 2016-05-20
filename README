@@ -1,0 +1,12 @@
+for deployment
+sudo bower --allow-root update widget-utils
+
+----
+
+for development 
+
+in widget-utils project root folder
+bower link
+
+in widget folder
+bower link widget-utils
