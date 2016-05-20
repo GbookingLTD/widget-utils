@@ -114,3 +114,30 @@ export function isBusyDay(day, crunchv2, taxonomy, slotSize, busySlots, business
   var hasFreeSlot = _.find(slots, {busy: false});
   return !hasFreeSlot;
 }
+
+export function isDateForbidden(widgetConfiguration, date, ignoreStartDate) {
+  if (ignoreStartDate === null || typeof ignoreStartDate == 'undefined') {
+    ignoreStartDate = false;
+  }
+
+  if (widgetConfiguration && widgetConfiguration.bookableDateRanges &&  widgetConfiguration.bookableDateRanges.enabled) {
+    var dateMoment = moment(date),
+      dateAvailable = true,
+      start = widgetConfiguration.bookableDateRanges.start,
+      end = widgetConfiguration.bookableDateRanges.end;
+    if (start && end && !ignoreStartDate) {
+      dateAvailable = dateMoment.isAfter(moment(start).startOf('day')) && dateMoment.isBefore(moment(end).endOf('day'));
+    }
+    else if (start && !ignoreStartDate) {
+      dateAvailable = dateMoment.isAfter(moment(start).startOf('day'));
+    }
+    else if (end) {
+      dateAvailable = dateMoment.isBefore(moment(end).endOf('day'));
+    }
+
+    return !dateAvailable;
+  }
+  return !!(widgetConfiguration &&
+    widgetConfiguration.bookableMonthsCount > 0 &&
+    moment().add('M', widgetConfiguration.bookableMonthsCount - 1).endOf('M').isBefore(date));
+}

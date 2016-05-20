@@ -19,7 +19,7 @@ gulp.task('compile', function() {
         'lodash',
         'moment'
       ],
-      sourceMap: true,
+      sourceMap: false,
       format: 'umd',
       moduleName: 'WidgetUtils',
       plugins: [
@@ -28,7 +28,7 @@ gulp.task('compile', function() {
     }))
     .pipe($.babel())
     .on('error', $.util.log)
-    .pipe($.sourcemaps.write('.'))
+    //.pipe($.sourcemaps.write('.'))
     .pipe(gulp.dest('dist'));
 });
 
