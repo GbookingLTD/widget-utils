@@ -94,3 +94,14 @@ export function busySlotsInterval(date, businessData, daysToFetch) {
     endDate: busySlotsDate(then)
   };
 }
+
+export function alignTimeByQuantum(minutes, quantum) {
+  if (quantum === 0 || 60 % quantum !== 0) throw new Error('invalid time quantum');
+  return Math.ceil(minutes / quantum) * quantum;
+}
+
+export function alignSlotTime(startTime, slotSize, m) {
+  var diff = m.diff(startTime, 'minute');
+  var alignedDiff = alignTimeByQuantum(diff, slotSize);
+  return startTime.add(alignedDiff, 'minute').toDate();
+}

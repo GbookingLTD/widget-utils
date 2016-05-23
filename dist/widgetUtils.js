@@ -98,12 +98,25 @@
     };
   }
 
+  function alignTimeByQuantum(minutes, quantum) {
+    if (quantum === 0 || 60 % quantum !== 0) throw new Error('invalid time quantum');
+    return Math.ceil(minutes / quantum) * quantum;
+  }
+
+  function alignSlotTime(startTime, slotSize, m) {
+    var diff = m.diff(startTime, 'minute');
+    var alignedDiff = alignTimeByQuantum(diff, slotSize);
+    return startTime.add(alignedDiff, 'minute').toDate();
+  }
+
   var DateTime = Object.freeze({
     setBusinessDateTZ: setBusinessDateTZ,
     businessTimezoneUtcOffset: businessTimezoneUtcOffset,
     startBusinessTZDay: startBusinessTZDay,
     getDateLikeUTC: getDateLikeUTC,
-    busySlotsInterval: busySlotsInterval
+    busySlotsInterval: busySlotsInterval,
+    alignTimeByQuantum: alignTimeByQuantum,
+    alignSlotTime: alignSlotTime
   });
 
   /**
@@ -260,9 +273,54 @@
     isDateForbidden: isDateForbidden
   });
 
+  /**
+   *
+   * Do not supported for GT
+   *
+   * @param businessData
+   * @param busySlots
+   * @param slotSize
+   * @param day
+   * @returns {boolean}
+   */
+  function calendarBookingTime(businessData, busySlots, slotSize, day) {
+    var widgetConfiguration = businessData.business.widget_configuration;
+    if (isDateForbidden(widgetConfiguration, day.date)) {
+      return;
+    }
+    var slotDay = _(busySlots.days).find(function (d) {
+      return moment(d.date).isSame(day.date, 'day');
+    });
+    if (slotDay) {
+      var startTime = new Date(slotDay.start_time);
+      var endTime = new Date(slotDay.end_time);
+
+      var businessNow = moment.utc();
+      setBusinessDateTZ(businessData, businessNow);
+      var businessNowLikeUTC = getDateLikeUTC(businessNow);
+
+      if (businessNowLikeUTC.isSame(moment.utc(startTime), 'day') && moment.utc(startTime) < businessNowLikeUTC) {
+        startTime = alignSlotTime(moment.utc(startTime), slotSize, businessNowLikeUTC);
+      }
+
+      while (startTime.getTime() < endTime.getTime()) {
+        var dateCheck = checkDate(slotDay.slots, startTime);
+        if (dateCheck[0] !== 0) {
+          return moment.utc(startTime);
+        }
+        startTime.setUTCMinutes(startTime.getMinutes() + dateCheck[1]);
+      }
+    }
+  }
+
+  var Booking = Object.freeze({
+    calendarBookingTime: calendarBookingTime
+  });
+
   var widgetUtils = {
     DateTime: DateTime,
-    BusySlots: BusySlots
+    BusySlots: BusySlots,
+    Booking: Booking
   };
 
   return widgetUtils;
