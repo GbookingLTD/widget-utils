@@ -29,6 +29,9 @@ export function calendarBookingTime(businessData, busySlots, slotSize, day) {
     setBusinessDateTZ(businessData, businessNow);
     var businessNowLikeUTC = getDateLikeUTC(businessNow);
 
+    businessData.business.general_info.min_booking_time &&
+      businessNowLikeUTC.add('hours', businessData.business.general_info.min_booking_time);
+
     if (businessNowLikeUTC.isSame(moment.utc(startTime), 'day') && moment.utc(startTime) < businessNowLikeUTC) {
       startTime = alignSlotTime(moment.utc(startTime), slotSize, businessNowLikeUTC);
     }
