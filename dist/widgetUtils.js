@@ -373,17 +373,13 @@
       output = outputStr.replace('.', ',');
     }
     return output;
-  };
-
-  var roundNumberUsingRule$1 = Object.freeze({
-    roundNumberUsingRule: roundNumberUsingRule
-  });
+  }
 
   var widgetUtils = {
     DateTime: DateTime,
     BusySlots: BusySlots,
     Booking: Booking,
-    roundNumberUsingRule: roundNumberUsingRule$1
+    roundNumberUsingRule: roundNumberUsingRule
   };
 
   return widgetUtils;

@@ -56,4 +56,4 @@ export function roundNumberUsingRule(input, businessData, noCommas) {
     output = outputStr.replace('.', ',');
   }
   return output;
-};
+}
