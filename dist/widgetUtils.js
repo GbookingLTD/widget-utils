@@ -239,14 +239,15 @@
     var result = [1, defaultStep];
     if (dayBusySlots.busy && dayBusySlots.busy.length) {
       var targetSlotRange = moment.range(moment(date), moment(date).add(defaultStep, 'minutes'));
-      dayBusySlots.busy.forEach(function (busySlot) {
+      for (var i = 0; i < dayBusySlots.busy.length; i++) {
+        var busySlot = dayBusySlots.busy[i];
         var busySlotDuration = busySlot.duration || defaultStep;
         var busySlotRange = moment.range(moment(busySlot.time), moment(busySlot.time).add(busySlotDuration, 'minutes'));
         if (targetSlotRange.intersect(busySlotRange) && !moment(date).isSame(busySlotRange.end)) {
-          result = [-busySlot.space_left, busySlotDuration];
-          return false;
+          result = [-busySlot.space_left, busySlotDuration, busySlot.time];
+          break;
         }
-      });
+      }
     } else if (!dayBusySlots.available) {
       result = [0, defaultStep];
     }
