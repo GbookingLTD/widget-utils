@@ -235,6 +235,24 @@
     return result;
   }
 
+  function checkSlotInterval(dayBusySlots, date, defaultStep) {
+    var result = [1, defaultStep];
+    if (dayBusySlots.busy && dayBusySlots.busy.length) {
+      var targetSlotRange = moment.range(moment(date), moment(date).add(defaultStep, 'minutes'));
+      dayBusySlots.busy.forEach(function (busySlot) {
+        var busySlotDuration = busySlot.duration || defaultStep;
+        var busySlotRange = moment.range(moment(busySlot.time), moment(busySlot.time).add(busySlotDuration, 'minutes'));
+        if (targetSlotRange.intersect(busySlotRange) && !moment(date).isSame(busySlotRange.end)) {
+          result = [-busySlot.space_left, busySlotDuration];
+          return false;
+        }
+      });
+    } else if (!dayBusySlots.available) {
+      result = [0, defaultStep];
+    }
+    return result;
+  }
+
   function isBusyDay(day, crunchv2, taxonomy, slotSize, busySlots, businessData) {
     var calculateDaySlots = crunchv2 ? calculateDaySlotsV2 : calculateDaySlotsV1;
     var slots = calculateDaySlots(day, taxonomy, slotSize, busySlots, businessData);
@@ -269,6 +287,7 @@
     calculateDaySlotsV1: calculateDaySlotsV1,
     calculateDaySlotsV2: calculateDaySlotsV2,
     checkDate: checkDate,
+    checkSlotInterval: checkSlotInterval,
     isBusyDay: isBusyDay,
     isDateForbidden: isDateForbidden
   });
