@@ -166,7 +166,11 @@ export function isDateForbidden(widgetConfiguration, date, ignoreStartDate) {
 
     return !dateAvailable;
   }
-  return !!(widgetConfiguration &&
-    widgetConfiguration.bookableMonthsCount > 0 &&
-    moment().add('M', widgetConfiguration.bookableMonthsCount - 1).endOf('M').isBefore(date));
+  //bookable weeks calculation
+  if (widgetConfiguration.bookableMonthsCount > 0 && widgetConfiguration.bookableMonthsCount < 1) {
+    var weeks = Math.round(widgetConfiguration.bookableMonthsCount / 0.23);
+    return moment().add(weeks, 'weeks').isBefore(date)
+  }
+
+  return !!(widgetConfiguration && widgetConfiguration.bookableMonthsCount > 0 && moment().add('M', widgetConfiguration.bookableMonthsCount - 1).endOf('M').isBefore(date));
 }
