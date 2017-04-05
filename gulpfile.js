@@ -32,10 +32,20 @@ gulp.task('compile', function() {
     .pipe(gulp.dest('dist'));
 });
 
+gulp.task('watch', function() {
+  return $.watch('src/**/*.js', function() {
+    gulp.start('build');
+  });
+})
+
 gulp.task('clean', function () {
-  return $.del(['dist/']);
+  return $.del(['dist/**']);
 });
 
-gulp.task('default', ['clean'], function () {
+gulp.task('build', ['clean'], function() {
   gulp.start('compile');
 });
+
+gulp.task('dev', ['build', 'watch']);
+
+gulp.task('default', ['build']);
