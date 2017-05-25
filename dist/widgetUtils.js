@@ -1,6 +1,10 @@
+'use strict';
+
+var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
+
 (function (global, factory) {
-  typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory(require('lodash'), require('moment')) : typeof define === 'function' && define.amd ? define(['lodash', 'moment'], factory) : global.WidgetUtils = factory(global._, global.moment);
-})(this, function (_, moment) {
+  (typeof exports === 'undefined' ? 'undefined' : _typeof(exports)) === 'object' && typeof module !== 'undefined' ? module.exports = factory(require('lodash'), require('moment')) : typeof define === 'function' && define.amd ? define(['lodash', 'moment'], factory) : global.WidgetUtils = factory(global._, global.moment);
+})(undefined, function (_, moment) {
   'use strict';
 
   _ = 'default' in _ ? _['default'] : _;
@@ -18,7 +22,7 @@
     return date;
   }
 
-  var utcOffset = function (date) {
+  var utcOffset = function utcOffset(date) {
     return date.utcOffset ? date.utcOffset() : -date.zone();
   };
 
@@ -63,7 +67,7 @@
     return moment.utc(date).add(utcOffset(date), 'minute');
   }
 
-  var busySlotsDate = function (date) {
+  var busySlotsDate = function busySlotsDate(date) {
     return getDateLikeUTC(date).startOf('day').toISOString();
   };
 
@@ -73,7 +77,7 @@
    * @param date
    * @param businessData
    */
-  var getBusinessDateLikeUTC = function (date, businessData) {
+  var getBusinessDateLikeUTC = function getBusinessDateLikeUTC(date, businessData) {
     setBusinessDateTZ(businessData, date);
     return getDateLikeUTC(date);
   };
@@ -345,7 +349,7 @@
     calendarBookingTime: calendarBookingTime
   });
 
-  const SLOT_SIZE = 5;
+  var SLOT_SIZE = 5;
 
   // Compute start_time/end_time according to given day schedule.
   function getDayBoundsFromShedule(daySchedule, date) {
@@ -359,18 +363,20 @@
   }
 
   // Return day bounds for day from timetable using cache.
-  function getDayBoundsFromTimetable(date, timetable, timetableCache = {}) {
+  function getDayBoundsFromTimetable(date, timetable) {
+    var timetableCache = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
+
     if (timetable.active !== true) {
       return null;
     }
 
-    const weekday = moment(date).weekday();
+    var weekday = moment(date).weekday();
 
     if (timetableCache[weekday]) {
       return timetableCache[weekday];
     }
 
-    let dayScheduleArray;
+    var dayScheduleArray = void 0;
     switch (weekday) {
       case 0:
       case 7:
@@ -391,9 +397,9 @@
         return null;
     }
 
-    const daySchedule = dayScheduleArray && dayScheduleArray[0];
+    var daySchedule = dayScheduleArray && dayScheduleArray[0];
     if (daySchedule) {
-      const dayBounds = getDayBoundsFromShedule(daySchedule, date);
+      var dayBounds = getDayBoundsFromShedule(daySchedule, date);
       timetableCache[weekday] = dayBounds;
       return dayBounds;
     }
@@ -402,7 +408,7 @@
   }
 
   function cracValueToBits(value) {
-    const bits = [];
+    var bits = [];
     // Fastest way to parse stringifyed bitmask
     Array.prototype.forEach.call(value, function (sign) {
       if (sign === '0' || sign === '1') {
@@ -415,20 +421,21 @@
   // Generate crunch-capable data from CRAC.
   // Complexity: O(N), where N = 24hours / 5 minutes
   function getCrunchSlotsFromCrac(cracSlot, date, startMinutes, endMinutes, maxSlotSize) {
-    const busySlots = [];
-    let available = false;
-    let start_time, end_time;
+    var busySlots = [];
+    var available = false;
+    var start_time = void 0,
+        end_time = void 0;
 
-    const bitmask = cracValueToBits(cracSlot.bitset);
-    const reverseOffset = bitmask.length - 1;
-    let startBitIndex = typeof startMinutes === 'undefined' ? 0 : Math.floor(startMinutes / SLOT_SIZE);
-    let endBitIndex = typeof endMinutes === 'undefined' ? reverseOffset : Math.floor(endMinutes / SLOT_SIZE);
-    const resultDate = moment.utc(date);
+    var bitmask = cracValueToBits(cracSlot.bitset);
+    var reverseOffset = bitmask.length - 1;
+    var startBitIndex = typeof startMinutes === 'undefined' ? 0 : Math.floor(startMinutes / SLOT_SIZE);
+    var endBitIndex = typeof endMinutes === 'undefined' ? reverseOffset : Math.floor(endMinutes / SLOT_SIZE);
+    var resultDate = moment.utc(date);
 
-    let currentSlot;
+    var currentSlot = void 0;
     function commitSlot(endMinutes) {
-      const startMinues = currentSlot.start;
-      const time = resultDate.clone().set({
+      var startMinues = currentSlot.start;
+      var time = resultDate.clone().set({
         minutes: startMinues % 60,
         hours: Math.floor(startMinues / 60)
       });
@@ -453,9 +460,9 @@
 
     // Walking through bitmaks in reverse direction.
     for (var ii = startBitIndex; ii < endBitIndex; ii++) {
-      const bitIndex = reverseOffset - ii;
-      const bit = bitmask[bitIndex];
-      const minutes = ii * SLOT_SIZE;
+      var bitIndex = reverseOffset - ii;
+      var bit = bitmask[bitIndex];
+      var minutes = ii * SLOT_SIZE;
 
       if (bit === 0) {
         available = true;
@@ -467,7 +474,7 @@
         if (!currentSlot) {
           makeSlot(minutes);
         } else if (maxSlotSize > 0) {
-          const duration = minutes - currentSlot.start;
+          var duration = minutes - currentSlot.start;
           if (duration > maxSlotSize) {
             commitSlot(minutes - SLOT_SIZE);
             makeSlot(minutes - SLOT_SIZE);
@@ -480,13 +487,13 @@
       commitSlot((endBitIndex - 1) * SLOT_SIZE);
     }
 
-    const busySlotsLength = busySlots.length;
+    var busySlotsLength = busySlots.length;
 
     // Change start_time bounds according to near available time.
     if (bitmask[reverseOffset - startBitIndex] === 1) {
-      let startSlot = busySlots[0];
-      for (let ii = 1; ii < busySlotsLength; ii++) {
-        let slot = busySlots[ii];
+      var startSlot = busySlots[0];
+      for (var _ii = 1; _ii < busySlotsLength; _ii++) {
+        var slot = busySlots[_ii];
         if (startSlot.end === slot.start) {
           startSlot = slot;
         } else {
@@ -499,11 +506,11 @@
 
     // Change end_time bounds according to near available time.
     if (bitmask[reverseOffset - endBitIndex + 1] === 1) {
-      let endSlot = busySlots[busySlotsLength - 1];
-      for (let ii = busySlotsLength - 2; ii >= 0; ii--) {
-        let slot = busySlots[ii];
-        if (endSlot.start === slot.end) {
-          endSlot = slot;
+      var endSlot = busySlots[busySlotsLength - 1];
+      for (var _ii2 = busySlotsLength - 2; _ii2 >= 0; _ii2--) {
+        var _slot = busySlots[_ii2];
+        if (endSlot.start === _slot.end) {
+          endSlot = _slot;
         } else {
           break;
         }
@@ -513,10 +520,10 @@
     }
 
     return {
-      available,
+      available: available,
       busy: busySlots,
-      start_time,
-      end_time
+      start_time: start_time,
+      end_time: end_time
     };
   }
 
@@ -529,17 +536,19 @@
    * @return {CrunBusySlot|Object}           Crunch response format
    */
   function toBusySlots(cracSlots, business, taxonomyIDs) {
-    const businessTimetable = business.general_info.timetable;
-    const businessTimetableCache = {};
-    const daysOff = [];
-    let maxSlotDuration = -1;
+    var businessTimetable = business.general_info.timetable;
+    var businessTimetableCache = {};
+    var daysOff = [];
+    var maxSlotDuration = -1;
 
     // TODO: compute daysOff when all day of resource is not available.
 
     if (taxonomyIDs && taxonomyIDs.length) {
-      const taxonomies = _.filter(business.taxonomies, tt => taxonomyIDs.indexOf(String(tt.id)) >= 0);
+      var taxonomies = _.filter(business.taxonomies, function (tt) {
+        return taxonomyIDs.indexOf(String(tt.id)) >= 0;
+      });
 
-      const maxTaxonomyDuration = _.max(taxonomies, 'duration');
+      var maxTaxonomyDuration = _.max(taxonomies, 'duration');
       if (maxTaxonomyDuration) {
         maxSlotDuration = maxTaxonomyDuration.duration;
       }
@@ -549,12 +558,13 @@
       taxonomyId: taxonomyIDs && taxonomyIDs[0],
       slots_size: maxSlotDuration > 0 ? maxSlotDuration : 0,
       maxSlotCapacity: 1,
-      daysOff,
+      daysOff: daysOff,
       excludedResources: [],
       days: _.filter(_.map(cracSlots, function (cracSlot) {
-        const { date } = cracSlot;
+        var date = cracSlot.date;
 
-        const dayBounds = getDayBoundsFromTimetable(date, businessTimetable, businessTimetableCache);
+
+        var dayBounds = getDayBoundsFromTimetable(date, businessTimetable, businessTimetableCache);
         if (!dayBounds) {
           cracSlot.resources.forEach(function (resourceId) {
             daysOff.push({
@@ -565,13 +575,13 @@
           return null;
         }
 
-        const slots = getCrunchSlotsFromCrac(cracSlot, date, dayBounds.start, dayBounds.end, maxSlotDuration);
+        var slots = getCrunchSlotsFromCrac(cracSlot, date, dayBounds.start, dayBounds.end, maxSlotDuration);
 
         return {
-          date,
+          date: date,
           start_time: slots.start_time || dayBounds.start_time,
           end_time: slots.end_time || dayBounds.end_time,
-          slots
+          slots: slots
         };
       }))
     };
@@ -638,11 +648,11 @@
   }
 
   var widgetUtils = {
-    DateTime,
-    BusySlots,
-    Booking,
-    Crac,
-    roundNumberUsingRule
+    DateTime: DateTime,
+    BusySlots: BusySlots,
+    Booking: Booking,
+    Crac: Crac,
+    roundNumberUsingRule: roundNumberUsingRule
   };
 
   return widgetUtils;

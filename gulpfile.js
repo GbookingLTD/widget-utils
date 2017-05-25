@@ -26,7 +26,9 @@ gulp.task('compile', function() {
         rollupIncludePaths(includePathOptions)
       ]
     }))
-    .pipe($.babel())
+    .pipe($.babel({
+      presets: ['es2015']
+    }))
     .on('error', $.util.log)
     //.pipe($.sourcemaps.write('.'))
     .pipe(gulp.dest('dist'));

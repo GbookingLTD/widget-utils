@@ -1,9 +1,10 @@
 {
   "name": "widget-utils",
-  "version": "0.1.5",
+  "version": "0.2.0",
   "scripts": {
     "dev": "./node_modules/.bin/gulp dev",
-    "start": "./node_modules/.bin/gulp build"
+    "build": "./node_modules/.bin/gulp build",
+    "start": "npm run build"
   },
   "devDependencies": {
     "babel": "6.5.2",
