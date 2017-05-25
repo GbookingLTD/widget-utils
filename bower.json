@@ -2,7 +2,8 @@
   "name": "widget-utils",
   "version": "0.2.0",
   "authors": [
-    "swvitaliy <sw.vitaliy@gmail.com>"
+    "swvitaliy <sw.vitaliy@gmail.com>",
+    "vasiliy0s <talk@vasiliy0s.com>"
   ],
   "description": "",
   "main": "dist/widgetUtils.js",

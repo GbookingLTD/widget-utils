@@ -7,6 +7,7 @@ var $ = require('gulp-load-plugins')({
 });
 
 var rollupIncludePaths = require('rollup-plugin-includepaths');
+var babel = require('rollup-plugin-babel');
 
 var includePathOptions = {
     paths: ['src/']
@@ -23,11 +24,11 @@ gulp.task('compile', function() {
       format: 'umd',
       moduleName: 'WidgetUtils',
       plugins: [
+        babel({
+          "presets": ["es2015-rollup"],
+        }),
         rollupIncludePaths(includePathOptions)
       ]
-    }))
-    .pipe($.babel({
-      presets: ['es2015']
     }))
     .on('error', $.util.log)
     //.pipe($.sourcemaps.write('.'))

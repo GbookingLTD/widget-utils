@@ -1,11 +1,8 @@
-'use strict';
-
-var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
-
 (function (global, factory) {
-  (typeof exports === 'undefined' ? 'undefined' : _typeof(exports)) === 'object' && typeof module !== 'undefined' ? module.exports = factory(require('lodash'), require('moment')) : typeof define === 'function' && define.amd ? define(['lodash', 'moment'], factory) : global.WidgetUtils = factory(global._, global.moment);
-})(undefined, function (_, moment) {
-  'use strict';
+  typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory(require('lodash'), require('moment')) :
+  typeof define === 'function' && define.amd ? define(['lodash', 'moment'], factory) :
+  (global.WidgetUtils = factory(global._,global.moment));
+}(this, function (_,moment) { 'use strict';
 
   _ = 'default' in _ ? _['default'] : _;
   moment = 'default' in moment ? moment['default'] : moment;
@@ -113,7 +110,7 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
     return startTime.add(alignedDiff, 'minute').toDate();
   }
 
-  var DateTime = Object.freeze({
+var DateTime = Object.freeze({
     setBusinessDateTZ: setBusinessDateTZ,
     businessTimezoneUtcOffset: businessTimezoneUtcOffset,
     startBusinessTZDay: startBusinessTZDay,
@@ -294,7 +291,7 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
     return !!(widgetConfiguration && widgetConfiguration.bookableMonthsCount > 0 && moment().add('M', widgetConfiguration.bookableMonthsCount - 1).endOf('M').isBefore(date));
   }
 
-  var BusySlots = Object.freeze({
+var BusySlots = Object.freeze({
     calculateDaySlotsV1: calculateDaySlotsV1,
     calculateDaySlotsV2: calculateDaySlotsV2,
     checkDate: checkDate,
@@ -345,7 +342,7 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
     }
   }
 
-  var Booking = Object.freeze({
+var Booking = Object.freeze({
     calendarBookingTime: calendarBookingTime
   });
 
@@ -587,7 +584,7 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
     };
   }
 
-  var Crac = Object.freeze({
+var Crac = Object.freeze({
     toBusySlots: toBusySlots
   });
 
@@ -656,4 +653,5 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
   };
 
   return widgetUtils;
-});
+
+}));
