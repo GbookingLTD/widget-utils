@@ -191,6 +191,9 @@ export function toBusySlots(cracSlots, business, taxonomyIDs) {
   const businessTimetable = business.general_info.timetable;
   const businessTimetableCache = {};
   const daysOff = [];
+  const excludedResources = [];
+  const excludedResourcesCountMap = {};
+  const daysCount = cracSlots.length;
   let maxSlotDuration = -1;
 
   // TODO: compute daysOff when all day of resource is not available.
@@ -207,12 +210,12 @@ export function toBusySlots(cracSlots, business, taxonomyIDs) {
     }
   }
 
-  return {
+  const busySlotsResponse = {
     taxonomyId: taxonomyIDs && taxonomyIDs[0],
     slots_size: maxSlotDuration > 0 ? maxSlotDuration : 0,
     maxSlotCapacity: 1,
     daysOff,
-    excludedResources: [],
+    excludedResources,
     days: _.filter(_.map(cracSlots, function(cracSlot) {
       const { date } = cracSlot;
 
@@ -229,6 +232,11 @@ export function toBusySlots(cracSlots, business, taxonomyIDs) {
 
       const slots =  getCrunchSlotsFromCrac(cracSlot, date, dayBounds.start, dayBounds.end, maxSlotDuration);
 
+      if (!slots.available && cracSlot.resources.length === 1) {
+        let resourceId = cracSlot.resources[0];
+        excludedResourcesCountMap[resourceId] = (excludedResourcesCountMap[resourceId] || 0) + 1;
+      }
+
       return {
         date,
         start_time: slots.start_time || dayBounds.start_time,
@@ -237,4 +245,15 @@ export function toBusySlots(cracSlots, business, taxonomyIDs) {
       };
     })),
   };
+
+  // Post processing of excludedResources
+  for (const resourceId in excludedResourcesCountMap) {
+    if (Object.prototype.hasOwnProperty.call(excludedResourcesCountMap, resourceId)) {
+      if (excludedResourcesCountMap[resourceId] >= daysCount) {
+        excludedResources.push(resourceId);
+      }
+    }
+  }
+
+  return busySlotsResponse;
 }

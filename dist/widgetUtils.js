@@ -536,6 +536,9 @@ var Booking = Object.freeze({
     var businessTimetable = business.general_info.timetable;
     var businessTimetableCache = {};
     var daysOff = [];
+    var excludedResources = [];
+    var excludedResourcesCountMap = {};
+    var daysCount = cracSlots.length;
     var maxSlotDuration = -1;
 
     // TODO: compute daysOff when all day of resource is not available.
@@ -551,12 +554,12 @@ var Booking = Object.freeze({
       }
     }
 
-    return {
+    var busySlotsResponse = {
       taxonomyId: taxonomyIDs && taxonomyIDs[0],
       slots_size: maxSlotDuration > 0 ? maxSlotDuration : 0,
       maxSlotCapacity: 1,
       daysOff: daysOff,
-      excludedResources: [],
+      excludedResources: excludedResources,
       days: _.filter(_.map(cracSlots, function (cracSlot) {
         var date = cracSlot.date;
 
@@ -574,6 +577,11 @@ var Booking = Object.freeze({
 
         var slots = getCrunchSlotsFromCrac(cracSlot, date, dayBounds.start, dayBounds.end, maxSlotDuration);
 
+        if (!slots.available && cracSlot.resources.length === 1) {
+          var resourceId = cracSlot.resources[0];
+          excludedResourcesCountMap[resourceId] = (excludedResourcesCountMap[resourceId] || 0) + 1;
+        }
+
         return {
           date: date,
           start_time: slots.start_time || dayBounds.start_time,
@@ -582,6 +590,17 @@ var Booking = Object.freeze({
         };
       }))
     };
+
+    // Post processing of excludedResources
+    for (var resourceId in excludedResourcesCountMap) {
+      if (Object.prototype.hasOwnProperty.call(excludedResourcesCountMap, resourceId)) {
+        if (excludedResourcesCountMap[resourceId] >= daysCount) {
+          excludedResources.push(resourceId);
+        }
+      }
+    }
+
+    return busySlotsResponse;
   }
 
 var Crac = Object.freeze({
