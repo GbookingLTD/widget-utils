@@ -193,7 +193,7 @@ export function toBusySlots(cracSlots, business, taxonomyIDs) {
   const daysOff = [];
   const excludedResources = [];
   const excludedResourcesCountMap = {};
-  const daysCount = cracSlots.length;
+  let visitedDaysCount = 0;
   let maxSlotDuration = -1;
 
   // TODO: compute daysOff when all day of resource is not available.
@@ -232,10 +232,13 @@ export function toBusySlots(cracSlots, business, taxonomyIDs) {
 
       const slots =  getCrunchSlotsFromCrac(cracSlot, date, dayBounds.start, dayBounds.end, maxSlotDuration);
 
-      if (!slots.available && cracSlot.resources.length === 1) {
-        let resourceId = cracSlot.resources[0];
-        excludedResourcesCountMap[resourceId] = (excludedResourcesCountMap[resourceId] || 0) + 1;
+      if (cracSlot.excludedResources) {
+        cracSlot.excludedResources.forEach(
+          resourceId => excludedResourcesCountMap[resourceId] = (excludedResourcesCountMap[resourceId] || 0) + 1
+        );
       }
+
+      visitedDaysCount++;
 
       return {
         date,
@@ -249,7 +252,7 @@ export function toBusySlots(cracSlots, business, taxonomyIDs) {
   // Post processing of excludedResources
   for (const resourceId in excludedResourcesCountMap) {
     if (Object.prototype.hasOwnProperty.call(excludedResourcesCountMap, resourceId)) {
-      if (excludedResourcesCountMap[resourceId] >= daysCount) {
+      if (excludedResourcesCountMap[resourceId] >= visitedDaysCount) {
         excludedResources.push(resourceId);
       }
     }
