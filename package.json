@@ -1,6 +1,6 @@
 {
   "name": "widget-utils",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "scripts": {
     "dev": "./node_modules/.bin/gulp dev",
     "build": "./node_modules/.bin/gulp build",
