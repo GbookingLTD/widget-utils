@@ -116,7 +116,7 @@ function getCrunchSlotsFromCrac(cracSlot, date, startMinutes, endMinutes, maxSlo
       available = true;
 
       if (currentSlot) {
-        commitSlot(minutes - SLOT_SIZE);
+        commitSlot(minutes);
       }
     } else if (bit === 1) {
       if (!currentSlot) {

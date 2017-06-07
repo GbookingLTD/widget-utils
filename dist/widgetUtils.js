@@ -465,7 +465,7 @@ var Booking = Object.freeze({
         available = true;
 
         if (currentSlot) {
-          commitSlot(minutes - SLOT_SIZE);
+          commitSlot(minutes);
         }
       } else if (bit === 1) {
         if (!currentSlot) {
