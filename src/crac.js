@@ -81,17 +81,19 @@ function getCrunchSlotsFromCrac(cracSlot, date, startMinutes, endMinutes, maxSlo
   const resultDate = moment.utc(date);
 
   let currentSlot;
-  function commitSlot(endMinutes) {
-    const startMinues = currentSlot.start;
+  function commitSlot() {
+    const startMinutes = currentSlot.start;
     const time = resultDate.clone().set({
-      minutes: startMinues % 60,
-      hours: Math.floor(startMinues / 60),
+      minutes: startMinutes % 60,
+      hours: Math.floor(startMinutes / 60),
     });
     currentSlot.time = time.toISOString();
     currentSlot.startTS = time.unix();
-    currentSlot.end = endMinutes;
-    currentSlot.duration = endMinutes - startMinues;
+    currentSlot.end = startMinutes + currentSlot.duration;
     busySlots.push(currentSlot);
+
+    // console.info('commitSlot', currentSlot.time, currentSlot.start, currentSlot.end, currentSlot.duration);
+
     currentSlot = undefined;
   }
 
@@ -100,11 +102,14 @@ function getCrunchSlotsFromCrac(cracSlot, date, startMinutes, endMinutes, maxSlo
     currentSlot = {
       space_left: 0,
       start: startMinutes,
+      duration: SLOT_SIZE,
       partial_busy: null,
     };
+
+    // console.info('makeSlot', startMinutes);
   }
 
-  // console.log('bitmask:', bitmask.slice(reverseOffset - endBitIndex + 1, reverseOffset - startBitIndex).join(''), date);
+  // console.log(date, bitmask.slice(reverseOffset - endBitIndex + 1, reverseOffset - startBitIndex).join(''));
 
   // Walking through bitmaks in reverse direction.
   for (var ii = startBitIndex; ii < endBitIndex; ii++) {
@@ -112,27 +117,35 @@ function getCrunchSlotsFromCrac(cracSlot, date, startMinutes, endMinutes, maxSlo
     const bit = bitmask[bitIndex];
     const minutes = ii * SLOT_SIZE;
 
-    if (bit === 0) {
-      available = true;
+    // console.log('--> ', ii, bit, minutes);
 
-      if (currentSlot) {
-        commitSlot(minutes);
-      }
-    } else if (bit === 1) {
+    if (bit === 1) {
       if (!currentSlot) {
+        // console.info('switched to `1` bit', minutes);
         makeSlot(minutes);
-      } else if (maxSlotSize > 0) {
-        const duration = minutes - currentSlot.start;
-        if (duration > maxSlotSize) {
-          commitSlot(minutes - SLOT_SIZE);
-          makeSlot(minutes - SLOT_SIZE);
+        // console.log('currentSlot.duration:', currentSlot && currentSlot.duration);
+      } else {
+        currentSlot.duration += SLOT_SIZE;
+        // console.log('currentSlot.duration:', currentSlot && currentSlot.duration);
+
+        if (currentSlot.duration >= maxSlotSize) {
+          commitSlot();
+          // console.info('separate by maxSlotSize', maxSlotSize);
+          makeSlot(minutes);
         }
+      }
+    } else if (bit === 0) {
+      available = true;
+      if (currentSlot) {
+        // console.info('switched to `0` bit', minutes);
+        commitSlot();
       }
     }
   }
 
   if (currentSlot) {
-    commitSlot((endBitIndex - 1) * SLOT_SIZE);
+    // console.info('ensure last slot');
+    commitSlot();
   }
 
   const busySlotsLength = busySlots.length;
