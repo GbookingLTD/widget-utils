@@ -20,34 +20,29 @@ function getDayBoundsFromShedule(daySchedule, date) {
 
 
 // Return day bounds for day from timetable using cache.
-function getDayBoundsFromTimetable(date, timetable, timetableCache = {}) {
+function getDayBoundsFromTimetable(date, timetable) {
   if (timetable.active !== true) {
     return null;
   }
 
   const weekday = moment(date).weekday();
 
-  if (timetableCache[weekday]) {
-    return timetableCache[weekday];
-  }
-
   let dayScheduleArray;
   switch(weekday) {
-  	case 0:
-    case 7: dayScheduleArray = timetable.week.sun; break;
-  	case 1: dayScheduleArray = timetable.week.mon; break;
-  	case 2: dayScheduleArray = timetable.week.tue; break;
-  	case 3: dayScheduleArray = timetable.week.wed; break;
-  	case 4: dayScheduleArray = timetable.week.thu; break;
-  	case 5: dayScheduleArray = timetable.week.fri; break;
-  	case 6: dayScheduleArray = timetable.week.sat; break;
+    case 7:
+    case 0: dayScheduleArray = timetable.week.mon; break;
+  	case 1: dayScheduleArray = timetable.week.tue; break;
+  	case 2: dayScheduleArray = timetable.week.wed; break;
+  	case 3: dayScheduleArray = timetable.week.thu; break;
+  	case 4: dayScheduleArray = timetable.week.fri; break;
+  	case 5: dayScheduleArray = timetable.week.sat; break;
+    case 6: dayScheduleArray = timetable.week.sun; break;
     default: return null;
   }
 
   const daySchedule = dayScheduleArray && dayScheduleArray[0];
   if (daySchedule) {
     const dayBounds = getDayBoundsFromShedule(daySchedule, date);
-    timetableCache[weekday] = dayBounds;
     return dayBounds;
   }
 
@@ -58,13 +53,11 @@ function getDayBoundsFromTimetable(date, timetable, timetableCache = {}) {
 // This function takes day bounds from getDayBoundsFromTimetable for every timetables
 // and computes min-start and max-end bounds from all given timetables.
 // It allows us to show correct day bounds for 'any free worker' option.
-function getDayBoundsFromAllTimetables(date, timetables, cache) {
+function getDayBoundsFromAllTimetables(date, timetables) {
   let allDayBounds = null;
 
-  timetables.forEach((tt, index) => {
-    const ttCacheKey = `${date}:${index}`;
-    const ttCache = cache[ttCacheKey] ? cache[ttCacheKey] : (cache[ttCacheKey] = {});
-    const dayBounds = getDayBoundsFromTimetable(date, tt, ttCache);
+  timetables.forEach(tt => {
+    const dayBounds = getDayBoundsFromTimetable(date, tt);
 
     if (!dayBounds) {
       return;
@@ -235,7 +228,6 @@ function getCrunchSlotsFromCrac(cracSlot, date, startMinutes, endMinutes, maxSlo
  */
 export function toBusySlots(cracSlots, business, taxonomyIDs, resourceIds = []) {
   const businessTimetable = business.general_info.timetable;
-  const timetableCache = {};
   const daysOff = [];
   const excludedResources = [];
   const excludedResourcesCountMap = {};
@@ -281,7 +273,8 @@ export function toBusySlots(cracSlots, business, taxonomyIDs, resourceIds = []) 
     days: _.filter(_.map(cracSlots, function(cracSlot) {
       const { date } = cracSlot;
 
-      const dayBounds = getDayBoundsFromAllTimetables(date, resourceTimetables, timetableCache);
+      const dayBounds = getDayBoundsFromAllTimetables(date, resourceTimetables);
+
       if (!dayBounds) {
         cracSlot.resources.forEach(function(resourceId) {
           daysOff.push({
@@ -289,7 +282,14 @@ export function toBusySlots(cracSlots, business, taxonomyIDs, resourceIds = []) 
             resource_id: resourceId,
           });
         });
-        return null;
+
+        return {
+          date,
+          slots: {
+            busy: [],
+            available: false
+          }
+        };
       }
 
       const slots =  getCrunchSlotsFromCrac(cracSlot, date, dayBounds.start, dayBounds.end, maxSlotDuration);

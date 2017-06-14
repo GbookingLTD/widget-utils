@@ -361,35 +361,29 @@ var Booking = Object.freeze({
 
   // Return day bounds for day from timetable using cache.
   function getDayBoundsFromTimetable(date, timetable) {
-    var timetableCache = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
-
     if (timetable.active !== true) {
       return null;
     }
 
     var weekday = moment(date).weekday();
 
-    if (timetableCache[weekday]) {
-      return timetableCache[weekday];
-    }
-
     var dayScheduleArray = void 0;
     switch (weekday) {
-      case 0:
       case 7:
-        dayScheduleArray = timetable.week.sun;break;
-      case 1:
+      case 0:
         dayScheduleArray = timetable.week.mon;break;
-      case 2:
+      case 1:
         dayScheduleArray = timetable.week.tue;break;
-      case 3:
+      case 2:
         dayScheduleArray = timetable.week.wed;break;
-      case 4:
+      case 3:
         dayScheduleArray = timetable.week.thu;break;
-      case 5:
+      case 4:
         dayScheduleArray = timetable.week.fri;break;
-      case 6:
+      case 5:
         dayScheduleArray = timetable.week.sat;break;
+      case 6:
+        dayScheduleArray = timetable.week.sun;break;
       default:
         return null;
     }
@@ -397,7 +391,6 @@ var Booking = Object.freeze({
     var daySchedule = dayScheduleArray && dayScheduleArray[0];
     if (daySchedule) {
       var dayBounds = getDayBoundsFromShedule(daySchedule, date);
-      timetableCache[weekday] = dayBounds;
       return dayBounds;
     }
 
@@ -407,13 +400,11 @@ var Booking = Object.freeze({
   // This function takes day bounds from getDayBoundsFromTimetable for every timetables
   // and computes min-start and max-end bounds from all given timetables.
   // It allows us to show correct day bounds for 'any free worker' option.
-  function getDayBoundsFromAllTimetables(date, timetables, cache) {
+  function getDayBoundsFromAllTimetables(date, timetables) {
     var allDayBounds = null;
 
-    timetables.forEach(function (tt, index) {
-      var ttCacheKey = date + ':' + index;
-      var ttCache = cache[ttCacheKey] ? cache[ttCacheKey] : cache[ttCacheKey] = {};
-      var dayBounds = getDayBoundsFromTimetable(date, tt, ttCache);
+    timetables.forEach(function (tt) {
+      var dayBounds = getDayBoundsFromTimetable(date, tt);
 
       if (!dayBounds) {
         return;
@@ -589,7 +580,6 @@ var Booking = Object.freeze({
     var resourceIds = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : [];
 
     var businessTimetable = business.general_info.timetable;
-    var timetableCache = {};
     var daysOff = [];
     var excludedResources = [];
     var excludedResourcesCountMap = {};
@@ -632,7 +622,8 @@ var Booking = Object.freeze({
         var date = cracSlot.date;
 
 
-        var dayBounds = getDayBoundsFromAllTimetables(date, resourceTimetables, timetableCache);
+        var dayBounds = getDayBoundsFromAllTimetables(date, resourceTimetables);
+
         if (!dayBounds) {
           cracSlot.resources.forEach(function (resourceId) {
             daysOff.push({
@@ -640,7 +631,14 @@ var Booking = Object.freeze({
               resource_id: resourceId
             });
           });
-          return null;
+
+          return {
+            date: date,
+            slots: {
+              busy: [],
+              available: false
+            }
+          };
         }
 
         var slots = getCrunchSlotsFromCrac(cracSlot, date, dayBounds.start, dayBounds.end, maxSlotDuration);
