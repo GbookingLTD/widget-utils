@@ -404,6 +404,46 @@ var Booking = Object.freeze({
     return null;
   }
 
+  // This function takes day bounds from getDayBoundsFromTimetable for every timetables
+  // and computes min-start and max-end bounds from all given timetables.
+  // It allows us to show correct day bounds for 'any free worker' option.
+  function getDayBoundsFromAllTimetables(date, timetables, cache) {
+    var allDayBounds = null;
+
+    timetables.forEach(function (tt, index) {
+      var ttCacheKey = date + ':' + index;
+      var ttCache = cache[ttCacheKey] ? cache[ttCacheKey] : cache[ttCacheKey] = {};
+      var dayBounds = getDayBoundsFromTimetable(date, tt, ttCache);
+
+      if (!dayBounds) {
+        return;
+      } else if (!allDayBounds) {
+        var start_time = dayBounds.start_time,
+            start = dayBounds.start,
+            end_time = dayBounds.end_time,
+            end = dayBounds.end;
+
+        allDayBounds = { start_time: start_time, start: start, end_time: end_time, end: end };
+      } else {
+        var _start_time = dayBounds.start_time,
+            _start = dayBounds.start,
+            _end_time = dayBounds.end_time,
+            _end = dayBounds.end;
+
+        if (allDayBounds.start > _start) {
+          allDayBounds.start = _start;
+          allDayBounds.start_time = _start_time;
+        }
+        if (allDayBounds.end < _end) {
+          allDayBounds.end = _end;
+          allDayBounds.end_time = _end_time;
+        }
+      }
+    });
+
+    return allDayBounds;
+  }
+
   function cracValueToBits(value) {
     var bits = [];
     // Fastest way to parse stringifyed bitmask
@@ -546,13 +586,28 @@ var Booking = Object.freeze({
    * @return {CrunBusySlot|Object}           Crunch response format
    */
   function toBusySlots(cracSlots, business, taxonomyIDs) {
+    var resourceIds = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : [];
+
     var businessTimetable = business.general_info.timetable;
-    var businessTimetableCache = {};
+    var timetableCache = {};
     var daysOff = [];
     var excludedResources = [];
     var excludedResourcesCountMap = {};
     var visitedDaysCount = 0;
     var maxSlotDuration = -1;
+    var resourceTimetables = [];
+
+    business.resources.forEach(function (rr) {
+      if (resourceIds.indexOf(rr.id) < 0) {
+        return;
+      }
+      resourceTimetables.push(rr.timetable && rr.timetable.active === true ? rr.timetable : businessTimetable);
+    });
+
+    // Use business timetable if nomore resources passed.
+    if (resourceTimetables.length < 1) {
+      resourceTimetables.push(businessTimetable);
+    }
 
     // TODO: compute daysOff when all day of resource is not available.
 
@@ -577,7 +632,7 @@ var Booking = Object.freeze({
         var date = cracSlot.date;
 
 
-        var dayBounds = getDayBoundsFromTimetable(date, businessTimetable, businessTimetableCache);
+        var dayBounds = getDayBoundsFromAllTimetables(date, resourceTimetables, timetableCache);
         if (!dayBounds) {
           cracSlot.resources.forEach(function (resourceId) {
             daysOff.push({

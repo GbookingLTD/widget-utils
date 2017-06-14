@@ -55,6 +55,39 @@ function getDayBoundsFromTimetable(date, timetable, timetableCache = {}) {
 }
 
 
+// This function takes day bounds from getDayBoundsFromTimetable for every timetables
+// and computes min-start and max-end bounds from all given timetables.
+// It allows us to show correct day bounds for 'any free worker' option.
+function getDayBoundsFromAllTimetables(date, timetables, cache) {
+  let allDayBounds = null;
+
+  timetables.forEach((tt, index) => {
+    const ttCacheKey = `${date}:${index}`;
+    const ttCache = cache[ttCacheKey] ? cache[ttCacheKey] : (cache[ttCacheKey] = {});
+    const dayBounds = getDayBoundsFromTimetable(date, tt, ttCache);
+
+    if (!dayBounds) {
+      return;
+    } else if (!allDayBounds) {
+      const { start_time, start, end_time, end } = dayBounds;
+      allDayBounds = { start_time, start, end_time, end };
+    } else {
+      const { start_time, start, end_time, end } = dayBounds;
+      if (allDayBounds.start > start) {
+        allDayBounds.start = start;
+        allDayBounds.start_time = start_time;
+      }
+      if (allDayBounds.end < end) {
+        allDayBounds.end = end;
+        allDayBounds.end_time = end_time;
+      }
+    }
+  });
+
+  return allDayBounds;
+}
+
+
 function cracValueToBits(value) {
   const bits = [];
   // Fastest way to parse stringifyed bitmask
@@ -200,14 +233,30 @@ function getCrunchSlotsFromCrac(cracSlot, date, startMinutes, endMinutes, maxSlo
  * @param  {CracBusySlots|Array<Object>} cracSlots CRAC response format
  * @return {CrunBusySlot|Object}           Crunch response format
  */
-export function toBusySlots(cracSlots, business, taxonomyIDs) {
+export function toBusySlots(cracSlots, business, taxonomyIDs, resourceIds = []) {
   const businessTimetable = business.general_info.timetable;
-  const businessTimetableCache = {};
+  const timetableCache = {};
   const daysOff = [];
   const excludedResources = [];
   const excludedResourcesCountMap = {};
   let visitedDaysCount = 0;
   let maxSlotDuration = -1;
+  const resourceTimetables = [];
+
+  business.resources.forEach(rr => {
+    if (resourceIds.indexOf(rr.id) < 0) {
+      return;
+    }
+    resourceTimetables.push((rr.timetable && rr.timetable.active === true) ?
+                              rr.timetable :
+                              businessTimetable
+                            );
+  });
+
+  // Use business timetable if nomore resources passed.
+  if (resourceTimetables.length < 1) {
+    resourceTimetables.push(businessTimetable);
+  }
 
   // TODO: compute daysOff when all day of resource is not available.
 
@@ -232,7 +281,7 @@ export function toBusySlots(cracSlots, business, taxonomyIDs) {
     days: _.filter(_.map(cracSlots, function(cracSlot) {
       const { date } = cracSlot;
 
-      const dayBounds = getDayBoundsFromTimetable(date, businessTimetable, businessTimetableCache);
+      const dayBounds = getDayBoundsFromAllTimetables(date, resourceTimetables, timetableCache);
       if (!dayBounds) {
         cracSlot.resources.forEach(function(resourceId) {
           daysOff.push({
