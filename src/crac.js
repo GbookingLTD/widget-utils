@@ -250,8 +250,6 @@ export function toBusySlots(cracSlots, business, taxonomyIDs, resourceIds = []) 
     resourceTimetables.push(businessTimetable);
   }
 
-  // TODO: compute daysOff when all day of resource is not available.
-
   if (taxonomyIDs && taxonomyIDs.length) {
     const taxonomies = _.filter(
       business.taxonomies,
@@ -270,7 +268,7 @@ export function toBusySlots(cracSlots, business, taxonomyIDs, resourceIds = []) 
     maxSlotCapacity: 1,
     daysOff,
     excludedResources,
-    days: _.filter(_.map(cracSlots, function(cracSlot) {
+    days: _.map(cracSlots, function(cracSlot) {
       const { date } = cracSlot;
 
       const dayBounds = getDayBoundsFromAllTimetables(date, resourceTimetables);
@@ -308,7 +306,7 @@ export function toBusySlots(cracSlots, business, taxonomyIDs, resourceIds = []) 
         end_time: slots.end_time || dayBounds.end_time,
         slots,
       };
-    })),
+    }),
   };
 
   // Post processing of excludedResources

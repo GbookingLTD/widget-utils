@@ -599,8 +599,6 @@ var Booking = Object.freeze({
       resourceTimetables.push(businessTimetable);
     }
 
-    // TODO: compute daysOff when all day of resource is not available.
-
     if (taxonomyIDs && taxonomyIDs.length) {
       var taxonomies = _.filter(business.taxonomies, function (tt) {
         return taxonomyIDs.indexOf(String(tt.id)) >= 0;
@@ -618,7 +616,7 @@ var Booking = Object.freeze({
       maxSlotCapacity: 1,
       daysOff: daysOff,
       excludedResources: excludedResources,
-      days: _.filter(_.map(cracSlots, function (cracSlot) {
+      days: _.map(cracSlots, function (cracSlot) {
         var date = cracSlot.date;
 
 
@@ -657,7 +655,7 @@ var Booking = Object.freeze({
           end_time: slots.end_time || dayBounds.end_time,
           slots: slots
         };
-      }))
+      })
     };
 
     // Post processing of excludedResources
