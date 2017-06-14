@@ -1,9 +1,10 @@
 {
   "name": "widget-utils",
-  "version": "0.2.5",
+  "version": "0.3.0",
   "authors": [
     "swvitaliy <sw.vitaliy@gmail.com>",
-    "vasiliy0s <talk@vasiliy0s.com>"
+    "vasiliy0s <talk@vasiliy0s.com>",
+    "alexz <alex.zhukov@gbooking.ru>"
   ],
   "description": "",
   "main": "dist/widgetUtils.js",

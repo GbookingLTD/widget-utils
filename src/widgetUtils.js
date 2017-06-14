@@ -3,6 +3,7 @@ import * as BusySlots from './busySlots';
 import * as Booking from './booking';
 import * as Crac from './crac';
 import { roundNumberUsingRule } from './roundNumberUsingRule';
+import phoneUtils from './phoneUtils';
 
 export default {
   DateTime,
@@ -10,4 +11,5 @@ export default {
   Booking,
   Crac,
   roundNumberUsingRule,
+  phoneUtils
 };
