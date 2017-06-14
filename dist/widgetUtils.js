@@ -949,6 +949,20 @@ var Crac = Object.freeze({
               return "+" + p.country_code + "(" + p.area_code + ") " + p1 + "-" + p2 + "-" + p3;
             }
           },
+          'GE': {
+            code: '995',
+            mask: '+995(999) 999-999',
+            phoneExtractor: function phoneExtractor(value) {
+              var digits = value.replace(/\D/g, '');
+              return ['', '995', digits.substring(3, 6), digits.substring(6), ''];
+            },
+            phoneStringMaker: function phoneStringMaker(p) {
+              if (!p || !p.number) return '';
+              var p1 = p.number.length > 4 ? p.number.substr(0, 3) : '';
+              var p2 = p.number.length > 4 ? p.number.substr(3, 6) : '';
+              return "+" + p.country_code + "(" + p.area_code + ") " + p1 + "-" + p2;
+            }
+          },
           'IL': {
             code: '972',
             mask: '9999999999',
