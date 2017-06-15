@@ -876,78 +876,23 @@ var Crac = Object.freeze({
       classCallCheck(this, phoneUtils);
     }
 
-    createClass(phoneUtils, [{
-      key: "getPhoneSettings",
-      value: function getPhoneSettings(business, options) {
-        options = options || {};
-        var country = business.general_info.address.length ? business.general_info.address[0].country : "RU";
-        country = country || "RU";
-        if (options.unfilled && ["RU", "LV"].indexOf(country) >= 0) {
-          country += "_UNFILLED";
-        }
-        if (options.dirty && ["RU", "LV"].indexOf(country) >= 0) {
-          country += '_DIRTY';
-        }
-        return phoneUtils.phoneData[country] || phoneUtils.phoneData["RU"];
-      }
-    }, {
-      key: "getCountryPhoneSettings",
-      value: function getCountryPhoneSettings(countryCode) {
-        return phoneUtils.phoneData[countryCode] || phoneUtils.phoneData["RU"];
-      }
-    }, {
-      key: "getPhoneString",
-      value: function getPhoneString(business, obj) {
-        if (obj && obj.phone && obj.phone.length > 0) {
-          var phone = this.getPhoneSettings(business).phoneStringMaker(obj.phone[0]);
-          return phone.replace("++", "+");
-        }
-        return "";
-      }
-    }, {
-      key: "getPhoneSettingsPhone",
-      value: function getPhoneSettingsPhone(phoneSettings, phoneString) {
-        var data = phoneSettings.phoneExtractor(phoneString);
-        var phone = {
-          country_code: '',
-          area_code: '',
-          number: ''
-        };
-        if (data && data.length) {
-          phone.country_code = data[1];
-          phone.area_code = data[2];
-          phone.number = data[3] + data[4];
-        }
-
-        return phone;
-      }
-    }, {
-      key: "getPhone",
-      value: function getPhone(business, phoneString) {
-        return this.getPhoneSettingsPhone(this.getPhoneSettings(business), phoneString);
-      }
-    }, {
-      key: "isValidPhone",
-      value: function isValidPhone(parsedPhone) {
-        return parsedPhone && parsedPhone.country_code && typeof parsedPhone.area_code === "string" && typeof parsedPhone.number === "string" && (parsedPhone.area_code + parsedPhone.number).length >= 6;
-      }
-    }], [{
-      key: "defaultExtractor",
+    createClass(phoneUtils, null, [{
+      key: 'defaultExtractor',
       value: function defaultExtractor(value) {
         var regex = /\+(\d+)\((\d+)\) (\d+)-(\d+)/;
         return value.match(regex);
       }
     }, {
-      key: "defaultStringMaker",
+      key: 'defaultStringMaker',
       value: function defaultStringMaker(p) {
         if (!p || !p.number) return '';
         //let p = person.phone[0];
         var p1 = p.number.length > 3 ? p.number.substr(0, 3) : '';
         var p2 = p.number.length > 3 ? p.number.substr(3) : '';
-        return "+" + p.country_code + "(" + p.area_code + ") " + p1 + "-" + p2;
+        return '+' + p.country_code + '(' + p.area_code + ') ' + p1 + '-' + p2;
       }
     }, {
-      key: "langCodes",
+      key: 'langCodes',
       get: function get() {
         return {
           'ru_RU': 'ru-ru',
@@ -965,7 +910,7 @@ var Crac = Object.freeze({
         };
       }
     }, {
-      key: "countryToLang",
+      key: 'countryToLang',
       get: function get() {
         return {
           'EN': 'en_US',
@@ -986,41 +931,70 @@ var Crac = Object.freeze({
         };
       }
     }, {
-      key: "phoneData",
+      key: 'phoneData',
       get: function get() {
         return {
           'AM': {
             code: '374',
-            mask: '+374(99) 99-99-99',
+            mask: '+374(dd) dd-dd-dd',
+            rules: {
+              "9": null,
+              "d": /\d/
+            },
             phoneExtractor: function phoneExtractor(value) {
               var digits = value.replace(/\D/g, '');
               return ['', '374', digits.substring(3, 5), digits.substring(5), ''];
+            },
+            phoneExtractorWidget: function phoneExtractorWidget(value) {
+              var digits = value.replace(/\D/g, '');
+              return [digits.substring(0, 2), digits.substring(2)];
             },
             phoneStringMaker: function phoneStringMaker(p) {
               if (!p || !p.number) return '';
               var p1 = p.number.length > 3 ? p.number.substr(0, 2) : '';
               var p2 = p.number.length > 3 ? p.number.substr(2, 2) : '';
               var p3 = p.number.length > 3 ? p.number.substr(4, 2) : '';
-              return "+" + p.country_code + "(" + p.area_code + ") " + p1 + "-" + p2 + "-" + p3;
+              return '+' + p.country_code + '(' + p.area_code + ') ' + p1 + '-' + p2 + '-' + p3;
             }
           },
           'GE': {
             code: '995',
-            mask: '+995(999) 999-999',
+            rules: {
+              "9": null,
+              "d": /\d/
+            },
+            mask: '+995 (ddd) ddd-ddd',
+            phoneExtractorWidget: function phoneExtractorWidget(value) {
+              var digits = value.replace(/\D/g, '');
+              return [digits.substring(0, 3), digits.substring(3)];
+            },
             phoneExtractor: function phoneExtractor(value) {
               var digits = value.replace(/\D/g, '');
-              return ['', '995', digits.substring(3, 6), digits.substring(6), ''];
+              if (digits.length === 12) {
+                return ['', '995', digits.substring(3, 6), digits.substring(6), ''];
+              }
+              return ['', '995', '', '', ''];
             },
             phoneStringMaker: function phoneStringMaker(p) {
               if (!p || !p.number) return '';
-              var p1 = p.number.length > 4 ? p.number.substr(0, 3) : '';
-              var p2 = p.number.length > 4 ? p.number.substr(3, 6) : '';
-              return "+" + p.country_code + "(" + p.area_code + ") " + p1 + "-" + p2;
+              var p1 = p.number.length > 3 ? p.number.substr(0, 3) : '';
+              var p2 = p.number.length > 3 ? p.number.substr(3, 6) : '';
+              return '+' + p.country_code + '(' + p.area_code + ') ' + p1 + '-' + p2;
             }
           },
           'IL': {
             code: '972',
-            mask: '9999999999',
+            mask: 'dddddddddd',
+            rules: {
+              "9": null,
+              "d": /\d/
+            },
+            phoneExtractorWidget: function phoneExtractorWidget(value) {
+              if (value[0] === '0') {
+                return [value.substring(1, 3), value.substring(3)];
+              }
+              return ['', ''];
+            },
             phoneExtractor: function phoneExtractor(value) {
               if (value[0] === '0' && value.length === 10) {
                 return ['', '972', value.substring(1, 3), value.substring(3), ''];
@@ -1031,14 +1005,24 @@ var Crac = Object.freeze({
               if (!p) return '';
               var countryCode = (p.country_code || '').replace("+");
               if (countryCode === "972") {
-                return p.number ? "0" + p.area_code + p.number : "";
+                return p.number ? '0' + p.area_code + p.number : "";
               }
               return phoneUtils.defaultStringMaker(p);
             }
           },
           'FR': {
             code: '33',
-            mask: '9999999999',
+            mask: 'dddddddddd',
+            rules: {
+              "9": null,
+              "d": /\d/
+            },
+            phoneExtractorWidget: function phoneExtractorWidget(value) {
+              if (value[0] === '0') {
+                return [value.substring(1, 3), value.substring(3)];
+              }
+              return ['', ''];
+            },
             phoneExtractor: function phoneExtractor(value) {
               if (value[0] === '0' && value.length === 10) {
                 return ['', '33', value.substring(1, 3), value.substring(3), ''];
@@ -1049,26 +1033,45 @@ var Crac = Object.freeze({
               if (!p) return '';
               var countryCode = (p.country_code || '').replace("+");
               if (countryCode === "33") {
-                return p.number ? "0" + p.area_code + p.number : "";
+                return p.number ? '0' + p.area_code + p.number : "";
               }
               return phoneUtils.defaultStringMaker(p);
             }
           },
           'US': {
             code: '1',
-            mask: '+1(999) 999-9999',
+            mask: '+1(ddd) ddd-dddd',
+            rules: {
+              "9": null,
+              "d": /\d/
+            },
+            phoneExtractorWidget: function phoneExtractorWidget(value) {
+              var digits = value.replace(/\D/g, '');
+              return [digits.substring(0, 3), digits.substring(3)];
+            },
             phoneExtractor: phoneUtils.defaultExtractor,
             phoneStringMaker: phoneUtils.defaultStringMaker
           },
           'UA': {
             code: '380',
-            mask: '+380(99) 999-9999',
+            mask: '+380(dd) ddd-dddd',
+            phoneExtractorWidget: function phoneExtractorWidget(value) {
+              var digits = value.replace(/\D/g, '');
+              return [digits.substring(0, 2), digits.substring(2)];
+            },
             phoneExtractor: phoneUtils.defaultExtractor,
             phoneStringMaker: phoneUtils.defaultStringMaker
           },
           'LV': {
             code: '371',
-            mask: '+(371) 99999999',
+            mask: '+(371) dddddddd',
+            rules: {
+              "9": null,
+              "d": /\d/
+            },
+            phoneExtractorWidget: function phoneExtractorWidget(value) {
+              return ['', value];
+            },
             phoneExtractor: function phoneExtractor(value) {
               if (value.indexOf("371") === 0) value = '(371)' + value.substr(3);
               var regex = /\+?\((\d+)\)\s*(\d*)/;
@@ -1077,7 +1080,7 @@ var Crac = Object.freeze({
             },
             phoneStringMaker: function phoneStringMaker(p) {
               if (!p) return '';
-              return "+(371) " + p.area_code + p.number;
+              return '+(371) ' + p.area_code + p.number;
             }
           },
           'LV_UNFILLED': {
@@ -1091,7 +1094,7 @@ var Crac = Object.freeze({
             },
             phoneStringMaker: function phoneStringMaker(p) {
               if (!p) return '';
-              return "+(371) " + p.area_code + p.number;
+              return '+(371) ' + p.area_code + p.number;
             }
           },
           'LV_DIRTY': {
@@ -1105,7 +1108,7 @@ var Crac = Object.freeze({
             },
             phoneStringMaker: function phoneStringMaker(p) {
               if (!p) return '';
-              return "+(371) " + p.area_code + p.number;
+              return '+(371) ' + p.area_code + p.number;
             }
           },
           'RU_UNFILLED': {
@@ -1129,13 +1132,60 @@ var Crac = Object.freeze({
           },
           'RU': {
             code: '7',
-            mask: '+7(999) 999-9999',
+            mask: '+7(ddd) ddd-dddd',
+            rules: {
+              "9": null,
+              "d": /\d/
+            },
+            phoneExtractorWidget: function phoneExtractorWidget(value) {
+              var digits = value.replace(/\D/g, '');
+              return [digits.substring(0, 3), digits.substring(3)];
+            },
             phoneExtractor: function phoneExtractor(value) {
               var digits = value.replace(/\D/g, '');
               if (digits.length >= 10) {
                 return ['', '7', digits.substring(digits.length - 10, digits.length - 7), digits.substring(digits.length - 7), ''];
               }
               return ['', '7', '', '', ''];
+            },
+            phoneStringMaker: phoneUtils.defaultStringMaker
+          },
+          'BLR': {
+            code: '7',
+            mask: '+7(ddd) ddd-dddd',
+            rules: {
+              "9": null,
+              "d": /\d/
+            },
+            phoneExtractorWidget: function phoneExtractorWidget(value) {
+              var digits = value.replace(/\D/g, '');
+              return [digits.substring(0, 3), digits.substring(3)];
+            },
+            phoneExtractor: function phoneExtractor(value) {
+              var digits = value.replace(/\D/g, '');
+              if (digits.length >= 10) {
+                return ['', '7', digits.substring(digits.length - 10, digits.length - 7), digits.substring(digits.length - 7), ''];
+              }
+              return ['', '7', '', '', ''];
+            },
+            phoneStringMaker: phoneUtils.defaultStringMaker
+          },
+          'CH': {
+            code: '86',
+            mask: '+86 (ddd) ddd-dd-dd',
+            rules: {
+              "9": null,
+              "d": /\d/
+            },
+            phoneExtractorWidget: function phoneExtractorWidget(value) {
+              return [value.substring(0, 3), value.substring(3)];
+            },
+            phoneExtractor: function phoneExtractor(value) {
+              var digits = value.replace(/\D/g, '');
+              if (digits.length >= 10) {
+                return ['', '86', digits.substring(digits.length - 10, digits.length - 7), digits.substring(digits.length - 7), ''];
+              }
+              return ['', '86', '', '', ''];
             },
             phoneStringMaker: phoneUtils.defaultStringMaker
           },
@@ -1146,6 +1196,13 @@ var Crac = Object.freeze({
               "d": /\d/
             },
             mask: '+49 (dd dd) dd dd dd',
+            phoneExtractorWidget: function phoneExtractorWidget(value) {
+              var digits = value.replace(/\D/g, '');
+              if (digits.length >= 8) {
+                return [digits.substring(0, 3), digits.substring(3)];
+              }
+              return ['', ''];
+            },
             phoneExtractor: function phoneExtractor(value) {
               var digits = value.replace(/\D/g, '');
               //console.log("digits",digits);
@@ -1158,9 +1215,9 @@ var Crac = Object.freeze({
             phoneStringMaker: function phoneStringMaker(p) {
               if (!p) return '';
               if (p.area_code && p.area_code.length >= 4 && p.number && p.number.length >= 6) {
-                return "+" + p.country_code + " (" + p.area_code.substr(0, 2) + " " + p.area_code.substr(2, 2) + ") " + p.number.substr(0, 2) + " " + p.number.substr(2, 2) + " " + p.number.substr(4, 2);
+                return '+' + p.country_code + ' (' + p.area_code.substr(0, 2) + ' ' + p.area_code.substr(2, 2) + ') ' + p.number.substr(0, 2) + ' ' + p.number.substr(2, 2) + ' ' + p.number.substr(4, 2);
               }
-              return "+" + p.country_code + " (" + p.area_code + ") " + p.number;
+              return '+' + p.country_code + ' (' + p.area_code + ') ' + p.number;
             }
           }
         };
