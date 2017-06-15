@@ -426,11 +426,11 @@ var Booking = Object.freeze({
             _end_time = dayBounds.end_time,
             _end = dayBounds.end;
 
-        if (allDayBounds.start > _start) {
+        if (allDayBounds.start < _start) {
           allDayBounds.start = _start;
           allDayBounds.start_time = _start_time;
         }
-        if (allDayBounds.end < _end) {
+        if (allDayBounds.end > _end) {
           allDayBounds.end = _end;
           allDayBounds.end_time = _end_time;
         }
@@ -577,6 +577,11 @@ var Booking = Object.freeze({
     };
   }
 
+  // Special fix for `$scope.getEmptyDayLabel()` in `desktopwidget` app.
+  function isoDateForDayOff(date) {
+    return moment(date).toISOString().replace('.000Z', 'Z');
+  }
+
   /**
    * Presense CRAC data type as Crunch' Busy Slots
    *
@@ -593,7 +598,7 @@ var Booking = Object.freeze({
     var excludedResources = [];
     var excludedResourcesCountMap = {};
     var maxSlotDuration = -1;
-    var resourceTimetables = [];
+    var resourceTimetables = [businessTimetable];
 
     business.resources.forEach(function (rr) {
       if (resourceIds.indexOf(rr.id) < 0) {
@@ -601,11 +606,6 @@ var Booking = Object.freeze({
       }
       resourceTimetables.push(rr.timetable && rr.timetable.active === true ? rr.timetable : businessTimetable);
     });
-
-    // Use business timetable if nomore resources passed.
-    if (resourceTimetables.length < 1) {
-      resourceTimetables.push(businessTimetable);
-    }
 
     if (taxonomyIDs && taxonomyIDs.length) {
       var taxonomies = _.filter(business.taxonomies, function (tt) {
@@ -633,9 +633,11 @@ var Booking = Object.freeze({
         var dayBounds = getDayBoundsFromAllTimetables(date, resourceTimetables);
 
         if (!dayBounds) {
+          var dayOffDate = isoDateForDayOff(date);
+
           cracSlot.resources.forEach(function (resourceId) {
             daysOff.push({
-              date: date,
+              date: dayOffDate,
               resource_id: resourceId
             });
           });
@@ -662,8 +664,14 @@ var Booking = Object.freeze({
         var slots = getCrunchSlotsFromCrac(cracSlot, date, dayStart, dayEnd, maxSlotDuration);
 
         if (cracSlot.excludedResources) {
+          var _dayOffDate = isoDateForDayOff(date);
+
           cracSlot.excludedResources.forEach(function (resourceId) {
-            return excludedResourcesCountMap[resourceId] = (excludedResourcesCountMap[resourceId] || 0) + 1;
+            excludedResourcesCountMap[resourceId] = (excludedResourcesCountMap[resourceId] || 0) + 1;
+            daysOff.push({
+              date: _dayOffDate,
+              resource_id: resourceId
+            });
           });
         }
 
