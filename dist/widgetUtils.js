@@ -583,7 +583,6 @@ var Booking = Object.freeze({
     var daysOff = [];
     var excludedResources = [];
     var excludedResourcesCountMap = {};
-    var visitedDaysCount = 0;
     var maxSlotDuration = -1;
     var resourceTimetables = [];
 
@@ -647,8 +646,6 @@ var Booking = Object.freeze({
           });
         }
 
-        visitedDaysCount++;
-
         return {
           date: date,
           start_time: slots.start_time || dayBounds.start_time,
@@ -659,9 +656,10 @@ var Booking = Object.freeze({
     };
 
     // Post processing of excludedResources
+    var daysCount = busySlotsResponse.days.length;
     for (var resourceId in excludedResourcesCountMap) {
       if (Object.prototype.hasOwnProperty.call(excludedResourcesCountMap, resourceId)) {
-        if (excludedResourcesCountMap[resourceId] >= visitedDaysCount) {
+        if (excludedResourcesCountMap[resourceId] >= daysCount) {
           excludedResources.push(resourceId);
         }
       }

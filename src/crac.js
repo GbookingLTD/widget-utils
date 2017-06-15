@@ -231,7 +231,6 @@ export function toBusySlots(cracSlots, business, taxonomyIDs, resourceIds = []) 
   const daysOff = [];
   const excludedResources = [];
   const excludedResourcesCountMap = {};
-  let visitedDaysCount = 0;
   let maxSlotDuration = -1;
   const resourceTimetables = [];
 
@@ -298,8 +297,6 @@ export function toBusySlots(cracSlots, business, taxonomyIDs, resourceIds = []) 
         );
       }
 
-      visitedDaysCount++;
-
       return {
         date,
         start_time: slots.start_time || dayBounds.start_time,
@@ -310,9 +307,10 @@ export function toBusySlots(cracSlots, business, taxonomyIDs, resourceIds = []) 
   };
 
   // Post processing of excludedResources
+  const daysCount = busySlotsResponse.days.length;
   for (const resourceId in excludedResourcesCountMap) {
     if (Object.prototype.hasOwnProperty.call(excludedResourcesCountMap, resourceId)) {
-      if (excludedResourcesCountMap[resourceId] >= visitedDaysCount) {
+      if (excludedResourcesCountMap[resourceId] >= daysCount) {
         excludedResources.push(resourceId);
       }
     }
