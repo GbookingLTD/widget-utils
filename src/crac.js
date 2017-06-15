@@ -71,11 +71,11 @@ function getDayBoundsFromAllTimetables(date, timetables) {
       allDayBounds = { start_time, start, end_time, end };
     } else {
       const { start_time, start, end_time, end } = dayBounds;
-      if (allDayBounds.start > start) {
+      if (allDayBounds.start < start) {
         allDayBounds.start = start;
         allDayBounds.start_time = start_time;
       }
-      if (allDayBounds.end < end) {
+      if (allDayBounds.end > end) {
         allDayBounds.end = end;
         allDayBounds.end_time = end_time;
       }
@@ -227,6 +227,12 @@ function getCrunchSlotsFromCrac(cracSlot, date, startMinutes, endMinutes, maxSlo
 }
 
 
+// Special fix for `$scope.getEmptyDayLabel()` in `desktopwidget` app.
+function isoDateForDayOff(date) {
+  return moment(date).toISOString().replace('.000Z', 'Z');
+}
+
+
 /**
  * Presense CRAC data type as Crunch' Busy Slots
  *
@@ -241,7 +247,7 @@ export function toBusySlots(cracSlots, business, taxonomyIDs, resourceIds = []) 
   const excludedResources = [];
   const excludedResourcesCountMap = {};
   let maxSlotDuration = -1;
-  const resourceTimetables = [];
+  const resourceTimetables = [businessTimetable];
 
   business.resources.forEach(rr => {
     if (resourceIds.indexOf(rr.id) < 0) {
@@ -253,10 +259,6 @@ export function toBusySlots(cracSlots, business, taxonomyIDs, resourceIds = []) 
                             );
   });
 
-  // Use business timetable if nomore resources passed.
-  if (resourceTimetables.length < 1) {
-    resourceTimetables.push(businessTimetable);
-  }
 
   if (taxonomyIDs && taxonomyIDs.length) {
     const taxonomies = _.filter(
@@ -284,9 +286,11 @@ export function toBusySlots(cracSlots, business, taxonomyIDs, resourceIds = []) 
       const dayBounds = getDayBoundsFromAllTimetables(date, resourceTimetables);
 
       if (!dayBounds) {
+        const dayOffDate = isoDateForDayOff(date);
+
         cracSlot.resources.forEach(function(resourceId) {
           daysOff.push({
-            date: date,
+            date: dayOffDate,
             resource_id: resourceId,
           });
         });
@@ -313,8 +317,16 @@ export function toBusySlots(cracSlots, business, taxonomyIDs, resourceIds = []) 
       const slots =  getCrunchSlotsFromCrac(cracSlot, date, dayStart, dayEnd, maxSlotDuration);
 
       if (cracSlot.excludedResources) {
+        const dayOffDate = isoDateForDayOff(date);
+
         cracSlot.excludedResources.forEach(
-          resourceId => excludedResourcesCountMap[resourceId] = (excludedResourcesCountMap[resourceId] || 0) + 1
+          (resourceId) => {
+            excludedResourcesCountMap[resourceId] = (excludedResourcesCountMap[resourceId] || 0) + 1;
+            daysOff.push({
+              date: dayOffDate,
+              resource_id: resourceId,
+            });
+          }
         );
       }
 
