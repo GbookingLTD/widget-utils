@@ -348,13 +348,18 @@ var Booking = Object.freeze({
 
   var SLOT_SIZE = 5;
 
+  // Convert minutes to date in ISO format
+  function minutesToDate(date, minutes) {
+    return moment(date).startOf('day').add(minutes, 'minutes').utc().toDate().toString();
+  }
+
   // Compute start_time/end_time according to given day schedule.
   function getDayBoundsFromShedule(daySchedule, date) {
     return {
-      start_time: moment(date).startOf('day').add(daySchedule.start, 'minutes').utc().toDate().toString(),
+      start_time: minutesToDate(date, daySchedule.start),
       start: daySchedule.start,
 
-      end_time: moment(date).startOf('day').add(daySchedule.end, 'minutes').utc().toDate().toString(),
+      end_time: minutesToDate(date, daySchedule.end),
       end: daySchedule.end
     };
   }
@@ -542,7 +547,9 @@ var Booking = Object.freeze({
         }
       }
 
-      start_time = moment.utc(date).startOf('day').add(startSlot.end, 'minutes').toISOString();
+      if (startSlot) {
+        start_time = moment.utc(date).startOf('day').add(startSlot.end, 'minutes').toISOString();
+      }
     }
 
     // Change end_time bounds according to near available time.
@@ -557,7 +564,9 @@ var Booking = Object.freeze({
         }
       }
 
-      end_time = endSlot.time;
+      if (endSlot) {
+        end_time = endSlot.time;
+      }
     }
 
     return {
@@ -609,6 +618,8 @@ var Booking = Object.freeze({
       }
     }
 
+    var now = moment();
+
     var busySlotsResponse = {
       taxonomyId: taxonomyIDs && taxonomyIDs[0],
       slots_size: maxSlotDuration > 0 ? maxSlotDuration : 0,
@@ -638,7 +649,17 @@ var Booking = Object.freeze({
           };
         }
 
-        var slots = getCrunchSlotsFromCrac(cracSlot, date, dayBounds.start, dayBounds.end, maxSlotDuration);
+        var dayStart = dayBounds.start;
+        var startTime = dayBounds.start_time;
+        var dayEnd = dayBounds.end;
+        if (now.isSame(date, 'day')) {
+          var nowMinutes = now.hours() * 60 + now.minutes();
+          dayStart = Math.ceil(nowMinutes / maxSlotDuration) * maxSlotDuration;
+          dayStart = Math.min(dayStart, dayEnd);
+          startTime = minutesToDate(now, dayStart);
+        }
+
+        var slots = getCrunchSlotsFromCrac(cracSlot, date, dayStart, dayEnd, maxSlotDuration);
 
         if (cracSlot.excludedResources) {
           cracSlot.excludedResources.forEach(function (resourceId) {
@@ -648,7 +669,7 @@ var Booking = Object.freeze({
 
         return {
           date: date,
-          start_time: slots.start_time || dayBounds.start_time,
+          start_time: slots.start_time || startTime,
           end_time: slots.end_time || dayBounds.end_time,
           slots: slots
         };
