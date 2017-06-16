@@ -71,11 +71,11 @@ function getDayBoundsFromAllTimetables(date, timetables) {
       allDayBounds = { start_time, start, end_time, end };
     } else {
       const { start_time, start, end_time, end } = dayBounds;
-      if (allDayBounds.start < start) {
+      if (allDayBounds.start > start) {
         allDayBounds.start = start;
         allDayBounds.start_time = start_time;
       }
-      if (allDayBounds.end > end) {
+      if (allDayBounds.end < end) {
         allDayBounds.end = end;
         allDayBounds.end_time = end_time;
       }
@@ -247,7 +247,7 @@ export function toBusySlots(cracSlots, business, taxonomyIDs, resourceIds = []) 
   const excludedResources = [];
   const excludedResourcesCountMap = {};
   let maxSlotDuration = -1;
-  const resourceTimetables = [businessTimetable];
+  const resourceTimetables = [];
 
   business.resources.forEach(rr => {
     if (resourceIds.indexOf(rr.id) < 0) {
@@ -258,6 +258,10 @@ export function toBusySlots(cracSlots, business, taxonomyIDs, resourceIds = []) 
                               businessTimetable
                             );
   });
+
+  if (resourceTimetables.length < 1) {
+    resourceTimetables.push(businessTimetable);
+  }
 
 
   if (taxonomyIDs && taxonomyIDs.length) {
@@ -272,7 +276,12 @@ export function toBusySlots(cracSlots, business, taxonomyIDs, resourceIds = []) 
     }
   }
 
-  const now = moment();
+  // const now = moment();
+
+  function excludedResource(resource_id, date) {
+    excludedResourcesCountMap[resource_id] = (excludedResourcesCountMap[resource_id] || 0) + 1;
+    daysOff.push({ date, resource_id });
+  }
 
   const busySlotsResponse = {
     taxonomyId: taxonomyIDs && taxonomyIDs[0],
@@ -287,13 +296,7 @@ export function toBusySlots(cracSlots, business, taxonomyIDs, resourceIds = []) 
 
       if (!dayBounds) {
         const dayOffDate = isoDateForDayOff(date);
-
-        cracSlot.resources.forEach(function(resourceId) {
-          daysOff.push({
-            date: dayOffDate,
-            resource_id: resourceId,
-          });
-        });
+        business.resources.forEach((rr) => excludedResource(rr.id, dayOffDate));
 
         return {
           date,
@@ -302,40 +305,31 @@ export function toBusySlots(cracSlots, business, taxonomyIDs, resourceIds = []) 
             available: false
           }
         };
+      } else {
+        let dayStart = dayBounds.start;
+        let startTime = dayBounds.start_time;
+        const dayEnd = dayBounds.end;
+        // if (now.isSame(date, 'day')) {
+        //   const nowMinutes = now.hours() * 60 + now.minutes();
+        //   dayStart = Math.ceil(nowMinutes / maxSlotDuration) * maxSlotDuration;
+        //   dayStart = Math.min(dayStart, dayEnd);
+        //   startTime = minutesToDate(now, dayStart);
+        // }
+
+        const slots =  getCrunchSlotsFromCrac(cracSlot, date, dayStart, dayEnd, maxSlotDuration);
+
+        if (cracSlot.excludedResources) {
+          const dayOffDate = isoDateForDayOff(date);
+          cracSlot.excludedResources.forEach((rid) => excludedResource(rid, dayOffDate));
+        }
+
+        return {
+          date,
+          start_time: slots.start_time || startTime,
+          end_time: slots.end_time || dayBounds.end_time,
+          slots,
+        };
       }
-
-      let dayStart = dayBounds.start;
-      let startTime = dayBounds.start_time;
-      const dayEnd = dayBounds.end;
-      if (now.isSame(date, 'day')) {
-        const nowMinutes = now.hours() * 60 + now.minutes();
-        dayStart = Math.ceil(nowMinutes / maxSlotDuration) * maxSlotDuration;
-        dayStart = Math.min(dayStart, dayEnd);
-        startTime = minutesToDate(now, dayStart);
-      }
-
-      const slots =  getCrunchSlotsFromCrac(cracSlot, date, dayStart, dayEnd, maxSlotDuration);
-
-      if (cracSlot.excludedResources) {
-        const dayOffDate = isoDateForDayOff(date);
-
-        cracSlot.excludedResources.forEach(
-          (resourceId) => {
-            excludedResourcesCountMap[resourceId] = (excludedResourcesCountMap[resourceId] || 0) + 1;
-            daysOff.push({
-              date: dayOffDate,
-              resource_id: resourceId,
-            });
-          }
-        );
-      }
-
-      return {
-        date,
-        start_time: slots.start_time || startTime,
-        end_time: slots.end_time || dayBounds.end_time,
-        slots,
-      };
     }),
   };
 

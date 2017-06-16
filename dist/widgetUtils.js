@@ -426,11 +426,11 @@ var Booking = Object.freeze({
             _end_time = dayBounds.end_time,
             _end = dayBounds.end;
 
-        if (allDayBounds.start < _start) {
+        if (allDayBounds.start > _start) {
           allDayBounds.start = _start;
           allDayBounds.start_time = _start_time;
         }
-        if (allDayBounds.end > _end) {
+        if (allDayBounds.end < _end) {
           allDayBounds.end = _end;
           allDayBounds.end_time = _end_time;
         }
@@ -598,7 +598,7 @@ var Booking = Object.freeze({
     var excludedResources = [];
     var excludedResourcesCountMap = {};
     var maxSlotDuration = -1;
-    var resourceTimetables = [businessTimetable];
+    var resourceTimetables = [];
 
     business.resources.forEach(function (rr) {
       if (resourceIds.indexOf(rr.id) < 0) {
@@ -606,6 +606,10 @@ var Booking = Object.freeze({
       }
       resourceTimetables.push(rr.timetable && rr.timetable.active === true ? rr.timetable : businessTimetable);
     });
+
+    if (resourceTimetables.length < 1) {
+      resourceTimetables.push(businessTimetable);
+    }
 
     if (taxonomyIDs && taxonomyIDs.length) {
       var taxonomies = _.filter(business.taxonomies, function (tt) {
@@ -618,7 +622,12 @@ var Booking = Object.freeze({
       }
     }
 
-    var now = moment();
+    // const now = moment();
+
+    function excludedResource(resource_id, date) {
+      excludedResourcesCountMap[resource_id] = (excludedResourcesCountMap[resource_id] || 0) + 1;
+      daysOff.push({ date: date, resource_id: resource_id });
+    }
 
     var busySlotsResponse = {
       taxonomyId: taxonomyIDs && taxonomyIDs[0],
@@ -634,12 +643,8 @@ var Booking = Object.freeze({
 
         if (!dayBounds) {
           var dayOffDate = isoDateForDayOff(date);
-
-          cracSlot.resources.forEach(function (resourceId) {
-            daysOff.push({
-              date: dayOffDate,
-              resource_id: resourceId
-            });
+          business.resources.forEach(function (rr) {
+            return excludedResource(rr.id, dayOffDate);
           });
 
           return {
@@ -649,38 +654,33 @@ var Booking = Object.freeze({
               available: false
             }
           };
-        }
+        } else {
+          var dayStart = dayBounds.start;
+          var startTime = dayBounds.start_time;
+          var dayEnd = dayBounds.end;
+          // if (now.isSame(date, 'day')) {
+          //   const nowMinutes = now.hours() * 60 + now.minutes();
+          //   dayStart = Math.ceil(nowMinutes / maxSlotDuration) * maxSlotDuration;
+          //   dayStart = Math.min(dayStart, dayEnd);
+          //   startTime = minutesToDate(now, dayStart);
+          // }
 
-        var dayStart = dayBounds.start;
-        var startTime = dayBounds.start_time;
-        var dayEnd = dayBounds.end;
-        if (now.isSame(date, 'day')) {
-          var nowMinutes = now.hours() * 60 + now.minutes();
-          dayStart = Math.ceil(nowMinutes / maxSlotDuration) * maxSlotDuration;
-          dayStart = Math.min(dayStart, dayEnd);
-          startTime = minutesToDate(now, dayStart);
-        }
+          var slots = getCrunchSlotsFromCrac(cracSlot, date, dayStart, dayEnd, maxSlotDuration);
 
-        var slots = getCrunchSlotsFromCrac(cracSlot, date, dayStart, dayEnd, maxSlotDuration);
-
-        if (cracSlot.excludedResources) {
-          var _dayOffDate = isoDateForDayOff(date);
-
-          cracSlot.excludedResources.forEach(function (resourceId) {
-            excludedResourcesCountMap[resourceId] = (excludedResourcesCountMap[resourceId] || 0) + 1;
-            daysOff.push({
-              date: _dayOffDate,
-              resource_id: resourceId
+          if (cracSlot.excludedResources) {
+            var _dayOffDate = isoDateForDayOff(date);
+            cracSlot.excludedResources.forEach(function (rid) {
+              return excludedResource(rid, _dayOffDate);
             });
-          });
-        }
+          }
 
-        return {
-          date: date,
-          start_time: slots.start_time || startTime,
-          end_time: slots.end_time || dayBounds.end_time,
-          slots: slots
-        };
+          return {
+            date: date,
+            start_time: slots.start_time || startTime,
+            end_time: slots.end_time || dayBounds.end_time,
+            slots: slots
+          };
+        }
       })
     };
 
