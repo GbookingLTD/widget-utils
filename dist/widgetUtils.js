@@ -757,440 +757,416 @@ var Crac = Object.freeze({
     return output;
   }
 
-  var asyncGenerator = function () {
-    function AwaitValue(value) {
-      this.value = value;
+  function getPhoneSettings(business, options) {
+    options = options || {};
+    var country = business.general_info.address.length ? business.general_info.address[0].country : "RU";
+    country = country || "RU";
+    if (options.unfilled && ["RU", "LV"].indexOf(country) >= 0) {
+      country += "_UNFILLED";
+    }
+    if (options.dirty && ["RU", "LV"].indexOf(country) >= 0) {
+      country += '_DIRTY';
+    }
+    return phoneData[country] || phoneData["RU"];
+  }
+
+  function getCountryPhoneSettings(countryCode) {
+    return phoneData[countryCode] || phoneData["RU"];
+  }
+
+  function getPhoneString(business, obj) {
+    if (obj && obj.phone && obj.phone.length > 0) {
+      var phone = getPhoneSettings(business).phoneStringMaker(obj.phone[0]);
+      return phone.replace("++", "+");
+    }
+    return "";
+  }
+
+  function getPhoneSettingsPhone(phoneSettings, phoneString) {
+    var data = phoneSettings.phoneExtractor(phoneString);
+    var phone = {
+      country_code: '',
+      area_code: '',
+      number: ''
+    };
+    if (data && data.length) {
+      phone.country_code = data[1];
+      phone.area_code = data[2];
+      phone.number = data[3] + data[4];
     }
 
-    function AsyncGenerator(gen) {
-      var front, back;
+    return phone;
+  }
 
-      function send(key, arg) {
-        return new Promise(function (resolve, reject) {
-          var request = {
-            key: key,
-            arg: arg,
-            resolve: resolve,
-            reject: reject,
-            next: null
-          };
+  function getPhone(business, phoneString) {
+    return getPhoneSettingsPhone(getPhoneSettings(business), phoneString);
+  }
 
-          if (back) {
-            back = back.next = request;
-          } else {
-            front = back = request;
-            resume(key, arg);
-          }
-        });
-      }
+  function isValidPhone(parsedPhone) {
+    return parsedPhone && parsedPhone.country_code && typeof parsedPhone.area_code === "string" && typeof parsedPhone.number === "string" && (parsedPhone.area_code + parsedPhone.number).length >= 6;
+  }
 
-      function resume(key, arg) {
-        try {
-          var result = gen[key](arg);
-          var value = result.value;
+  function getPhoneData(countryCode) {
+    return phoneData[countryCode];
+  }
 
-          if (value instanceof AwaitValue) {
-            Promise.resolve(value.value).then(function (arg) {
-              resume("next", arg);
-            }, function (arg) {
-              resume("throw", arg);
-            });
-          } else {
-            settle(result.done ? "return" : "normal", result.value);
-          }
-        } catch (err) {
-          settle("throw", err);
-        }
-      }
+  function defaultExtractor(value) {
+    var regex = /\+(\d+)\((\d+)\) (\d+)-(\d+)/;
+    return value.match(regex);
+  }
 
-      function settle(type, value) {
-        switch (type) {
-          case "return":
-            front.resolve({
-              value: value,
-              done: true
-            });
-            break;
+  function defaultStringMaker(p) {
+    if (!p || !p.number) return '';
+    //let p = person.phone[0];
+    var p1 = p.number.length > 3 ? p.number.substr(0, 3) : '';
+    var p2 = p.number.length > 3 ? p.number.substr(3) : '';
+    return "+" + p.country_code + "(" + p.area_code + ") " + p1 + "-" + p2;
+  }
 
-          case "throw":
-            front.reject(value);
-            break;
-
-          default:
-            front.resolve({
-              value: value,
-              done: false
-            });
-            break;
-        }
-
-        front = front.next;
-
-        if (front) {
-          resume(front.key, front.arg);
-        } else {
-          back = null;
-        }
-      }
-
-      this._invoke = send;
-
-      if (typeof gen.return !== "function") {
-        this.return = undefined;
-      }
-    }
-
-    if (typeof Symbol === "function" && Symbol.asyncIterator) {
-      AsyncGenerator.prototype[Symbol.asyncIterator] = function () {
-        return this;
-      };
-    }
-
-    AsyncGenerator.prototype.next = function (arg) {
-      return this._invoke("next", arg);
-    };
-
-    AsyncGenerator.prototype.throw = function (arg) {
-      return this._invoke("throw", arg);
-    };
-
-    AsyncGenerator.prototype.return = function (arg) {
-      return this._invoke("return", arg);
-    };
-
-    return {
-      wrap: function (fn) {
-        return function () {
-          return new AsyncGenerator(fn.apply(this, arguments));
-        };
+  var phoneData = {
+    'AM': {
+      code: '374',
+      mask: '+374(dd) dd-dd-dd',
+      rules: {
+        "9": null,
+        "d": /\d/
       },
-      await: function (value) {
-        return new AwaitValue(value);
+      phoneExtractor: function phoneExtractor(value) {
+        var digits = value.replace(/\D/g, '');
+        return ['', '374', digits.substring(3, 5), digits.substring(5), ''];
+      },
+      phoneExtractorWidget: function phoneExtractorWidget(value) {
+        var digits = value.replace(/\D/g, '');
+        return [digits.substring(0, 2), digits.substring(2)];
+      },
+      phoneStringMaker: function phoneStringMaker(p) {
+        if (!p || !p.number) return '';
+        var p1 = p.number.length > 3 ? p.number.substr(0, 2) : '';
+        var p2 = p.number.length > 3 ? p.number.substr(2, 2) : '';
+        var p3 = p.number.length > 3 ? p.number.substr(4, 2) : '';
+        return "+" + p.country_code + "(" + p.area_code + ") " + p1 + "-" + p2 + "-" + p3;
       }
-    };
-  }();
-
-  var classCallCheck = function (instance, Constructor) {
-    if (!(instance instanceof Constructor)) {
-      throw new TypeError("Cannot call a class as a function");
+    },
+    'GE': {
+      code: '995',
+      rules: {
+        "9": null,
+        "d": /\d/
+      },
+      mask: '+995 (ddd) ddd-ddd',
+      phoneExtractorWidget: function phoneExtractorWidget(value) {
+        var digits = value.replace(/\D/g, '');
+        return [digits.substring(0, 3), digits.substring(3)];
+      },
+      phoneExtractor: function phoneExtractor(value) {
+        var digits = value.replace(/\D/g, '');
+        if (digits.length === 12) {
+          return ['', '995', digits.substring(3, 6), digits.substring(6), ''];
+        }
+        return ['', '995', '', '', ''];
+      },
+      phoneStringMaker: function phoneStringMaker(p) {
+        if (!p || !p.number) return '';
+        var p1 = p.number.length > 3 ? p.number.substr(0, 3) : '';
+        var p2 = p.number.length > 3 ? p.number.substr(3, 6) : '';
+        return "+" + p.country_code + "(" + p.area_code + ") " + p1 + "-" + p2;
+      }
+    },
+    'IL': {
+      code: '972',
+      mask: 'dddddddddd',
+      rules: {
+        "9": null,
+        "d": /\d/
+      },
+      phoneExtractorWidget: function phoneExtractorWidget(value) {
+        if (value[0] === '0') {
+          return [value.substring(1, 3), value.substring(3)];
+        }
+        return ['', ''];
+      },
+      phoneExtractor: function phoneExtractor(value) {
+        if (value[0] === '0' && value.length === 10) {
+          return ['', '972', value.substring(1, 3), value.substring(3), ''];
+        }
+        return ['', '972', '', '', ''];
+      },
+      phoneStringMaker: function phoneStringMaker(p) {
+        if (!p) return '';
+        var countryCode = (p.country_code || '').replace("+");
+        if (countryCode === "972") {
+          return p.number ? "0" + p.area_code + p.number : "";
+        }
+        return defaultStringMaker(p);
+      }
+    },
+    'FR': {
+      code: '33',
+      mask: 'dddddddddd',
+      rules: {
+        "9": null,
+        "d": /\d/
+      },
+      phoneExtractorWidget: function phoneExtractorWidget(value) {
+        if (value[0] === '0') {
+          return [value.substring(1, 3), value.substring(3)];
+        }
+        return ['', ''];
+      },
+      phoneExtractor: function phoneExtractor(value) {
+        if (value[0] === '0' && value.length === 10) {
+          return ['', '33', value.substring(1, 3), value.substring(3), ''];
+        }
+        return ['', '33', '', '', ''];
+      },
+      phoneStringMaker: function phoneStringMaker(p) {
+        if (!p) return '';
+        var countryCode = (p.country_code || '').replace("+");
+        if (countryCode === "33") {
+          return p.number ? "0" + p.area_code + p.number : "";
+        }
+        return defaultStringMaker(p);
+      }
+    },
+    'US': {
+      code: '1',
+      mask: '+1(ddd) ddd-dddd',
+      rules: {
+        "9": null,
+        "d": /\d/
+      },
+      phoneExtractorWidget: function phoneExtractorWidget(value) {
+        var digits = value.replace(/\D/g, '');
+        return [digits.substring(0, 3), digits.substring(3)];
+      },
+      phoneExtractor: defaultExtractor,
+      phoneStringMaker: defaultStringMaker
+    },
+    'UA': {
+      code: '380',
+      mask: '+380(dd) ddd-dddd',
+      phoneExtractorWidget: function phoneExtractorWidget(value) {
+        var digits = value.replace(/\D/g, '');
+        return [digits.substring(0, 2), digits.substring(2)];
+      },
+      phoneExtractor: defaultExtractor,
+      phoneStringMaker: defaultStringMaker
+    },
+    'LV': {
+      code: '371',
+      mask: '+(371) dddddddd',
+      rules: {
+        "9": null,
+        "d": /\d/
+      },
+      phoneExtractorWidget: function phoneExtractorWidget(value) {
+        return ['', value];
+      },
+      phoneExtractor: function phoneExtractor(value) {
+        if (value.indexOf("371") === 0) value = '(371)' + value.substr(3);
+        var regex = /\+?\((\d+)\)\s*(\d*)/;
+        var m = value.match(regex);
+        return m && m[2] ? ['', '371', '', m[2], ''] : ['', '371', '', '', ''];
+      },
+      phoneStringMaker: function phoneStringMaker(p) {
+        if (!p) return '';
+        return "+(371) " + p.area_code + p.number;
+      }
+    },
+    'LV_UNFILLED': {
+      code: '371',
+      mask: '+(371) 99999999',
+      phoneExtractor: function phoneExtractor(value) {
+        if (value.indexOf("371") === 0) value = '(371)' + value.substr(3);
+        var regex = /\+?\((\d+)\)[\s_]*(\d*)/;
+        var m = value.match(regex);
+        return m && m[2] ? ['', '371', '', m[2], ''] : ['', '371', '', '', ''];
+      },
+      phoneStringMaker: function phoneStringMaker(p) {
+        if (!p) return '';
+        return "+(371) " + p.area_code + p.number;
+      }
+    },
+    'LV_DIRTY': {
+      code: '371',
+      mask: '+(371) 99999999',
+      phoneExtractor: function phoneExtractor(value) {
+        if (value.indexOf("371") === 0) value = '(371)' + value.substr(3);
+        var regex = /\+?\((\d+)\)[\s_]*(\d*)/;
+        var m = value.match(regex);
+        return m && m[2] ? ['', '371', '', m[2], ''] : ['', '371', '', '', ''];
+      },
+      phoneStringMaker: function phoneStringMaker(p) {
+        if (!p) return '';
+        return "+(371) " + p.area_code + p.number;
+      }
+    },
+    'RU_UNFILLED': {
+      code: '7',
+      mask: '+7(999) 999-9999',
+      phoneExtractor: function phoneExtractor(value) {
+        var digits = value.replace(/\D/g, '');
+        return ['', '7', digits.substr(1, 3), digits.substr(4), ''];
+      },
+      phoneStringMaker: defaultStringMaker
+    },
+    'RU_DIRTY': {
+      code: '7',
+      mask: '+7(999) 999-9999',
+      phoneExtractor: function phoneExtractor(value) {
+        var normalized = value.replace('-', '');
+        return (/(\+.)\((.{3})\)\s(.{7})/.exec(normalized)
+        );
+      },
+      phoneStringMaker: defaultStringMaker
+    },
+    'RU': {
+      code: '7',
+      mask: '+7(ddd) ddd-dddd',
+      rules: {
+        "9": null,
+        "d": /\d/
+      },
+      phoneExtractorWidget: function phoneExtractorWidget(value) {
+        var digits = value.replace(/\D/g, '');
+        return [digits.substring(0, 3), digits.substring(3)];
+      },
+      phoneExtractor: function phoneExtractor(value) {
+        var digits = value.replace(/\D/g, '');
+        if (digits.length >= 10) {
+          return ['', '7', digits.substring(digits.length - 10, digits.length - 7), digits.substring(digits.length - 7), ''];
+        }
+        return ['', '7', '', '', ''];
+      },
+      phoneStringMaker: defaultStringMaker
+    },
+    'BLR': {
+      code: '7',
+      mask: '+7(ddd) ddd-dddd',
+      rules: {
+        "9": null,
+        "d": /\d/
+      },
+      phoneExtractorWidget: function phoneExtractorWidget(value) {
+        var digits = value.replace(/\D/g, '');
+        return [digits.substring(0, 3), digits.substring(3)];
+      },
+      phoneExtractor: function phoneExtractor(value) {
+        var digits = value.replace(/\D/g, '');
+        if (digits.length >= 10) {
+          return ['', '7', digits.substring(digits.length - 10, digits.length - 7), digits.substring(digits.length - 7), ''];
+        }
+        return ['', '7', '', '', ''];
+      },
+      phoneStringMaker: defaultStringMaker
+    },
+    'CH': {
+      code: '86',
+      mask: '+86 (ddd) ddd-dd-dd',
+      rules: {
+        "9": null,
+        "d": /\d/
+      },
+      phoneExtractorWidget: function phoneExtractorWidget(value) {
+        return [value.substring(0, 3), value.substring(3)];
+      },
+      phoneExtractor: function phoneExtractor(value) {
+        var digits = value.replace(/\D/g, '');
+        if (digits.length >= 10) {
+          return ['', '86', digits.substring(digits.length - 10, digits.length - 7), digits.substring(digits.length - 7), ''];
+        }
+        return ['', '86', '', '', ''];
+      },
+      phoneStringMaker: defaultStringMaker
+    },
+    'DE': {
+      code: '49',
+      rules: {
+        "9": null,
+        "d": /\d/
+      },
+      mask: '+49 (dd dd) dd dd dd',
+      phoneExtractorWidget: function phoneExtractorWidget(value) {
+        var digits = value.replace(/\D/g, '');
+        if (digits.length >= 8) {
+          return [digits.substring(0, 3), digits.substring(3)];
+        }
+        return ['', ''];
+      },
+      phoneExtractor: function phoneExtractor(value) {
+        var digits = value.replace(/\D/g, '');
+        //console.log("digits",digits);
+        if (digits.length >= 10) {
+          console.log(digits.substring(digits.length - 10, digits.length - 6), digits.substring(digits.length - 6));
+          return ['', '49', digits.substring(digits.length - 10, digits.length - 6), digits.substring(digits.length - 6), ''];
+        }
+        return ['', '49', '', '', ''];
+      },
+      phoneStringMaker: function phoneStringMaker(p) {
+        if (!p) return '';
+        if (p.area_code && p.area_code.length >= 4 && p.number && p.number.length >= 6) {
+          return "+" + p.country_code + " (" + p.area_code.substr(0, 2) + " " + p.area_code.substr(2, 2) + ") " + p.number.substr(0, 2) + " " + p.number.substr(2, 2) + " " + p.number.substr(4, 2);
+        }
+        return "+" + p.country_code + " (" + p.area_code + ") " + p.number;
+      }
     }
   };
 
-  var createClass = function () {
-    function defineProperties(target, props) {
-      for (var i = 0; i < props.length; i++) {
-        var descriptor = props[i];
-        descriptor.enumerable = descriptor.enumerable || false;
-        descriptor.configurable = true;
-        if ("value" in descriptor) descriptor.writable = true;
-        Object.defineProperty(target, descriptor.key, descriptor);
-      }
-    }
+var phoneUtils = Object.freeze({
+    getPhoneSettings: getPhoneSettings,
+    getCountryPhoneSettings: getCountryPhoneSettings,
+    getPhoneString: getPhoneString,
+    getPhoneSettingsPhone: getPhoneSettingsPhone,
+    getPhone: getPhone,
+    isValidPhone: isValidPhone,
+    getPhoneData: getPhoneData
+  });
 
-    return function (Constructor, protoProps, staticProps) {
-      if (protoProps) defineProperties(Constructor.prototype, protoProps);
-      if (staticProps) defineProperties(Constructor, staticProps);
-      return Constructor;
-    };
-  }();
+  function getLangCode(lang) {
+    return langCodes[lang] || 'ru-ru';
+  };
 
-  var phoneUtils = function () {
-    function phoneUtils() {
-      classCallCheck(this, phoneUtils);
-    }
+  function getCountryLang(country) {
+    return countryToLang[country] || countryToLang.EN;
+  };
 
-    createClass(phoneUtils, [{
-      key: "getPhoneSettings",
-      value: function getPhoneSettings(business, options) {
-        options = options || {};
-        var country = business.general_info.address.length ? business.general_info.address[0].country : "RU";
-        country = country || "RU";
-        if (options.unfilled && ["RU", "LV"].indexOf(country) >= 0) {
-          country += "_UNFILLED";
-        }
-        if (options.dirty && ["RU", "LV"].indexOf(country) >= 0) {
-          country += '_DIRTY';
-        }
-        return phoneUtils.phoneData[country] || phoneUtils.phoneData["RU"];
-      }
-    }, {
-      key: "getCountryPhoneSettings",
-      value: function getCountryPhoneSettings(countryCode) {
-        return phoneUtils.phoneData[countryCode] || phoneUtils.phoneData["RU"];
-      }
-    }, {
-      key: "getPhoneString",
-      value: function getPhoneString(business, obj) {
-        if (obj && obj.phone && obj.phone.length > 0) {
-          var phone = this.getPhoneSettings(business).phoneStringMaker(obj.phone[0]);
-          return phone.replace("++", "+");
-        }
-        return "";
-      }
-    }, {
-      key: "getPhoneSettingsPhone",
-      value: function getPhoneSettingsPhone(phoneSettings, phoneString) {
-        var data = phoneSettings.phoneExtractor(phoneString);
-        var phone = {
-          country_code: '',
-          area_code: '',
-          number: ''
-        };
-        if (data && data.length) {
-          phone.country_code = data[1];
-          phone.area_code = data[2];
-          phone.number = data[3] + data[4];
-        }
+  var langCodes = {
+    'ru_RU': 'ru-ru',
+    'fr_FR': 'fr-fr',
+    'en_US': 'en-us',
+    'he_IL': 'he-il',
+    'lv_LV': 'lv-lv',
+    'lt_LT': 'lt-lt',
+    'et_ET': 'et-et',
+    'de_DE': 'de-de',
+    'zh_CN': 'zh-cn',
+    'fi_FI': 'fi-fi',
+    'am_AM': 'am-am',
+    'ge_GE': 'ge-ge'
+  };
 
-        return phone;
-      }
-    }, {
-      key: "getPhone",
-      value: function getPhone(business, phoneString) {
-        return this.getPhoneSettingsPhone(this.getPhoneSettings(business), phoneString);
-      }
-    }, {
-      key: "isValidPhone",
-      value: function isValidPhone(parsedPhone) {
-        return parsedPhone && parsedPhone.country_code && typeof parsedPhone.area_code === "string" && typeof parsedPhone.number === "string" && (parsedPhone.area_code + parsedPhone.number).length >= 6;
-      }
-    }], [{
-      key: "defaultExtractor",
-      value: function defaultExtractor(value) {
-        var regex = /\+(\d+)\((\d+)\) (\d+)-(\d+)/;
-        return value.match(regex);
-      }
-    }, {
-      key: "defaultStringMaker",
-      value: function defaultStringMaker(p) {
-        if (!p || !p.number) return '';
-        //let p = person.phone[0];
-        var p1 = p.number.length > 3 ? p.number.substr(0, 3) : '';
-        var p2 = p.number.length > 3 ? p.number.substr(3) : '';
-        return "+" + p.country_code + "(" + p.area_code + ") " + p1 + "-" + p2;
-      }
-    }, {
-      key: "langCodes",
-      get: function get() {
-        return {
-          'ru_RU': 'ru-ru',
-          'fr_FR': 'fr-fr',
-          'en_US': 'en-us',
-          'he_IL': 'he-il',
-          'lv_LV': 'lv-lv',
-          'lt_LT': 'lt-lt',
-          'et_ET': 'et-et',
-          'de_DE': 'de-de',
-          'zh_CN': 'zh-cn',
-          'fi_FI': 'fi-fi',
-          'am_AM': 'am-am',
-          'ge_GE': 'ge-ge'
-        };
-      }
-    }, {
-      key: "countryToLang",
-      get: function get() {
-        return {
-          'EN': 'en_US',
-          'RU': 'ru_RU',
-          'KZ': 'ru_RU',
-          'FR': 'fr_FR',
-          'UA': 'uk_UA',
-          'HE': 'he_IL',
-          'HU': 'hu_HU',
-          'IL': 'he_IL',
-          'LV': 'lv_LV',
-          'LT': 'lt_LT',
-          'ET': 'et_ET',
-          'DE': 'de_DE',
-          'CH': 'zh_CN',
-          'AM': 'am_AM',
-          'GE': 'ge_GE'
-        };
-      }
-    }, {
-      key: "phoneData",
-      get: function get() {
-        return {
-          'AM': {
-            code: '374',
-            mask: '+374(99) 99-99-99',
-            phoneExtractor: function phoneExtractor(value) {
-              var digits = value.replace(/\D/g, '');
-              return ['', '374', digits.substring(3, 5), digits.substring(5), ''];
-            },
-            phoneStringMaker: function phoneStringMaker(p) {
-              if (!p || !p.number) return '';
-              var p1 = p.number.length > 3 ? p.number.substr(0, 2) : '';
-              var p2 = p.number.length > 3 ? p.number.substr(2, 2) : '';
-              var p3 = p.number.length > 3 ? p.number.substr(4, 2) : '';
-              return "+" + p.country_code + "(" + p.area_code + ") " + p1 + "-" + p2 + "-" + p3;
-            }
-          },
-          'GE': {
-            code: '995',
-            mask: '+995(999) 999-999',
-            phoneExtractor: function phoneExtractor(value) {
-              var digits = value.replace(/\D/g, '');
-              return ['', '995', digits.substring(3, 6), digits.substring(6), ''];
-            },
-            phoneStringMaker: function phoneStringMaker(p) {
-              if (!p || !p.number) return '';
-              var p1 = p.number.length > 4 ? p.number.substr(0, 3) : '';
-              var p2 = p.number.length > 4 ? p.number.substr(3, 6) : '';
-              return "+" + p.country_code + "(" + p.area_code + ") " + p1 + "-" + p2;
-            }
-          },
-          'IL': {
-            code: '972',
-            mask: '9999999999',
-            phoneExtractor: function phoneExtractor(value) {
-              if (value[0] === '0' && value.length === 10) {
-                return ['', '972', value.substring(1, 3), value.substring(3), ''];
-              }
-              return ['', '972', '', '', ''];
-            },
-            phoneStringMaker: function phoneStringMaker(p) {
-              if (!p) return '';
-              var countryCode = (p.country_code || '').replace("+");
-              if (countryCode === "972") {
-                return p.number ? "0" + p.area_code + p.number : "";
-              }
-              return phoneUtils.defaultStringMaker(p);
-            }
-          },
-          'FR': {
-            code: '33',
-            mask: '9999999999',
-            phoneExtractor: function phoneExtractor(value) {
-              if (value[0] === '0' && value.length === 10) {
-                return ['', '33', value.substring(1, 3), value.substring(3), ''];
-              }
-              return ['', '33', '', '', ''];
-            },
-            phoneStringMaker: function phoneStringMaker(p) {
-              if (!p) return '';
-              var countryCode = (p.country_code || '').replace("+");
-              if (countryCode === "33") {
-                return p.number ? "0" + p.area_code + p.number : "";
-              }
-              return phoneUtils.defaultStringMaker(p);
-            }
-          },
-          'US': {
-            code: '1',
-            mask: '+1(999) 999-9999',
-            phoneExtractor: phoneUtils.defaultExtractor,
-            phoneStringMaker: phoneUtils.defaultStringMaker
-          },
-          'UA': {
-            code: '380',
-            mask: '+380(99) 999-9999',
-            phoneExtractor: phoneUtils.defaultExtractor,
-            phoneStringMaker: phoneUtils.defaultStringMaker
-          },
-          'LV': {
-            code: '371',
-            mask: '+(371) 99999999',
-            phoneExtractor: function phoneExtractor(value) {
-              if (value.indexOf("371") === 0) value = '(371)' + value.substr(3);
-              var regex = /\+?\((\d+)\)\s*(\d*)/;
-              var m = value.match(regex);
-              return m && m[2] ? ['', '371', '', m[2], ''] : ['', '371', '', '', ''];
-            },
-            phoneStringMaker: function phoneStringMaker(p) {
-              if (!p) return '';
-              return "+(371) " + p.area_code + p.number;
-            }
-          },
-          'LV_UNFILLED': {
-            code: '371',
-            mask: '+(371) 99999999',
-            phoneExtractor: function phoneExtractor(value) {
-              if (value.indexOf("371") === 0) value = '(371)' + value.substr(3);
-              var regex = /\+?\((\d+)\)[\s_]*(\d*)/;
-              var m = value.match(regex);
-              return m && m[2] ? ['', '371', '', m[2], ''] : ['', '371', '', '', ''];
-            },
-            phoneStringMaker: function phoneStringMaker(p) {
-              if (!p) return '';
-              return "+(371) " + p.area_code + p.number;
-            }
-          },
-          'LV_DIRTY': {
-            code: '371',
-            mask: '+(371) 99999999',
-            phoneExtractor: function phoneExtractor(value) {
-              if (value.indexOf("371") === 0) value = '(371)' + value.substr(3);
-              var regex = /\+?\((\d+)\)[\s_]*(\d*)/;
-              var m = value.match(regex);
-              return m && m[2] ? ['', '371', '', m[2], ''] : ['', '371', '', '', ''];
-            },
-            phoneStringMaker: function phoneStringMaker(p) {
-              if (!p) return '';
-              return "+(371) " + p.area_code + p.number;
-            }
-          },
-          'RU_UNFILLED': {
-            code: '7',
-            mask: '+7(999) 999-9999',
-            phoneExtractor: function phoneExtractor(value) {
-              var digits = value.replace(/\D/g, '');
-              return ['', '7', digits.substr(1, 3), digits.substr(4), ''];
-            },
-            phoneStringMaker: phoneUtils.defaultStringMaker
-          },
-          'RU_DIRTY': {
-            code: '7',
-            mask: '+7(999) 999-9999',
-            phoneExtractor: function phoneExtractor(value) {
-              var normalized = value.replace('-', '');
-              return (/(\+.)\((.{3})\)\s(.{7})/.exec(normalized)
-              );
-            },
-            phoneStringMaker: phoneUtils.defaultStringMaker
-          },
-          'RU': {
-            code: '7',
-            mask: '+7(999) 999-9999',
-            phoneExtractor: function phoneExtractor(value) {
-              var digits = value.replace(/\D/g, '');
-              if (digits.length >= 10) {
-                return ['', '7', digits.substring(digits.length - 10, digits.length - 7), digits.substring(digits.length - 7), ''];
-              }
-              return ['', '7', '', '', ''];
-            },
-            phoneStringMaker: phoneUtils.defaultStringMaker
-          },
-          'DE': {
-            code: '49',
-            rules: {
-              "9": null,
-              "d": /\d/
-            },
-            mask: '+49 (dd dd) dd dd dd',
-            phoneExtractor: function phoneExtractor(value) {
-              var digits = value.replace(/\D/g, '');
-              //console.log("digits",digits);
-              if (digits.length >= 10) {
-                console.log(digits.substring(digits.length - 10, digits.length - 6), digits.substring(digits.length - 6));
-                return ['', '49', digits.substring(digits.length - 10, digits.length - 6), digits.substring(digits.length - 6), ''];
-              }
-              return ['', '49', '', '', ''];
-            },
-            phoneStringMaker: function phoneStringMaker(p) {
-              if (!p) return '';
-              if (p.area_code && p.area_code.length >= 4 && p.number && p.number.length >= 6) {
-                return "+" + p.country_code + " (" + p.area_code.substr(0, 2) + " " + p.area_code.substr(2, 2) + ") " + p.number.substr(0, 2) + " " + p.number.substr(2, 2) + " " + p.number.substr(4, 2);
-              }
-              return "+" + p.country_code + " (" + p.area_code + ") " + p.number;
-            }
-          }
-        };
-      }
-    }]);
-    return phoneUtils;
-  }();
+  var countryToLang = {
+    'EN': 'en_US',
+    'RU': 'ru_RU',
+    'KZ': 'ru_RU',
+    'FR': 'fr_FR',
+    'UA': 'uk_UA',
+    'HE': 'he_IL',
+    'HU': 'hu_HU',
+    'IL': 'he_IL',
+    'LV': 'lv_LV',
+    'LT': 'lt_LT',
+    'ET': 'et_ET',
+    'DE': 'de_DE',
+    'CH': 'zh_CN',
+    'AM': 'am_AM',
+    'GE': 'ge_GE'
+  };
+
+var langUtils = Object.freeze({
+    getLangCode: getLangCode,
+    getCountryLang: getCountryLang
+  });
 
   var widgetUtils = {
     DateTime: DateTime,
@@ -1198,7 +1174,8 @@ var Crac = Object.freeze({
     Booking: Booking,
     Crac: Crac,
     roundNumberUsingRule: roundNumberUsingRule,
-    phoneUtils: phoneUtils
+    phoneUtils: phoneUtils,
+    langUtils: langUtils
   };
 
   return widgetUtils;
