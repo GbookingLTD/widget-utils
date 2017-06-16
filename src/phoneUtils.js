@@ -1,51 +1,66 @@
 'use strict';
 
-class phoneUtils {
-
-  static get langCodes() {
-    return {
-      'ru_RU': 'ru-ru',
-      'fr_FR': 'fr-fr',
-      'en_US': 'en-us',
-      'he_IL': 'he-il',
-      'lv_LV': 'lv-lv',
-      'lt_LT': 'lt-lt',
-      'et_ET': 'et-et',
-      'de_DE': 'de-de',
-      'zh_CN': 'zh-cn',
-      'fi_FI': 'fi-fi',
-      'am_AM': 'am-am',
-      'ge_GE': 'ge-ge'
-    };
+  export function getPhoneSettings(business, options) {
+    options = options || {};
+    var country = business.general_info.address.length ? business.general_info.address[0].country : "RU";
+    country = country || "RU";
+    if (options.unfilled && ["RU", "LV"].indexOf(country) >= 0) {
+      country += "_UNFILLED";
+    }
+    if (options.dirty && ["RU", "LV"].indexOf(country) >= 0) {
+      country += '_DIRTY';
+    }
+    return phoneData[country] || phoneData["RU"];
   }
 
-  static get countryToLang() {
-    return {
-      'EN': 'en_US',
-      'RU': 'ru_RU',
-      'KZ': 'ru_RU',
-      'FR': 'fr_FR',
-      'UA': 'uk_UA',
-      'HE': 'he_IL',
-      'HU': 'hu_HU',
-      'IL': 'he_IL',
-      'LV': 'lv_LV',
-      'LT': 'lt_LT',
-      'ET': 'et_ET',
-      'DE': 'de_DE',
-      'CH': 'zh_CN',
-      'AM': 'am_AM',
-      'GE': 'ge_GE'
-    };
+  export function getCountryPhoneSettings(countryCode) {
+    return phoneData[countryCode] || phoneData["RU"];
   }
 
+  export function getPhoneString(business, obj) {
+    if (obj && obj.phone && obj.phone.length > 0) {
+      var phone = getPhoneSettings(business).phoneStringMaker(obj.phone[0]);
+      return phone.replace("++", "+");
+    }
+    return "";
+  }
 
-  static defaultExtractor(value) {
+  export function getPhoneSettingsPhone(phoneSettings, phoneString) {
+    var data = phoneSettings.phoneExtractor(phoneString);
+    var phone = {
+      country_code: '',
+      area_code: '',
+      number: ''
+    };
+    if (data && data.length) {
+      phone.country_code = data[1];
+      phone.area_code = data[2];
+      phone.number = data[3] + data[4];
+    }
+
+    return phone;
+  }
+
+  export function getPhone(business, phoneString) {
+    return getPhoneSettingsPhone(getPhoneSettings(business), phoneString);
+  }
+
+  export function isValidPhone(parsedPhone) {
+    return parsedPhone && parsedPhone.country_code &&
+      typeof parsedPhone.area_code === "string" && typeof parsedPhone.number === "string" &&
+      (parsedPhone.area_code + parsedPhone.number).length >= 6;
+  }
+
+  export function getPhoneData(countryCode) {
+    return phoneData[countryCode];
+  }
+
+  function defaultExtractor(value) {
     let regex = /\+(\d+)\((\d+)\) (\d+)-(\d+)/;
     return value.match(regex);
   }
 
-  static defaultStringMaker(p) {
+function defaultStringMaker(p) {
     if (!p || !p.number) return '';
     //let p = person.phone[0];
     let p1 = p.number.length > 3 ? p.number.substr(0, 3) : '';
@@ -53,8 +68,7 @@ class phoneUtils {
     return `+${p.country_code}(${p.area_code}) ${p1}-${p2}`;
   }
 
-  static get phoneData() {
-    return {
+  var phoneData =  {
       'AM': {
         code: '374',
         mask: '+374(dd) dd-dd-dd',
@@ -128,7 +142,7 @@ class phoneUtils {
           if (countryCode === "972") {
             return p.number ? `0${p.area_code}${p.number}` : "";
           }
-          return phoneUtils.defaultStringMaker(p);
+          return defaultStringMaker(p);
         }
       },
       'FR': {
@@ -156,7 +170,7 @@ class phoneUtils {
           if (countryCode === "33") {
             return p.number ? `0${p.area_code}${p.number}` : "";
           }
-          return phoneUtils.defaultStringMaker(p);
+          return defaultStringMaker(p);
         }
       },
       'US': {
@@ -170,8 +184,8 @@ class phoneUtils {
           var digits = value.replace(/\D/g, '');
           return [digits.substring(0, 3), digits.substring(3)];
         },
-        phoneExtractor: phoneUtils.defaultExtractor,
-        phoneStringMaker: phoneUtils.defaultStringMaker
+        phoneExtractor: defaultExtractor,
+        phoneStringMaker: defaultStringMaker
       },
       'UA': {
         code: '380',
@@ -180,8 +194,8 @@ class phoneUtils {
           var digits = value.replace(/\D/g, '');
           return [digits.substring(0, 2), digits.substring(2)];
         },
-        phoneExtractor: phoneUtils.defaultExtractor,
-        phoneStringMaker: phoneUtils.defaultStringMaker
+        phoneExtractor: defaultExtractor,
+        phoneStringMaker: defaultStringMaker
       },
       'LV': {
         code: '371',
@@ -239,7 +253,7 @@ class phoneUtils {
           var digits = value.replace(/\D/g, '');
           return ['', '7', digits.substr(1, 3), digits.substr(4), ''];
         },
-        phoneStringMaker: phoneUtils.defaultStringMaker
+        phoneStringMaker: defaultStringMaker
       },
       'RU_DIRTY': {
         code: '7',
@@ -248,7 +262,7 @@ class phoneUtils {
           var normalized = value.replace('-', '');
           return /(\+.)\((.{3})\)\s(.{7})/.exec(normalized);
         },
-        phoneStringMaker: phoneUtils.defaultStringMaker
+        phoneStringMaker: defaultStringMaker
       },
       'RU': {
         code: '7',
@@ -268,7 +282,7 @@ class phoneUtils {
           }
           return ['', '7', '', '', ''];
         },
-        phoneStringMaker: phoneUtils.defaultStringMaker
+        phoneStringMaker: defaultStringMaker
       },
       'BLR': {
         code: '7',
@@ -288,7 +302,7 @@ class phoneUtils {
           }
           return ['', '7', '', '', ''];
         },
-        phoneStringMaker: phoneUtils.defaultStringMaker
+        phoneStringMaker: defaultStringMaker
       },
       'CH': {
         code: '86',
@@ -307,7 +321,7 @@ class phoneUtils {
           }
           return ['', '86', '', '', ''];
         },
-        phoneStringMaker: phoneUtils.defaultStringMaker
+        phoneStringMaker: defaultStringMaker
       },
       'DE': {
         code: '49',
@@ -340,8 +354,5 @@ class phoneUtils {
           return `+${p.country_code} (${p.area_code}) ${p.number}`;
         }
       }
-    };
   }
-}
 
-export default phoneUtils;
