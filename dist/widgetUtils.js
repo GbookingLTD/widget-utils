@@ -505,10 +505,14 @@ var Booking = Object.freeze({
       // console.log('--> ', ii, bit, minutes);
 
       if (bit === 1) {
+        available = true;
+        if (currentSlot) {
+          commitSlot();
+        }
+      } else if (bit === 0) {
+
         if (!currentSlot) {
-          // console.info('switched to `1` bit', minutes);
           makeSlot(minutes);
-          // console.log('currentSlot.duration:', currentSlot && currentSlot.duration);
         } else {
           currentSlot.duration += SLOT_SIZE;
           // console.log('currentSlot.duration:', currentSlot && currentSlot.duration);
@@ -518,12 +522,6 @@ var Booking = Object.freeze({
             // console.info('separate by maxSlotSize', maxSlotSize);
             makeSlot(minutes);
           }
-        }
-      } else if (bit === 0) {
-        available = true;
-        if (currentSlot) {
-          // console.info('switched to `0` bit', minutes);
-          commitSlot();
         }
       }
     }
@@ -536,7 +534,7 @@ var Booking = Object.freeze({
     var busySlotsLength = busySlots.length;
 
     // Change start_time bounds according to near available time.
-    if (bitmask[reverseOffset - startBitIndex] === 1) {
+    if (bitmask[reverseOffset - startBitIndex] === 0) {
       var startSlot = busySlots[0];
       for (var _ii = 1; _ii < busySlotsLength; _ii++) {
         var slot = busySlots[_ii];
@@ -553,7 +551,7 @@ var Booking = Object.freeze({
     }
 
     // Change end_time bounds according to near available time.
-    if (bitmask[reverseOffset - endBitIndex + 1] === 1) {
+    if (bitmask[reverseOffset - endBitIndex + 1] === 0) {
       var endSlot = busySlots[busySlotsLength - 1];
       for (var _ii2 = busySlotsLength - 2; _ii2 >= 0; _ii2--) {
         var _slot = busySlots[_ii2];
