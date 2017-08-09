@@ -151,11 +151,15 @@ function getCrunchSlotsFromCrac(cracSlot, date, startMinutes, endMinutes, maxSlo
     // console.log('--> ', ii, bit, minutes);
 
     if (bit === 1) {
-      if (!currentSlot) {
-        // console.info('switched to `1` bit', minutes);
+      available = true;
+      if (currentSlot) {
+        commitSlot();
+      }
+    } else if (bit === 0) {
+
+      if (!currentSlot){
         makeSlot(minutes);
-        // console.log('currentSlot.duration:', currentSlot && currentSlot.duration);
-      } else {
+      } else{
         currentSlot.duration += SLOT_SIZE;
         // console.log('currentSlot.duration:', currentSlot && currentSlot.duration);
 
@@ -165,12 +169,7 @@ function getCrunchSlotsFromCrac(cracSlot, date, startMinutes, endMinutes, maxSlo
           makeSlot(minutes);
         }
       }
-    } else if (bit === 0) {
-      available = true;
-      if (currentSlot) {
-        // console.info('switched to `0` bit', minutes);
-        commitSlot();
-      }
+
     }
   }
 
@@ -182,7 +181,7 @@ function getCrunchSlotsFromCrac(cracSlot, date, startMinutes, endMinutes, maxSlo
   const busySlotsLength = busySlots.length;
 
   // Change start_time bounds according to near available time.
-  if (bitmask[reverseOffset - startBitIndex] === 1) {
+  if (bitmask[reverseOffset - startBitIndex] === 0) {
     let startSlot = busySlots[0];
     for (let ii = 1; ii < busySlotsLength; ii++) {
       let slot = busySlots[ii];
@@ -202,7 +201,7 @@ function getCrunchSlotsFromCrac(cracSlot, date, startMinutes, endMinutes, maxSlo
   }
 
   // Change end_time bounds according to near available time.
-  if (bitmask[reverseOffset - endBitIndex + 1] === 1) {
+  if (bitmask[reverseOffset - endBitIndex + 1] === 0) {
     let endSlot = busySlots[busySlotsLength - 1];
     for (let ii = busySlotsLength - 2; ii >= 0; ii--) {
       let slot = busySlots[ii];
