@@ -501,9 +501,17 @@ var Booking = Object.freeze({
       var bitIndex = reverseOffset - ii;
       var bit = bitmask[bitIndex];
       var minutes = ii * SLOT_SIZE;
+      var bitToCheck = maxSlotSize / SLOT_SIZE;
+      var lastBitToCheck = reverseOffset - ii - bitToCheck;
 
       // console.log('--> ', ii, bit, minutes);
-
+      var countAvailableBits = 0;
+      for (var jj = 0; jj < bitToCheck; jj++) {
+        countAvailableBits = bitmask[reverseOffset - ii - jj] ? countAvailableBits + 1 : countAvailableBits;
+      }
+      if (bit == 1 && countAvailableBits < bitToCheck) {
+        bit = 0;
+      }
       if (bit === 1) {
         available = true;
         if (currentSlot) {
@@ -590,6 +598,7 @@ var Booking = Object.freeze({
    */
   function toBusySlots(cracSlots, business, taxonomyIDs) {
     var resourceIds = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : [];
+    var serviceDuration = arguments[4];
 
     var businessTimetable = business.general_info.timetable;
     var daysOff = [];

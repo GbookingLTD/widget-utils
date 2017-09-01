@@ -145,12 +145,20 @@ function getCrunchSlotsFromCrac(cracSlot, date, startMinutes, endMinutes, maxSlo
   // Walking through bitmaks in reverse direction.
   for (var ii = startBitIndex; ii < endBitIndex; ii++) {
     const bitIndex = reverseOffset - ii;
-    const bit = bitmask[bitIndex];
+    var bit = bitmask[bitIndex];
     const minutes = ii * SLOT_SIZE;
+    const bitToCheck = maxSlotSize / SLOT_SIZE;
+    const lastBitToCheck = reverseOffset - ii - bitToCheck;
 
     // console.log('--> ', ii, bit, minutes);
-
-    if (bit === 1) {
+    var countAvailableBits = 0;
+    for (var jj = 0; jj < bitToCheck; jj++) { 
+      countAvailableBits = bitmask[reverseOffset - ii - jj] ? countAvailableBits+1: countAvailableBits;
+    }
+    if (bit == 1 && countAvailableBits < bitToCheck){
+      bit = 0;
+    }
+    if (bit === 1) {  
       available = true;
       if (currentSlot) {
         commitSlot();
@@ -240,7 +248,7 @@ function isoDateForDayOff(date) {
  * @param  {CracBusySlots|Array<Object>} cracSlots CRAC response format
  * @return {CrunBusySlot|Object}           Crunch response format
  */
-export function toBusySlots(cracSlots, business, taxonomyIDs, resourceIds = []) {
+export function toBusySlots(cracSlots, business, taxonomyIDs, resourceIds = [], serviceDuration) {
   const businessTimetable = business.general_info.timetable;
   const daysOff = [];
   const excludedResources = [];
