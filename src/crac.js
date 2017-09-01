@@ -248,7 +248,7 @@ function isoDateForDayOff(date) {
  * @param  {CracBusySlots|Array<Object>} cracSlots CRAC response format
  * @return {CrunBusySlot|Object}           Crunch response format
  */
-export function toBusySlots(cracSlots, business, taxonomyIDs, resourceIds = [], serviceDuration) {
+export function toBusySlots(cracSlots, business, taxonomyIDs, resourceIds = []) {
   const businessTimetable = business.general_info.timetable;
   const daysOff = [];
   const excludedResources = [];

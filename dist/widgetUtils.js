@@ -598,7 +598,6 @@ var Booking = Object.freeze({
    */
   function toBusySlots(cracSlots, business, taxonomyIDs) {
     var resourceIds = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : [];
-    var serviceDuration = arguments[4];
 
     var businessTimetable = business.general_info.timetable;
     var daysOff = [];
