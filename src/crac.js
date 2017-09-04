@@ -54,7 +54,30 @@ function getDayBoundsFromTimetable(date, timetable) {
   return null;
 }
 
-
+function getDayBoundsFromCracSlot(date,slot){
+  let allDayBounds = null;
+  const bitmask = cracValueToBits(slot.bitset);
+  var firstActiveBit = bitmask.length;
+  var daySize = 24 * 60 / SLOT_SIZE;
+  var lastActiveBit = bitmask.length - daySize;
+  for (var ii=bitmask.length - 1; ii > bitmask.length - 24 * 60 /SLOT_SIZE; ii--){
+    if ( bitmask[ii] == 1 &&  firstActiveBit ==  bitmask.length){
+      firstActiveBit = ii;
+    }
+    if ( bitmask[ii] == 1){
+      lastActiveBit = ii;
+    }
+  }
+  if (firstActiveBit != bitmask.length){
+    allDayBounds = {};
+    allDayBounds.start = (bitmask.length -1 - firstActiveBit) * SLOT_SIZE;
+    allDayBounds.start_time = moment(date).add(allDayBounds.start,'minutes').toISOString();
+    allDayBounds.end = (bitmask.length - lastActiveBit) * SLOT_SIZE;
+    allDayBounds.end_time = moment(date).add(allDayBounds.end,'minutes').toISOString();
+  }
+  console.log(bitmask);
+  return allDayBounds;
+}
 // This function takes day bounds from getDayBoundsFromTimetable for every timetables
 // and computes min-start and max-end bounds from all given timetables.
 // It allows us to show correct day bounds for 'any free worker' option.
@@ -147,17 +170,9 @@ function getCrunchSlotsFromCrac(cracSlot, date, startMinutes, endMinutes, maxSlo
     const bitIndex = reverseOffset - ii;
     var bit = bitmask[bitIndex];
     const minutes = ii * SLOT_SIZE;
-    const bitToCheck = maxSlotSize / SLOT_SIZE;
-    const lastBitToCheck = reverseOffset - ii - bitToCheck;
+  
 
-    // console.log('--> ', ii, bit, minutes);
-    var countAvailableBits = 0;
-    for (var jj = 0; jj < bitToCheck; jj++) { 
-      countAvailableBits = bitmask[reverseOffset - ii - jj] ? countAvailableBits+1: countAvailableBits;
-    }
-    if (bit == 1 && countAvailableBits < bitToCheck){
-      bit = 0;
-    }
+  
     if (bit === 1) {  
       available = true;
       if (currentSlot) {
@@ -299,7 +314,11 @@ export function toBusySlots(cracSlots, business, taxonomyIDs, resourceIds = []) 
     days: _.map(cracSlots, function(cracSlot) {
       const { date } = cracSlot;
 
-      const dayBounds = getDayBoundsFromAllTimetables(date, resourceTimetables);
+      var dayBounds = getDayBoundsFromAllTimetables(date, resourceTimetables);
+
+      if (!dayBounds){
+        dayBounds = getDayBoundsFromCracSlot(date,cracSlot);
+      }
 
       if (!dayBounds) {
         const dayOffDate = isoDateForDayOff(date);
@@ -316,12 +335,7 @@ export function toBusySlots(cracSlots, business, taxonomyIDs, resourceIds = []) 
         let dayStart = dayBounds.start;
         let startTime = dayBounds.start_time;
         const dayEnd = dayBounds.end;
-        // if (now.isSame(date, 'day')) {
-        //   const nowMinutes = now.hours() * 60 + now.minutes();
-        //   dayStart = Math.ceil(nowMinutes / maxSlotDuration) * maxSlotDuration;
-        //   dayStart = Math.min(dayStart, dayEnd);
-        //   startTime = minutesToDate(now, dayStart);
-        // }
+
 
         const slots =  getCrunchSlotsFromCrac(cracSlot, date, dayStart, dayEnd, maxSlotDuration);
 

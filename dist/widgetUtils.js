@@ -402,6 +402,30 @@ var Booking = Object.freeze({
     return null;
   }
 
+  function getDayBoundsFromCracSlot(date, slot) {
+    var allDayBounds = null;
+    var bitmask = cracValueToBits(slot.bitset);
+    var firstActiveBit = bitmask.length;
+    var daySize = 24 * 60 / SLOT_SIZE;
+    var lastActiveBit = bitmask.length - daySize;
+    for (var ii = bitmask.length - 1; ii > bitmask.length - 24 * 60 / SLOT_SIZE; ii--) {
+      if (bitmask[ii] == 1 && firstActiveBit == bitmask.length) {
+        firstActiveBit = ii;
+      }
+      if (bitmask[ii] == 1) {
+        lastActiveBit = ii;
+      }
+    }
+    if (firstActiveBit != bitmask.length) {
+      allDayBounds = {};
+      allDayBounds.start = (bitmask.length - 1 - firstActiveBit) * SLOT_SIZE;
+      allDayBounds.start_time = moment(date).add(allDayBounds.start, 'minutes').toISOString();
+      allDayBounds.end = (bitmask.length - lastActiveBit) * SLOT_SIZE;
+      allDayBounds.end_time = moment(date).add(allDayBounds.end, 'minutes').toISOString();
+    }
+    console.log(bitmask);
+    return allDayBounds;
+  }
   // This function takes day bounds from getDayBoundsFromTimetable for every timetables
   // and computes min-start and max-end bounds from all given timetables.
   // It allows us to show correct day bounds for 'any free worker' option.
@@ -501,17 +525,7 @@ var Booking = Object.freeze({
       var bitIndex = reverseOffset - ii;
       var bit = bitmask[bitIndex];
       var minutes = ii * SLOT_SIZE;
-      var bitToCheck = maxSlotSize / SLOT_SIZE;
-      var lastBitToCheck = reverseOffset - ii - bitToCheck;
 
-      // console.log('--> ', ii, bit, minutes);
-      var countAvailableBits = 0;
-      for (var jj = 0; jj < bitToCheck; jj++) {
-        countAvailableBits = bitmask[reverseOffset - ii - jj] ? countAvailableBits + 1 : countAvailableBits;
-      }
-      if (bit == 1 && countAvailableBits < bitToCheck) {
-        bit = 0;
-      }
       if (bit === 1) {
         available = true;
         if (currentSlot) {
@@ -648,6 +662,10 @@ var Booking = Object.freeze({
         var dayBounds = getDayBoundsFromAllTimetables(date, resourceTimetables);
 
         if (!dayBounds) {
+          dayBounds = getDayBoundsFromCracSlot(date, cracSlot);
+        }
+
+        if (!dayBounds) {
           var dayOffDate = isoDateForDayOff(date);
           business.resources.forEach(function (rr) {
             return excludedResource(rr.id, dayOffDate);
@@ -664,12 +682,6 @@ var Booking = Object.freeze({
           var dayStart = dayBounds.start;
           var startTime = dayBounds.start_time;
           var dayEnd = dayBounds.end;
-          // if (now.isSame(date, 'day')) {
-          //   const nowMinutes = now.hours() * 60 + now.minutes();
-          //   dayStart = Math.ceil(nowMinutes / maxSlotDuration) * maxSlotDuration;
-          //   dayStart = Math.min(dayStart, dayEnd);
-          //   startTime = minutesToDate(now, dayStart);
-          // }
 
           var slots = getCrunchSlotsFromCrac(cracSlot, date, dayStart, dayEnd, maxSlotDuration);
 
