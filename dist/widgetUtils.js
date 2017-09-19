@@ -193,6 +193,8 @@ var DateTime = Object.freeze({
       if (!_.isUndefined(slot.busy) && slot.busy && _.isUndefined(slot.space_left)) {
         return;
       }
+      var businessNow = moment.utc();
+      var businessNowLikeUTC = getDateLikeUTC(businessNow);
 
       var slot_time = moment.utc(day.date).add(slot.time, 'm');
       var duration = slot.duration || slotSize;
@@ -211,7 +213,7 @@ var DateTime = Object.freeze({
         actualSlot: actualSlot,
         slotTime: slot_time.format('LT'),
         spaceLeft: spaceLeft,
-        busy: now.isAfter(actualSlot) || spaceLeft === 0
+        busy: businessNowLikeUTC.isAfter(actualSlot) || spaceLeft === 0
       });
       slot_time.add('minutes', slotSize);
     });
