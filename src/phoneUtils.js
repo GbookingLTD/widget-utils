@@ -68,6 +68,14 @@ function defaultStringMaker(p) {
     return `+${p.country_code}(${p.area_code}) ${p1}-${p2}`;
   }
 
+  export function getCountryPhoneDigits(country){
+    return countryPhoneDigits[country] || 11;
+  }
+
+  var countryPhoneDigits = {
+    'UZ': 12,
+  };
+
   var phoneData =  {
       'AM': {
         code: '374',
@@ -281,6 +289,26 @@ function defaultStringMaker(p) {
             return ['', '7', digits.substring(digits.length - 10, digits.length - 7), digits.substring(digits.length - 7), ''];
           }
           return ['', '7', '', '', ''];
+        },
+        phoneStringMaker: defaultStringMaker
+      },
+      'UZ': {
+        code: '998',
+        mask: '+998(dd) ddd-dddd',
+        rules: {
+          "9": null,
+          "d": /\d/
+        },
+        phoneExtractorWidget: function (value) {
+          var digits = value.replace(/\D/g, '');
+          return [digits.substring(0, 3), digits.substring(3)];
+        },
+        phoneExtractor: function (value) {
+          var digits = value.replace(/\D/g, '');
+          if (digits.length >= 10) {
+            return ['', '998', digits.substring(digits.length - 9, digits.length - 6), digits.substring(digits.length - 6), ''];
+          }
+          return ['', '998', '', '', ''];
         },
         phoneStringMaker: defaultStringMaker
       },

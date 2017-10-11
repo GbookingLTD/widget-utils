@@ -843,6 +843,14 @@ var Crac = Object.freeze({
     return "+" + p.country_code + "(" + p.area_code + ") " + p1 + "-" + p2;
   }
 
+  function getCountryPhoneDigits(country){
+    return countryPhoneDigits[country] || 11;
+  }
+
+  var countryPhoneDigits = {
+    'UZ': 12,
+  };
+
   var phoneData = {
     'AM': {
       code: '374',
@@ -1060,6 +1068,26 @@ var Crac = Object.freeze({
       },
       phoneStringMaker: defaultStringMaker
     },
+    'UZ': {
+      code: '998',
+      mask: '+998(dd) ddd-dddd',
+      rules: {
+        "9": null,
+        "d": /\d/
+      },
+      phoneExtractorWidget: function phoneExtractorWidget(value) {
+        var digits = value.replace(/\D/g, '');
+        return [digits.substring(0, 3), digits.substring(3)];
+      },
+      phoneExtractor: function phoneExtractor(value) {
+        var digits = value.replace(/\D/g, '');
+        if (digits.length >= 10) {
+          return ['', '998', digits.substring(digits.length - 9, digits.length - 6), digits.substring(digits.length - 6), ''];
+        }
+        return ['', '998', '', '', ''];
+      },
+      phoneStringMaker: defaultStringMaker
+    },
     'BLR': {
       code: '7',
       mask: '+7(ddd) ddd-dddd',
@@ -1139,7 +1167,8 @@ var phoneUtils = Object.freeze({
     getPhoneSettingsPhone: getPhoneSettingsPhone,
     getPhone: getPhone,
     isValidPhone: isValidPhone,
-    getPhoneData: getPhoneData
+    getPhoneData: getPhoneData,
+    getCountryPhoneDigits: getCountryPhoneDigits
   });
 
   function getLangCode(lang) {
