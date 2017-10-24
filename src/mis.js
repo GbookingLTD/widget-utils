@@ -1,54 +1,58 @@
 'use strict';
-
+import _ from 'lodash';
 
 const AVAILABLE_PROVIDER_SETTINS = {
   'kgnja': {
-    availActions: ['reserve', 'confirm', 'cancel']
+    availActions: ['scheduleUpdate']
   },
   'medexis': {
-    availActions: ['reserve', 'confirm', 'cancel']
+    availActions: ['scheduleUpdate']
   },
   'onclinic': {
-    availActions: ['reserve', 'confirm', 'cancel']
+    availActions: ['scheduleUpdate']
   },
   'medwork': {
-    availActions: ['reserve', 'confirm', 'cancel']
+    availActions: ['scheduleUpdate']
   },
   'ugmk': {
-    availActions: ['reserve', 'confirm', 'cancel']
+    availActions: ['scheduleUpdate']
   },
   'clinic365': {
-    availActions: ['reserve', 'confirm', 'cancel']
+    availActions: ['scheduleUpdate']
   },
   'medicina': {
-    availActions: ['reserve', 'confirm', 'cancel']
-    // hasReservePreparation: true,
-    // reservePrepActions: ['fetch_slots']
+    availActions: ['scheduleUpdate']
   },
   'infoclinica': {
-    availActions: ['reserve', 'confirm', 'cancel'],
-    uploadWorkerImages: true
+    availActions: ['scheduleUpdate'],
   },
   'ident': {
     availActions: []
   },
   'onec': {
-    availActions: ['reserve', 'confirm', 'cancel']
+    availActions: ['scheduleUpdate']
   },
   'smclinic': {
-    availActions: ['reserve', 'confirm', 'cancel']
+    availActions: ['scheduleUpdate']
   },
   'phoenix': {
-    availActions: ['reserve', 'confirm', 'cancel']
+    availActions: ['scheduleUpdate']
   },
   'helix': {
-    availActions: ['reserve', 'confirm', 'cancel']
+    availActions: ['scheduleUpdate']
   },
 
 };
 
 const AVAILABLE_PROVIDERS = Object.keys(AVAILABLE_PROVIDER_SETTINS);
 
+var isActiveMISIntegration = function(provider, business, action) {
+  return business.integrationData && business.integrationData[provider] &&
+    business.integrationData[provider].active &&
+    (AVAILABLE_PROVIDER_SETTINS[provider].availActions.indexOf(action) >= 0 ||
+      business.integrationData[provider].availActions &&
+      business.integrationData[provider].availActions.indexOf(action) >= 0);
+}
 
 export function hasActiveMISIntegration(business) {
   return _.find(AVAILABLE_PROVIDERS, function(provider) {
