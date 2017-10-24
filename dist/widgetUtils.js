@@ -1,10 +1,10 @@
 (function (global, factory) {
   typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory(require('lodash'), require('moment')) :
   typeof define === 'function' && define.amd ? define(['lodash', 'moment'], factory) :
-  (global.WidgetUtils = factory(global._$1,global.moment));
-}(this, function (_$1,moment) { 'use strict';
+  (global.WidgetUtils = factory(global._,global.moment));
+}(this, function (_,moment) { 'use strict';
 
-  _$1 = 'default' in _$1 ? _$1['default'] : _$1;
+  _ = 'default' in _ ? _['default'] : _;
   moment = 'default' in moment ? moment['default'] : moment;
 
   function setBusinessDateTZ(businessData, date) {
@@ -40,14 +40,14 @@
    * @param utcDate
    */
   function startBusinessTZDay(businessData, utcDate) {
-    var originalDateUnits = _$1.reduce(['year', 'month', 'date'], function (ret, unit) {
+    var originalDateUnits = _.reduce(['year', 'month', 'date'], function (ret, unit) {
       ret[unit] = utcDate.get(unit);
       return ret;
     }, {});
 
     setBusinessDateTZ(businessData, utcDate);
 
-    _$1.each(originalDateUnits, function (value, unit) {
+    _.each(originalDateUnits, function (value, unit) {
       utcDate.set(unit, value);
     });
 
@@ -190,7 +190,7 @@ var DateTime = Object.freeze({
   function calculateDaySlotsV2(day, taxonomy, slotSize, busySlots) {
     var slots = [];
     day.slots.forEach(function (slot) {
-      if (!_$1.isUndefined(slot.busy) && slot.busy && _$1.isUndefined(slot.space_left)) {
+      if (!_.isUndefined(slot.busy) && slot.busy && _.isUndefined(slot.space_left)) {
         return;
       }
       var businessNow = moment.utc();
@@ -199,7 +199,7 @@ var DateTime = Object.freeze({
       var slot_time = moment.utc(day.date).add(slot.time, 'm');
       var duration = slot.duration || slotSize;
       var spaceLeft;
-      if (!_$1.isUndefined(slot.space_left)) {
+      if (!_.isUndefined(slot.space_left)) {
         spaceLeft = slot.space_left;
         if (spaceLeft === 1 && busySlots.maxSlotCapacity > 0) {
           spaceLeft = busySlots.maxSlotCapacity;
@@ -260,7 +260,7 @@ var DateTime = Object.freeze({
   function isBusyDay(day, crunchv2, taxonomy, slotSize, busySlots, businessData) {
     var calculateDaySlots = crunchv2 ? calculateDaySlotsV2 : calculateDaySlotsV1;
     var slots = calculateDaySlots(day, taxonomy, slotSize, busySlots, businessData);
-    var hasFreeSlot = _$1.find(slots, { busy: false });
+    var hasFreeSlot = _.find(slots, { busy: false });
     return !hasFreeSlot;
   }
 
@@ -317,7 +317,7 @@ var BusySlots = Object.freeze({
     if (isDateForbidden(widgetConfiguration, day.date)) {
       return;
     }
-    var slotDay = _$1(busySlots.days).find(function (d) {
+    var slotDay = _(busySlots.days).find(function (d) {
       return moment(d.date).isSame(day.date, 'day');
     });
     if (slotDay) {
@@ -634,11 +634,11 @@ var Booking = Object.freeze({
     }
 
     if (taxonomyIDs && taxonomyIDs.length) {
-      var taxonomies = _$1.filter(business.taxonomies, function (tt) {
+      var taxonomies = _.filter(business.taxonomies, function (tt) {
         return taxonomyIDs.indexOf(String(tt.id)) >= 0;
       });
 
-      var maxTaxonomyDuration = _$1.max(taxonomies, 'duration');
+      var maxTaxonomyDuration = _.max(taxonomies, 'duration');
       if (maxTaxonomyDuration) {
         maxSlotDuration = maxTaxonomyDuration.duration;
       }
@@ -657,7 +657,7 @@ var Booking = Object.freeze({
       maxSlotCapacity: 1,
       daysOff: daysOff,
       excludedResources: excludedResources,
-      days: _$1.map(cracSlots, function (cracSlot) {
+      days: _.map(cracSlots, function (cracSlot) {
         var date = cracSlot.date;
 
 
@@ -1219,51 +1219,52 @@ var langUtils = Object.freeze({
 
   var AVAILABLE_PROVIDER_SETTINS = {
     'kgnja': {
-      availActions: ['reserve', 'confirm', 'cancel']
+      availActions: ['scheduleUpdate']
     },
     'medexis': {
-      availActions: ['reserve', 'confirm', 'cancel']
+      availActions: ['scheduleUpdate']
     },
     'onclinic': {
-      availActions: ['reserve', 'confirm', 'cancel']
+      availActions: ['scheduleUpdate']
     },
     'medwork': {
-      availActions: ['reserve', 'confirm', 'cancel']
+      availActions: ['scheduleUpdate']
     },
     'ugmk': {
-      availActions: ['reserve', 'confirm', 'cancel']
+      availActions: ['scheduleUpdate']
     },
     'clinic365': {
-      availActions: ['reserve', 'confirm', 'cancel']
+      availActions: ['scheduleUpdate']
     },
     'medicina': {
-      availActions: ['reserve', 'confirm', 'cancel']
-      // hasReservePreparation: true,
-      // reservePrepActions: ['fetch_slots']
+      availActions: ['scheduleUpdate']
     },
     'infoclinica': {
-      availActions: ['reserve', 'confirm', 'cancel'],
-      uploadWorkerImages: true
+      availActions: ['scheduleUpdate']
     },
     'ident': {
       availActions: []
     },
     'onec': {
-      availActions: ['reserve', 'confirm', 'cancel']
+      availActions: ['scheduleUpdate']
     },
     'smclinic': {
-      availActions: ['reserve', 'confirm', 'cancel']
+      availActions: ['scheduleUpdate']
     },
     'phoenix': {
-      availActions: ['reserve', 'confirm', 'cancel']
+      availActions: ['scheduleUpdate']
     },
     'helix': {
-      availActions: ['reserve', 'confirm', 'cancel']
+      availActions: ['scheduleUpdate']
     }
 
   };
 
   var AVAILABLE_PROVIDERS = Object.keys(AVAILABLE_PROVIDER_SETTINS);
+
+  var isActiveMISIntegration = function isActiveMISIntegration(provider, business, action) {
+    return business.integrationData && business.integrationData[provider] && business.integrationData[provider].active && (AVAILABLE_PROVIDER_SETTINS[provider].availActions.indexOf(action) >= 0 || business.integrationData[provider].availActions && business.integrationData[provider].availActions.indexOf(action) >= 0);
+  };
 
   function hasActiveMISIntegration(business) {
     return _.find(AVAILABLE_PROVIDERS, function (provider) {
