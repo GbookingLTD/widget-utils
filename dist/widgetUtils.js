@@ -1266,7 +1266,7 @@ var langUtils = Object.freeze({
     return business.integrationData && business.integrationData[provider] && business.integrationData[provider].active && (AVAILABLE_PROVIDER_SETTINS[provider].availActions.indexOf(action) >= 0 || business.integrationData[provider].availActions && business.integrationData[provider].availActions.indexOf(action) >= 0);
   };
 
-  function hasActiveMISIntegration(business) {
+  function hasActiveMISIntegration(business, action) {
     return _.find(AVAILABLE_PROVIDERS, function (provider) {
       return isActiveMISIntegration(provider, business, action);
     });

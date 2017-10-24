@@ -54,7 +54,7 @@ var isActiveMISIntegration = function(provider, business, action) {
       business.integrationData[provider].availActions.indexOf(action) >= 0);
 }
 
-export function hasActiveMISIntegration(business) {
+export function hasActiveMISIntegration(business, action) {
   return _.find(AVAILABLE_PROVIDERS, function(provider) {
     return isActiveMISIntegration(provider, business, action);
   });
