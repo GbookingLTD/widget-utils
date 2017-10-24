@@ -1,10 +1,10 @@
 (function (global, factory) {
   typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory(require('lodash'), require('moment')) :
   typeof define === 'function' && define.amd ? define(['lodash', 'moment'], factory) :
-  (global.WidgetUtils = factory(global._,global.moment));
-}(this, function (_,moment) { 'use strict';
+  (global.WidgetUtils = factory(global._$1,global.moment));
+}(this, function (_$1,moment) { 'use strict';
 
-  _ = 'default' in _ ? _['default'] : _;
+  _$1 = 'default' in _$1 ? _$1['default'] : _$1;
   moment = 'default' in moment ? moment['default'] : moment;
 
   function setBusinessDateTZ(businessData, date) {
@@ -40,14 +40,14 @@
    * @param utcDate
    */
   function startBusinessTZDay(businessData, utcDate) {
-    var originalDateUnits = _.reduce(['year', 'month', 'date'], function (ret, unit) {
+    var originalDateUnits = _$1.reduce(['year', 'month', 'date'], function (ret, unit) {
       ret[unit] = utcDate.get(unit);
       return ret;
     }, {});
 
     setBusinessDateTZ(businessData, utcDate);
 
-    _.each(originalDateUnits, function (value, unit) {
+    _$1.each(originalDateUnits, function (value, unit) {
       utcDate.set(unit, value);
     });
 
@@ -190,7 +190,7 @@ var DateTime = Object.freeze({
   function calculateDaySlotsV2(day, taxonomy, slotSize, busySlots) {
     var slots = [];
     day.slots.forEach(function (slot) {
-      if (!_.isUndefined(slot.busy) && slot.busy && _.isUndefined(slot.space_left)) {
+      if (!_$1.isUndefined(slot.busy) && slot.busy && _$1.isUndefined(slot.space_left)) {
         return;
       }
       var businessNow = moment.utc();
@@ -199,7 +199,7 @@ var DateTime = Object.freeze({
       var slot_time = moment.utc(day.date).add(slot.time, 'm');
       var duration = slot.duration || slotSize;
       var spaceLeft;
-      if (!_.isUndefined(slot.space_left)) {
+      if (!_$1.isUndefined(slot.space_left)) {
         spaceLeft = slot.space_left;
         if (spaceLeft === 1 && busySlots.maxSlotCapacity > 0) {
           spaceLeft = busySlots.maxSlotCapacity;
@@ -260,7 +260,7 @@ var DateTime = Object.freeze({
   function isBusyDay(day, crunchv2, taxonomy, slotSize, busySlots, businessData) {
     var calculateDaySlots = crunchv2 ? calculateDaySlotsV2 : calculateDaySlotsV1;
     var slots = calculateDaySlots(day, taxonomy, slotSize, busySlots, businessData);
-    var hasFreeSlot = _.find(slots, { busy: false });
+    var hasFreeSlot = _$1.find(slots, { busy: false });
     return !hasFreeSlot;
   }
 
@@ -317,7 +317,7 @@ var BusySlots = Object.freeze({
     if (isDateForbidden(widgetConfiguration, day.date)) {
       return;
     }
-    var slotDay = _(busySlots.days).find(function (d) {
+    var slotDay = _$1(busySlots.days).find(function (d) {
       return moment(d.date).isSame(day.date, 'day');
     });
     if (slotDay) {
@@ -634,11 +634,11 @@ var Booking = Object.freeze({
     }
 
     if (taxonomyIDs && taxonomyIDs.length) {
-      var taxonomies = _.filter(business.taxonomies, function (tt) {
+      var taxonomies = _$1.filter(business.taxonomies, function (tt) {
         return taxonomyIDs.indexOf(String(tt.id)) >= 0;
       });
 
-      var maxTaxonomyDuration = _.max(taxonomies, 'duration');
+      var maxTaxonomyDuration = _$1.max(taxonomies, 'duration');
       if (maxTaxonomyDuration) {
         maxSlotDuration = maxTaxonomyDuration.duration;
       }
@@ -657,7 +657,7 @@ var Booking = Object.freeze({
       maxSlotCapacity: 1,
       daysOff: daysOff,
       excludedResources: excludedResources,
-      days: _.map(cracSlots, function (cracSlot) {
+      days: _$1.map(cracSlots, function (cracSlot) {
         var date = cracSlot.date;
 
 
@@ -843,12 +843,12 @@ var Crac = Object.freeze({
     return "+" + p.country_code + "(" + p.area_code + ") " + p1 + "-" + p2;
   }
 
-  function getCountryPhoneDigits(country){
+  function getCountryPhoneDigits(country) {
     return countryPhoneDigits[country] || 11;
   }
 
   var countryPhoneDigits = {
-    'UZ': 12,
+    'UZ': 12
   };
 
   var phoneData = {
@@ -1217,6 +1217,64 @@ var langUtils = Object.freeze({
     getCountryLang: getCountryLang
   });
 
+  var AVAILABLE_PROVIDER_SETTINS = {
+    'kgnja': {
+      availActions: ['reserve', 'confirm', 'cancel']
+    },
+    'medexis': {
+      availActions: ['reserve', 'confirm', 'cancel']
+    },
+    'onclinic': {
+      availActions: ['reserve', 'confirm', 'cancel']
+    },
+    'medwork': {
+      availActions: ['reserve', 'confirm', 'cancel']
+    },
+    'ugmk': {
+      availActions: ['reserve', 'confirm', 'cancel']
+    },
+    'clinic365': {
+      availActions: ['reserve', 'confirm', 'cancel']
+    },
+    'medicina': {
+      availActions: ['reserve', 'confirm', 'cancel']
+      // hasReservePreparation: true,
+      // reservePrepActions: ['fetch_slots']
+    },
+    'infoclinica': {
+      availActions: ['reserve', 'confirm', 'cancel'],
+      uploadWorkerImages: true
+    },
+    'ident': {
+      availActions: []
+    },
+    'onec': {
+      availActions: ['reserve', 'confirm', 'cancel']
+    },
+    'smclinic': {
+      availActions: ['reserve', 'confirm', 'cancel']
+    },
+    'phoenix': {
+      availActions: ['reserve', 'confirm', 'cancel']
+    },
+    'helix': {
+      availActions: ['reserve', 'confirm', 'cancel']
+    }
+
+  };
+
+  var AVAILABLE_PROVIDERS = Object.keys(AVAILABLE_PROVIDER_SETTINS);
+
+  function hasActiveMISIntegration(business) {
+    return _.find(AVAILABLE_PROVIDERS, function (provider) {
+      return isActiveMISIntegration(provider, business, action);
+    });
+  };
+
+var Mis = Object.freeze({
+    hasActiveMISIntegration: hasActiveMISIntegration
+  });
+
   var widgetUtils = {
     DateTime: DateTime,
     BusySlots: BusySlots,
@@ -1224,7 +1282,8 @@ var langUtils = Object.freeze({
     Crac: Crac,
     roundNumberUsingRule: roundNumberUsingRule,
     phoneUtils: phoneUtils,
-    langUtils: langUtils
+    langUtils: langUtils,
+    Mis: Mis
   };
 
   return widgetUtils;
