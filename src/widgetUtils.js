@@ -5,7 +5,6 @@ import * as Crac from './crac';
 import { roundNumberUsingRule } from './roundNumberUsingRule';
 import * as phoneUtils from './phoneUtils';
 import * as langUtils from './langUtils';
-import * as Mis from './mis';
 
 export default {
   DateTime,
@@ -14,6 +13,5 @@ export default {
   Crac,
   roundNumberUsingRule,
   phoneUtils,
-  langUtils,
-  Mis
+  langUtils
 };
