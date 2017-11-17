@@ -611,6 +611,11 @@ var Booking = Object.freeze({
     return moment(date).toISOString().replace('.000Z', 'Z');
   }
   
+  /**
+   * return excution time of taxonomy by specific worker
+   * @param {Object} businessWorker 
+   * @param {Object} businessTaxonomy 
+   */
   function resourceTaxonomyDuration(businessWorker, businessTaxonomy) {
     var duration = businessTaxonomy.duration;
     if (businessWorker.taxonomyLevels && businessWorker.taxonomyLevels.length > 0) {
@@ -625,9 +630,14 @@ var Booking = Object.freeze({
     return duration;
   }
 
-  function getServiceDurationByWorker(businessResources, businessTaonomies) {
+  /**
+   * return map of taxonomies, and foreach taxonomy map of resources and durations
+   * @param {Array} businessResources 
+   * @param {Array} businessTaxonomies 
+   */
+  function getServiceDurationByWorker(businessResources, businessTaxonomies) {
     var taxonomyDuration = {};
-    businessTaonomies.forEach(function (t) {
+    businessTaxonomies.forEach(function (t) {
       taxonomyDuration[t.id] = {};
       businessResources.forEach(function (r) {
         taxonomyDuration[t.id][r.id] = resourceTaxonomyDuration(r, t);
@@ -636,6 +646,12 @@ var Booking = Object.freeze({
     return taxonomyDuration;
   }
 
+  /**
+   * return map of resources each resource the total duaration to execute all taxonomies
+   * @param {*} ServiceDurationByWorker 
+   * @param {*} taxonomies 
+   * @param {*} resources 
+   */
   function getSlotDurationByWorker(ServiceDurationByWorker, taxonomies, resources) {
     var duration = {};
     resources.forEach(function (r) {
@@ -647,6 +663,11 @@ var Booking = Object.freeze({
     return duration;
   }
 
+  /**
+   * excute the capacity of each taxonomy from request Crac.GetRoomsFromTaxonomies
+   * @param {Object} taxonomyTreeCapacity 
+   * @param {Object} taxonomiesRooms 
+   */
   function getRoomCapacityByService(taxonomyTreeCapacity, taxonomiesRooms) {
     var capacity = {};
     taxonomiesRooms.forEach(function (t) {
@@ -657,6 +678,14 @@ var Booking = Object.freeze({
     return capacity;
   }
 
+  /**
+   * convert crac bitset response into bitset vectors
+   * @param {Object} cracSlot 
+   * @param {Object} roomCapacityByService 
+   * @param {Array} taxonomies 
+   * @param {Array} resources 
+   * @param {Array} taxonomiesRooms 
+   */
   function getBitSetsFromCracSlots(cracSlot, roomCapacityByService, taxonomies, resources, taxonomiesRooms) {
     var bitSets = {};
     bitSets.resources = {};
@@ -689,6 +718,16 @@ var Booking = Object.freeze({
     return bitSets;
   }
 
+  /**
+   * return vector:true mean the resource is free for total duration of all taxonomies and rooms are available for these taxonomies
+   * @param {Array} workerBitSets 
+   * @param {string} workerId 
+   * @param {Array} roomsBitSets 
+   * @param {Int} totalDuration 
+   * @param {Int} serviceDuration 
+   * @param {String} resources 
+   * @param {Array} taxonomies 
+   */
   function getServiceRoomVector(workerBitSets, workerId, roomsBitSets, totalDuration, serviceDuration, resources, taxonomies) {
     var workerFree, roomFree;
     var finalVector = initBusyVector();
@@ -708,6 +747,13 @@ var Booking = Object.freeze({
     return finalVector;
   }
   
+  /**
+   * return all combination of setting elements in array 
+   * example: taxonomyCombo(["a","b","c"]) return
+   * [["a", "b", "c"],["a", "c", "b"],["b", "a", "c"],
+   * ["b", "c", "a"],["c", "a", "b"],["c", "b", "a"]]
+   * @param {Array} input 
+   */
   function taxonomyCombo(input){
     var permArr = [],
       usedChars = [];
@@ -729,20 +775,16 @@ var Booking = Object.freeze({
     return permute(input);
   }
 
-  function getRoomDurations (taxonomiesRooms,resourceId,serviceDurationByWorker){
-    var rooms = [];
-    taxonomiesRooms.forEach(function(room){
-      var duration = serviceDurationByWorker[room.taxonomy][resourceId];
-      var index = _.indexOf(rooms,{id:toom.room})
-      if (index = -1){
-        rooms.push({id:room.room,duration:duration})
-      } else {
-        rooms[index].duration += duration;
-      }
-    })
-    return duration;
-  }
-
+  /**
+   * 
+   * Check if serious of taxonomies can be executed by specific worker at specfic bit
+   * 
+   * @param {int} index 
+   * @param {Object} serviceRoomVectors 
+   * @param {Array} taxonomyCombo 
+   * @param {String} resourceId 
+   * @param {Object} serviceDurationByWorker 
+   */
   function checkSlotTaxonomyCombo(index,serviceRoomVectors,taxonomyCombo,resourceId,serviceDurationByWorker){
     var duration, vector;
     var bit = true;
@@ -759,6 +801,18 @@ var Booking = Object.freeze({
     return bit ? 1: 0;
   }
 
+  /**
+   * 
+   * return resource vector; bit true when atleast 1 combination of taxonomy can be done
+   * for example: in case of padicure and manicure service in request, true grante that worker can execute the
+   * services by doing padicure first or manicure first
+   * 
+   * @param {Object} serviceRoomVectors 
+   * @param {String} resourceId 
+   * @param {Object} serviceDurationByWorker 
+   * @param {Array} taxonomies 
+   * @param {Array} taxonomiesRooms 
+   */
   function getWorkerVector(serviceRoomVectors, resourceId, serviceDurationByWorker, taxonomies, taxonomiesRooms) {
     var rooms = [];
     taxonomiesRooms.forEach(function(t){
@@ -780,6 +834,10 @@ var Booking = Object.freeze({
     return vector;
   }
 
+  /**
+   * create widget solts from bitset
+   * @param {bitset} resourceVector 
+   */
   function calcResourceSlots(resourceVector) {
     var resourceSlots = [];
     for (var i = 0; i< resourceVector.length ; i++){
@@ -789,21 +847,32 @@ var Booking = Object.freeze({
     }
     return resourceSlots;
   }
-
-  function calExcludedResource(resources, slots) {
-    return [];
-  }
-
-  function mergeUniqueSlots(allSlots, newSlots) {
-    var uniqueSlots = allSlots;
-    newSlots.forEach(function (slot) {
-      if (!_.find(uniqueSlots, { time: slot.time })) {
-        uniqueSlots.push(slot);
+  /**
+   * return array of excluded resources 
+   * retource excluded in case he dont have any free slot in request dates
+   * @param {Array} resources 
+   * @param {Object} slots 
+   */
+  function calExcludedResource(resources, allDaysSlots) {
+    var excludedResources = [];
+    resources.forEach(function(r){
+      var slotExist = false;
+      allDaysSlots.forEach(function (daySlots){
+        var resourceSlots = _.find(daySlots,{id:r})
+        if (resourceSlots && resourceSlots.slots && resourceSlots.slots.length > 0){
+          slotExist = true;
+        }
+      })
+      if (!slotExist){
+        excludedResources.push(r)
       }
-    });
-    return uniqueSlots;
+    })
   }
+  
 
+  /**
+   * intialize bitset with 1 in all bits
+   */
   function initFreeVector() {
     var set = [];
     for (var i = 0; i < VECTOR_SIZE; i++) {
@@ -812,6 +881,9 @@ var Booking = Object.freeze({
     return set;
   }
 
+  /**
+   * intialize bitset with 0 in all bits
+   */
   function initBusyVector() {
     var set = [];
     for (var i = 0; i < VECTOR_SIZE; i++) {
@@ -820,6 +892,12 @@ var Booking = Object.freeze({
     return set;
   }
 
+  /**
+   * check of bitset has serious of true from index to fit duration 
+   * @param {bitset} bistSet 
+   * @param {int} index 
+   * @param {int} duration 
+   */
   function checkFree(bistSet, index, duration) {
     var bits = parseInt(duration / SLOT_SIZE);
     for (var i = index; i < index + bits; i++) {
@@ -829,16 +907,13 @@ var Booking = Object.freeze({
     }
     return 1;
   }
-
-  function fixBitSetAccordingToDuration(bitset,duration){
-    var calculatedBitSet = [];
-    var durationInSlots = parseInt(duration / SLOT_SIZE);
-    for (var i=0; i< bitset.length;i++){
-      calculatedBitSet[i] = isBitAvailable(bitset,i,durationInSlots);
-    }
-    return calculatedBitSet;
-  }
   
+  /**
+   * And operation by bit between 2 sets
+   * 
+   * @param {*bitset} setA 
+   * @param {*bitset} setB 
+   */
   function setAnd (setA,setB){
     var unifiedSet = [];
     for (var i=0; i< setA.length; i++){
@@ -847,6 +922,12 @@ var Booking = Object.freeze({
     return unifiedSet;
   }
   
+  /**
+   * OR operation by bit between 2 sets
+   * 
+   * @param {*bitset} setA 
+   * @param {*bitset} setB 
+   */
   function setUnion (setA,setB){
     var unifiedSet = [];
     for (var i=0; i< setA.length; i++){
@@ -855,26 +936,15 @@ var Booking = Object.freeze({
     return unifiedSet;
   }
   
-  function getCalculatedRoomVector(cracSlot,roomId,capacity,taxonomyId,duration){
-    var freeSet = initFreeVector();
-    if (capacity = 0){
-      return freeSet;
-    }
-    var busySet = initBusyVector();
-    var roomSet;
-    if (capacity > 0){
-      for (var i=0 ; i< capacity ; i++){
-        //cracValueToBits
-        roomFromCrac = _.find(cracSlot.room,{room_id:roomId+"_"+i})
-        if (roomFromCrac){
-          roomSet = fixBitSetAccordingToDuration(cracValueToBits(roomFromCrac.bitset),duration);
-          busySet = setUnion(roomSet,busySet);
-        }
-      }
-    }
-    return busySet;
-  }
-
+  /**
+   *  Return slots of each resource and the union slot for any available view
+   * 
+   * @param {Object} cracResult 
+   * @param {Object} business 
+   * @param {Array} taxonomies 
+   * @param {Array} resources 
+   * @param {Array} taxonomiesRooms 
+   */
   function prepareSlots(cracResult, business, taxonomies, resources, taxonomiesRooms) {
 
     var excludedResource = [];

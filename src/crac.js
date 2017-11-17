@@ -261,322 +261,392 @@ function isoDateForDayOff(date) {
   return moment(date).toISOString().replace('.000Z', 'Z');
 }
 
-function resourceTaxonomyDuration(businessWorker, businessTaxonomy) {
-  var duration = businessTaxonomy.duration;
-  if (businessWorker.taxonomyLevels && businessWorker.taxonomyLevels.length > 0) {
-    var taxonomyLevel = _.find(businessWorker.taxonomyLevels, { id: businessTaxonomy.id });
-    if (taxonomyLevel) {
-      var additionalDuration = _.find(businessTaxonomy.additionalDurations, { level: taxonomyLevel.level });
-      if (additionalDuration && additionalDuration.duration) {
-        duration = additionalDuration.duration;
-      }
-    }
-  }
-  return duration;
-}
-
-function getServiceDurationByWorker(businessResources, businessTaonomies) {
-  var taxonomyDuration = {};
-  businessTaonomies.forEach(function (t) {
-    taxonomyDuration[t.id] = {};
-    businessResources.forEach(function (r) {
-      taxonomyDuration[t.id][r.id] = resourceTaxonomyDuration(r, t);
-    });
-  });
-  return taxonomyDuration;
-}
-
-function getSlotDurationByWorker(ServiceDurationByWorker, taxonomies, resources) {
-  var duration = {};
-  resources.forEach(function (r) {
-    duration[r] = 0;
-    taxonomies.forEach(function (t) {
-      duration[r] += ServiceDurationByWorker[t][r];
-    });
-  });
-  return duration;
-}
-
-function getRoomCapacityByService(taxonomyTreeCapacity, taxonomiesRooms) {
-  var capacity = {};
-  taxonomiesRooms.forEach(function (t) {
-    var treeCapacity = _.find(taxonomyTreeCapacity, { parent_id: t.room });
-    var tCapacity = treeCapacity && treeCapacity.capacity ? treeCapacity.capacity : 0;
-    capacity[t.taxonomy] = tCapacity;
-  });
-  return capacity;
-}
-
-function getBitSetsFromCracSlots(cracSlot, roomCapacityByService, taxonomies, resources, taxonomiesRooms) {
-  var bitSets = {};
-  bitSets.resources = {};
-  bitSets.rooms = {};
-  resources.forEach(function (r) {
-    var cracResource = _.find(cracSlot.resources, { resourceId: r });
-    if (cracResource) {
-      bitSets.resources[r] = cracValueToBits(cracResource.bitset);
-    } else {
-      bitSets.resources[r] = initBusyVector();
-    }
-  });
-
-  taxonomies.forEach(function (tId) {
-    var capacity = roomCapacityByService[tId];
-    var room = _.find(taxonomiesRooms, { taxonomy: tId });
-    if (room && !bitSets.rooms[room.room]) {
-      var roomId = room.room;
-      bitSets.rooms[roomId] = [];
-      for (var i = 0; i < capacity; i++) {
-        var cracRoom = _.find(cracSlot.rooms, { roomId: roomId + "_" + i });
-        if (cracRoom) {
-          bitSets.rooms[roomId][i] = cracValueToBits(cracRoom.bitset);
-        } else {
-          bitSets.rooms[roomId][i] = initFreeVector();
+/**
+   * return excution time of taxonomy by specific worker
+   * @param {Object} businessWorker 
+   * @param {Object} businessTaxonomy 
+   */
+  function resourceTaxonomyDuration(businessWorker, businessTaxonomy) {
+    var duration = businessTaxonomy.duration;
+    if (businessWorker.taxonomyLevels && businessWorker.taxonomyLevels.length > 0) {
+      var taxonomyLevel = _.find(businessWorker.taxonomyLevels, { id: businessTaxonomy.id });
+      if (taxonomyLevel) {
+        var additionalDuration = _.find(businessTaxonomy.additionalDurations, { level: taxonomyLevel.level });
+        if (additionalDuration && additionalDuration.duration) {
+          duration = additionalDuration.duration;
         }
       }
     }
-  });
-  return bitSets;
-}
-
-function getServiceRoomVector(workerBitSets, workerId, roomsBitSets, totalDuration, serviceDuration, resources, taxonomies) {
-  var workerFree, roomFree;
-  var finalVector = initBusyVector();
-  for (var i = 0; i < workerBitSets.length; i++) {
-    workerFree = checkFree(workerBitSets, i, totalDuration);
-    if (workerFree == 1){
-      roomFree = true;
-      if (roomsBitSets.length > 0){
-        roomFree = false;  
-      }
-      for (var j = 0; j < roomsBitSets.length; j++) {
-        roomFree = roomFree || checkFree(roomsBitSets[j], i, serviceDuration[workerId]);
-      }
-      finalVector[i] = roomFree;
-    } 
+    return duration;
   }
-  return finalVector;
-}
 
-function taxonomyCombo(input){
-  var permArr = [],
-    usedChars = [];
-
-  function permute(input) {
-    var i, ch;
-    for (i = 0; i < input.length; i++) {
-      ch = input.splice(i, 1)[0];
-      usedChars.push(ch);
-      if (input.length == 0) {
-        permArr.push(usedChars.slice());
-      }
-      permute(input);
-      input.splice(i, 0, ch);
-      usedChars.pop();
-    }
-    return permArr;
-  };
-  return permute(input);
-}
-
-function getRoomDurations (taxonomiesRooms,resourceId,serviceDurationByWorker){
-  var rooms = [];
-  taxonomiesRooms.forEach(function(room){
-    var duration = serviceDurationByWorker[room.taxonomy][resourceId];
-    var index = _.indexOf(rooms,{id:toom.room})
-    if (index = -1){
-      rooms.push({id:room.room,duration:duration})
-    } else {
-      rooms[index].duration += duration;
-    }
-  })
-  return duration;
-}
-
-function checkSlotTaxonomyCombo(index,serviceRoomVectors,taxonomyCombo,resourceId,serviceDurationByWorker){
-  var duration, vector;
-  var bit = true;
-  var calculatedIndex = index;
-  
-  duration = serviceDurationByWorker[taxonomyCombo[0]][resourceId];
-  bit =  bit&& serviceRoomVectors[taxonomyCombo[0]][resourceId][calculatedIndex];
-
-  for (var i=1; i < taxonomyCombo.length; i++){
-    calculatedIndex = calculatedIndex + i * parseInt(duration / SLOT_SIZE);
-    bit =  bit&& serviceRoomVectors[taxonomyCombo[i]][resourceId][calculatedIndex];
-    duration = serviceDurationByWorker[taxonomyCombo[i]][resourceId];
-  }
-  return bit ? 1: 0;
-}
-
-function getWorkerVector(serviceRoomVectors, resourceId, serviceDurationByWorker, taxonomies, taxonomiesRooms) {
-  var rooms = [];
-  taxonomiesRooms.forEach(function(t){
-    if (rooms.indexOf(t.room) == -1){
-      rooms.push(t.room);
-    }
-  })
-
-  var combinations = taxonomyCombo(taxonomies);
-  var vector = initBusyVector();
-  for (var j=0;j<vector.length;j++){
-    for (var i=0 ; i< combinations.length; i++){
-      vector[j] = vector[j] || checkSlotTaxonomyCombo(j,serviceRoomVectors,combinations[i],resourceId,serviceDurationByWorker);
-      if (vector[j] == 1){
-        break;
-      }
-    }
-  }
-  return vector;
-}
-
-function calcResourceSlots(resourceVector) {
-  var resourceSlots = [];
-  for (var i = 0; i< resourceVector.length ; i++){
-    if (resourceVector[i]){
-      resourceSlots.push({ time: i*SLOT_SIZE, duration: SLOT_SIZE , space_left: 1 ,discount:10});
-    }
-  }
-  return resourceSlots;
-}
-
-function calExcludedResource(resources, slots) {
-  return [];
-}
-
-function mergeUniqueSlots(allSlots, newSlots) {
-  var uniqueSlots = allSlots;
-  newSlots.forEach(function (slot) {
-    if (!_.find(uniqueSlots, { time: slot.time })) {
-      uniqueSlots.push(slot);
-    }
-  });
-  return uniqueSlots;
-}
-
-function initFreeVector() {
-  var set = [];
-  for (var i = 0; i < VECTOR_SIZE; i++) {
-    set[i] = 1;
-  }
-  return set;
-}
-
-function initBusyVector() {
-  var set = [];
-  for (var i = 0; i < VECTOR_SIZE; i++) {
-    set[i] = 0;
-  }
-  return set;
-}
-
-function checkFree(bistSet, index, duration) {
-  var bits = parseInt(duration / SLOT_SIZE);
-  for (var i = index; i < index + bits; i++) {
-    if (bistSet[i] == 0) {
-      return 0;
-    }
-  }
-  return 1;
-}
-
-function fixBitSetAccordingToDuration(bitset,duration){
-  var calculatedBitSet = [];
-  var durationInSlots = parseInt(duration / SLOT_SIZE);
-  for (var i=0; i< bitset.length;i++){
-    calculatedBitSet[i] = isBitAvailable(bitset,i,durationInSlots);
-  }
-  return calculatedBitSet;
-}
-
-function setAnd (setA,setB){
-  var unifiedSet = [];
-  for (var i=0; i< setA.length; i++){
-      unifiedSet[i] = setA[i] && setB[i] 
-  }
-  return unifiedSet;
-}
-
-function setUnion (setA,setB){
-  var unifiedSet = [];
-  for (var i=0; i< setA.length; i++){
-      unifiedSet[i] = setA[i] || setB[i] 
-  }
-  return unifiedSet;
-}
-
-function getCalculatedRoomVector(cracSlot,roomId,capacity,taxonomyId,duration){
-  var freeSet = initFreeVector();
-  if (capacity = 0){
-    return freeSet;
-  }
-  var busySet = initBusyVector();
-  var roomSet;
-  if (capacity > 0){
-    for (var i=0 ; i< capacity ; i++){
-      //cracValueToBits
-      roomFromCrac = _.find(cracSlot.room,{room_id:roomId+"_"+i})
-      if (roomFromCrac){
-        roomSet = fixBitSetAccordingToDuration(cracValueToBits(roomFromCrac.bitset),duration);
-        busySet = setUnion(roomSet,busySet);
-      }
-    }
-  }
-  return busySet;
-}
-
-export function prepareSlots(cracResult, business, taxonomies, resources, taxonomiesRooms) {
-
-  var excludedResource = [];
-  var finalSlots = {};
-  var businessData = business;
-
-  finalSlots.days = [];
-  finalSlots.excludedResource = [];
-
-  var businessTaxonomies = _.filter(business.taxonomies, function (t) {
-    return t.active && taxonomies.indexOf(t.id) > -1;
-  });
-  var businessWorkers = _.filter(business.resources, function (r) {
-    return r.status == 'ACTIVE' && resources.indexOf(r.id) > -1;
-  });
-
-  var serviceDurationByWorker = getServiceDurationByWorker(businessWorkers, businessTaxonomies);
-  var totalServicesDurationByWorker = getSlotDurationByWorker(serviceDurationByWorker, taxonomies, resources);
-  var roomCapacityByService = getRoomCapacityByService(business.taxonomy_tree_capacity, taxonomiesRooms);
-
-  cracResult.forEach(function (cracSlot) {
-    var bitSets = getBitSetsFromCracSlots(cracSlot, roomCapacityByService, taxonomies, resources, taxonomiesRooms);
-    var daySlots = {};
-    daySlots.date = moment(cracSlot.date).utc().startOf('day').toISOString();
-    daySlots.resources = [];
-    daySlots.slots = [];
-    var serviceRoomVectors = {};
-    var finalWorkersVector = {};
-
-    taxonomies.forEach(function (tId) {
-      serviceRoomVectors[tId] = {};
-      var room = _.find(taxonomiesRooms, { taxonomy: tId });
-      var roomBitSet = room ? bitSets.rooms[room.room] : [];
-      resources.forEach(function (rId) {
-        serviceRoomVectors[tId][rId] = getServiceRoomVector(bitSets.resources[rId], rId, roomBitSet, totalServicesDurationByWorker[rId], serviceDurationByWorker[tId], resources, taxonomies);
+  /**
+   * return map of taxonomies, and foreach taxonomy map of resources and durations
+   * @param {Array} businessResources 
+   * @param {Array} businessTaxonomies 
+   */
+  function getServiceDurationByWorker(businessResources, businessTaxonomies) {
+    var taxonomyDuration = {};
+    businessTaxonomies.forEach(function (t) {
+      taxonomyDuration[t.id] = {};
+      businessResources.forEach(function (r) {
+        taxonomyDuration[t.id][r.id] = resourceTaxonomyDuration(r, t);
       });
     });
+    return taxonomyDuration;
+  }
 
-    var anyAvailableVector = initBusyVector()
-    resources.forEach(function (rId) {
-      finalWorkersVector[rId] = getWorkerVector(serviceRoomVectors, rId, serviceDurationByWorker, taxonomies,taxonomiesRooms);
-      var resourceSlots = calcResourceSlots(finalWorkersVector[rId]);
-      daySlots.resources.push({ id: rId, slots: resourceSlots });
-      anyAvailableVector = setUnion(anyAvailableVector,finalWorkersVector[rId])
+  /**
+   * return map of resources each resource the total duaration to execute all taxonomies
+   * @param {*} ServiceDurationByWorker 
+   * @param {*} taxonomies 
+   * @param {*} resources 
+   */
+  function getSlotDurationByWorker(ServiceDurationByWorker, taxonomies, resources) {
+    var duration = {};
+    resources.forEach(function (r) {
+      duration[r] = 0;
+      taxonomies.forEach(function (t) {
+        duration[r] += ServiceDurationByWorker[t][r];
+      });
     });
-    daySlots.slots = calcResourceSlots(anyAvailableVector)
-    daySlots.available = daySlots.slots.length > 0;
-    finalSlots.days.push(daySlots);
-  });
-  finalSlots.excludedResource = calExcludedResource(resources, finalSlots.days);
-  return finalSlots;
-}
+    return duration;
+  }
+
+  /**
+   * excute the capacity of each taxonomy from request Crac.GetRoomsFromTaxonomies
+   * @param {Object} taxonomyTreeCapacity 
+   * @param {Object} taxonomiesRooms 
+   */
+  function getRoomCapacityByService(taxonomyTreeCapacity, taxonomiesRooms) {
+    var capacity = {};
+    taxonomiesRooms.forEach(function (t) {
+      var treeCapacity = _.find(taxonomyTreeCapacity, { parent_id: t.room });
+      var tCapacity = treeCapacity && treeCapacity.capacity ? treeCapacity.capacity : 0;
+      capacity[t.taxonomy] = tCapacity;
+    });
+    return capacity;
+  }
+
+  /**
+   * convert crac bitset response into bitset vectors
+   * @param {Object} cracSlot 
+   * @param {Object} roomCapacityByService 
+   * @param {Array} taxonomies 
+   * @param {Array} resources 
+   * @param {Array} taxonomiesRooms 
+   */
+  function getBitSetsFromCracSlots(cracSlot, roomCapacityByService, taxonomies, resources, taxonomiesRooms) {
+    var bitSets = {};
+    bitSets.resources = {};
+    bitSets.rooms = {};
+    resources.forEach(function (r) {
+      var cracResource = _.find(cracSlot.resources, { resourceId: r });
+      if (cracResource) {
+        bitSets.resources[r] = cracValueToBits(cracResource.bitset);
+      } else {
+        bitSets.resources[r] = initBusyVector();
+      }
+    });
+
+    taxonomies.forEach(function (tId) {
+      var capacity = roomCapacityByService[tId];
+      var room = _.find(taxonomiesRooms, { taxonomy: tId });
+      if (room && !bitSets.rooms[room.room]) {
+        var roomId = room.room;
+        bitSets.rooms[roomId] = [];
+        for (var i = 0; i < capacity; i++) {
+          var cracRoom = _.find(cracSlot.rooms, { roomId: roomId + "_" + i });
+          if (cracRoom) {
+            bitSets.rooms[roomId][i] = cracValueToBits(cracRoom.bitset);
+          } else {
+            bitSets.rooms[roomId][i] = initFreeVector();
+          }
+        }
+      }
+    });
+    return bitSets;
+  }
+
+  /**
+   * return vector:true mean the resource is free for total duration of all taxonomies and rooms are available for these taxonomies
+   * @param {Array} workerBitSets 
+   * @param {string} workerId 
+   * @param {Array} roomsBitSets 
+   * @param {Int} totalDuration 
+   * @param {Int} serviceDuration 
+   * @param {String} resources 
+   * @param {Array} taxonomies 
+   */
+  function getServiceRoomVector(workerBitSets, workerId, roomsBitSets, totalDuration, serviceDuration, resources, taxonomies) {
+    var workerFree, roomFree;
+    var finalVector = initBusyVector();
+    for (var i = 0; i < workerBitSets.length; i++) {
+      workerFree = checkFree(workerBitSets, i, totalDuration);
+      if (workerFree == 1){
+        roomFree = true;
+        if (roomsBitSets.length > 0){
+          roomFree = false;  
+        }
+        for (var j = 0; j < roomsBitSets.length; j++) {
+          roomFree = roomFree || checkFree(roomsBitSets[j], i, serviceDuration[workerId]);
+        }
+        finalVector[i] = roomFree;
+      } 
+    }
+    return finalVector;
+  }
+  
+  /**
+   * return all combination of setting elements in array 
+   * example: taxonomyCombo(["a","b","c"]) return
+   * [["a", "b", "c"],["a", "c", "b"],["b", "a", "c"],
+   * ["b", "c", "a"],["c", "a", "b"],["c", "b", "a"]]
+   * @param {Array} input 
+   */
+  function taxonomyCombo(input){
+    var permArr = [],
+      usedChars = [];
+  
+    function permute(input) {
+      var i, ch;
+      for (i = 0; i < input.length; i++) {
+        ch = input.splice(i, 1)[0];
+        usedChars.push(ch);
+        if (input.length == 0) {
+          permArr.push(usedChars.slice());
+        }
+        permute(input);
+        input.splice(i, 0, ch);
+        usedChars.pop();
+      }
+      return permArr;
+    };
+    return permute(input);
+  }
+
+  /**
+   * 
+   * Check if serious of taxonomies can be executed by specific worker at specfic bit
+   * 
+   * @param {int} index 
+   * @param {Object} serviceRoomVectors 
+   * @param {Array} taxonomyCombo 
+   * @param {String} resourceId 
+   * @param {Object} serviceDurationByWorker 
+   */
+  function checkSlotTaxonomyCombo(index,serviceRoomVectors,taxonomyCombo,resourceId,serviceDurationByWorker){
+    var duration, vector;
+    var bit = true;
+    var calculatedIndex = index;
+    
+    duration = serviceDurationByWorker[taxonomyCombo[0]][resourceId];
+    bit =  bit&& serviceRoomVectors[taxonomyCombo[0]][resourceId][calculatedIndex];
+
+    for (var i=1; i < taxonomyCombo.length; i++){
+      calculatedIndex = calculatedIndex + i * parseInt(duration / SLOT_SIZE);
+      bit =  bit&& serviceRoomVectors[taxonomyCombo[i]][resourceId][calculatedIndex];
+      duration = serviceDurationByWorker[taxonomyCombo[i]][resourceId];
+    }
+    return bit ? 1: 0;
+  }
+
+  /**
+   * 
+   * return resource vector; bit true when atleast 1 combination of taxonomy can be done
+   * for example: in case of padicure and manicure service in request, true grante that worker can execute the
+   * services by doing padicure first or manicure first
+   * 
+   * @param {Object} serviceRoomVectors 
+   * @param {String} resourceId 
+   * @param {Object} serviceDurationByWorker 
+   * @param {Array} taxonomies 
+   * @param {Array} taxonomiesRooms 
+   */
+  function getWorkerVector(serviceRoomVectors, resourceId, serviceDurationByWorker, taxonomies, taxonomiesRooms) {
+    var rooms = [];
+    taxonomiesRooms.forEach(function(t){
+      if (rooms.indexOf(t.room) == -1){
+        rooms.push(t.room);
+      }
+    })
+
+    var combinations = taxonomyCombo(taxonomies);
+    var vector = initBusyVector();
+    for (var j=0;j<vector.length;j++){
+      for (var i=0 ; i< combinations.length; i++){
+        vector[j] = vector[j] || checkSlotTaxonomyCombo(j,serviceRoomVectors,combinations[i],resourceId,serviceDurationByWorker);
+        if (vector[j] == 1){
+          break;
+        }
+      }
+    }
+    return vector;
+  }
+
+  /**
+   * create widget solts from bitset
+   * @param {bitset} resourceVector 
+   */
+  function calcResourceSlots(resourceVector) {
+    var resourceSlots = [];
+    for (var i = 0; i< resourceVector.length ; i++){
+      if (resourceVector[i]){
+        resourceSlots.push({ time: i*SLOT_SIZE, duration: SLOT_SIZE , space_left: 1 ,discount:10});
+      }
+    }
+    return resourceSlots;
+  }
+  /**
+   * return array of excluded resources 
+   * retource excluded in case he dont have any free slot in request dates
+   * @param {Array} resources 
+   * @param {Object} slots 
+   */
+  function calExcludedResource(resources, allDaysSlots) {
+    var excludedResources = [];
+    resources.forEach(function(r){
+      var slotExist = false;
+      allDaysSlots.forEach(function (daySlots){
+        var resourceSlots = _.find(daySlots,{id:r})
+        if (resourceSlots && resourceSlots.slots && resourceSlots.slots.length > 0){
+          slotExist = true;
+        }
+      })
+      if (!slotExist){
+        excludedResources.push(r)
+      }
+    })
+  }
+  
+
+  /**
+   * intialize bitset with 1 in all bits
+   */
+  function initFreeVector() {
+    var set = [];
+    for (var i = 0; i < VECTOR_SIZE; i++) {
+      set[i] = 1;
+    }
+    return set;
+  }
+
+  /**
+   * intialize bitset with 0 in all bits
+   */
+  function initBusyVector() {
+    var set = [];
+    for (var i = 0; i < VECTOR_SIZE; i++) {
+      set[i] = 0;
+    }
+    return set;
+  }
+
+  /**
+   * check of bitset has serious of true from index to fit duration 
+   * @param {bitset} bistSet 
+   * @param {int} index 
+   * @param {int} duration 
+   */
+  function checkFree(bistSet, index, duration) {
+    var bits = parseInt(duration / SLOT_SIZE);
+    for (var i = index; i < index + bits; i++) {
+      if (bistSet[i] == 0) {
+        return 0;
+      }
+    }
+    return 1;
+  }
+  
+  /**
+   * And operation by bit between 2 sets
+   * 
+   * @param {*bitset} setA 
+   * @param {*bitset} setB 
+   */
+  function setAnd (setA,setB){
+    var unifiedSet = [];
+    for (var i=0; i< setA.length; i++){
+        unifiedSet[i] = setA[i] && setB[i] 
+    }
+    return unifiedSet;
+  }
+  
+  /**
+   * OR operation by bit between 2 sets
+   * 
+   * @param {*bitset} setA 
+   * @param {*bitset} setB 
+   */
+  function setUnion (setA,setB){
+    var unifiedSet = [];
+    for (var i=0; i< setA.length; i++){
+        unifiedSet[i] = setA[i] || setB[i] 
+    }
+    return unifiedSet;
+  }
+  
+  /**
+   *  Return slots of each resource and the union slot for any available view
+   * 
+   * @param {Object} cracResult 
+   * @param {Object} business 
+   * @param {Array} taxonomies 
+   * @param {Array} resources 
+   * @param {Array} taxonomiesRooms 
+   */
+  export function prepareSlots(cracResult, business, taxonomies, resources, taxonomiesRooms) {
+
+    var excludedResource = [];
+    var finalSlots = {};
+    var businessData = business;
+
+    finalSlots.days = [];
+    finalSlots.excludedResource = [];
+
+    var businessTaxonomies = _.filter(business.taxonomies, function (t) {
+      return t.active && taxonomies.indexOf(t.id) > -1;
+    });
+    var businessWorkers = _.filter(business.resources, function (r) {
+      return r.status == 'ACTIVE' && resources.indexOf(r.id) > -1;
+    });
+
+    var serviceDurationByWorker = getServiceDurationByWorker(businessWorkers, businessTaxonomies);
+    var totalServicesDurationByWorker = getSlotDurationByWorker(serviceDurationByWorker, taxonomies, resources);
+    var roomCapacityByService = getRoomCapacityByService(business.taxonomy_tree_capacity, taxonomiesRooms);
+
+    cracResult.forEach(function (cracSlot) {
+      var bitSets = getBitSetsFromCracSlots(cracSlot, roomCapacityByService, taxonomies, resources, taxonomiesRooms);
+      var daySlots = {};
+      daySlots.date = moment(cracSlot.date).utc().startOf('day').toISOString();
+      daySlots.resources = [];
+      daySlots.slots = [];
+      var serviceRoomVectors = {};
+      var finalWorkersVector = {};
+
+      taxonomies.forEach(function (tId) {
+        serviceRoomVectors[tId] = {};
+        var room = _.find(taxonomiesRooms, { taxonomy: tId });
+        var roomBitSet = room ? bitSets.rooms[room.room] : [];
+        resources.forEach(function (rId) {
+          serviceRoomVectors[tId][rId] = getServiceRoomVector(bitSets.resources[rId], rId, roomBitSet, totalServicesDurationByWorker[rId], serviceDurationByWorker[tId], resources, taxonomies);
+        });
+      });
+
+      var anyAvailableVector = initBusyVector()
+      resources.forEach(function (rId) {
+        finalWorkersVector[rId] = getWorkerVector(serviceRoomVectors, rId, serviceDurationByWorker, taxonomies,taxonomiesRooms);
+        var resourceSlots = calcResourceSlots(finalWorkersVector[rId]);
+        daySlots.resources.push({ id: rId, slots: resourceSlots });
+        anyAvailableVector = setUnion(anyAvailableVector,finalWorkersVector[rId])
+      });
+      daySlots.slots = calcResourceSlots(anyAvailableVector)
+      daySlots.available = daySlots.slots.length > 0;
+      finalSlots.days.push(daySlots);
+    });
+    finalSlots.excludedResource = calExcludedResource(resources, finalSlots.days);
+    return finalSlots;
+  }
 
 /**
  * Presense CRAC data type as Crunch' Busy Slots
