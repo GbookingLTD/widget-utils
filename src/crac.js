@@ -261,10 +261,10 @@ function isoDateForDayOff(date) {
   return moment(date).toISOString().replace('.000Z', 'Z');
 }
 
-function resourceTaxonomyDuration(businessWokrer, businessTaxonomy) {
+function resourceTaxonomyDuration(businessWorker, businessTaxonomy) {
   var duration = businessTaxonomy.duration;
-  if (businessWokrer.taxonomyLevels && businessWokrer.taxonomyLevels.length > 0) {
-    var taxonomyLevel = _.find(businessWokrer.taxonomyLevels, { id: businessTaxonomy.id });
+  if (businessWorker.taxonomyLevels && businessWorker.taxonomyLevels.length > 0) {
+    var taxonomyLevel = _.find(businessWorker.taxonomyLevels, { id: businessTaxonomy.id });
     if (taxonomyLevel) {
       var additionalDuration = _.find(businessTaxonomy.additionalDurations, { level: taxonomyLevel.level });
       if (additionalDuration && additionalDuration.duration) {
@@ -275,14 +275,12 @@ function resourceTaxonomyDuration(businessWokrer, businessTaxonomy) {
   return duration;
 }
 
-function getServiceDurationByWorker(busienssResources, businessTaonomies) {
+function getServiceDurationByWorker(businessResources, businessTaonomies) {
   var taxonomyDuration = {};
   businessTaonomies.forEach(function (t) {
-    var businessTaxonomy = _.find(businessTaonomies, { id: t.id });
     taxonomyDuration[t.id] = {};
-    busienssResources.forEach(function (r) {
-      var worker = _.find(busienssResources, { id: r.id });
-      taxonomyDuration[t.id][r.id] = resourceTaxonomyDuration(worker, t);
+    businessResources.forEach(function (r) {
+      taxonomyDuration[t.id][r.id] = resourceTaxonomyDuration(r, t);
     });
   });
   return taxonomyDuration;
@@ -299,11 +297,11 @@ function getSlotDurationByWorker(ServiceDurationByWorker, taxonomies, resources)
   return duration;
 }
 
-function getRoomCapacityByService(taxonomyTreeCapacity, taxonomiesRooms, taxonomies) {
+function getRoomCapacityByService(taxonomyTreeCapacity, taxonomiesRooms) {
   var capacity = {};
   taxonomiesRooms.forEach(function (t) {
-    var treeCpacity = _.find(taxonomyTreeCapacity, { parent_id: t.room });
-    var tCapacity = treeCpacity && treeCpacity.capacity ? treeCpacity.capacity : 0;
+    var treeCapacity = _.find(taxonomyTreeCapacity, { parent_id: t.room });
+    var tCapacity = treeCapacity && treeCapacity.capacity ? treeCapacity.capacity : 0;
     capacity[t.taxonomy] = tCapacity;
   });
   return capacity;
@@ -325,7 +323,7 @@ function getBitSetsFromCracSlots(cracSlot, roomCapacityByService, taxonomies, re
   taxonomies.forEach(function (tId) {
     var capacity = roomCapacityByService[tId];
     var room = _.find(taxonomiesRooms, { taxonomy: tId });
-    if (room && !bitSets.rooms[roomId]) {
+    if (room && !bitSets.rooms[room.room]) {
       var roomId = room.room;
       bitSets.rooms[roomId] = [];
       for (var i = 0; i < capacity; i++) {
@@ -346,14 +344,16 @@ function getServiceRoomVector(workerBitSets, workerId, roomsBitSets, totalDurati
   var finalVector = initBusyVector();
   for (var i = 0; i < workerBitSets.length; i++) {
     workerFree = checkFree(workerBitSets, i, totalDuration);
-    roomFree = true;
-    if (roomsBitSets.length > 0){
-      roomFree = false;  
-    }
-    for (var j = 0; j < roomsBitSets.length; j++) {
-      roomFree = roomFree || checkFree(roomsBitSets[j], i, serviceDuration[workerId]);
-    }
-    finalVector[i] = roomFree && workerFree;
+    if (workerFree == 1){
+      roomFree = true;
+      if (roomsBitSets.length > 0){
+        roomFree = false;  
+      }
+      for (var j = 0; j < roomsBitSets.length; j++) {
+        roomFree = roomFree || checkFree(roomsBitSets[j], i, serviceDuration[workerId]);
+      }
+      finalVector[i] = roomFree;
+    } 
   }
   return finalVector;
 }
@@ -397,10 +397,14 @@ function checkSlotTaxonomyCombo(index,serviceRoomVectors,taxonomyCombo,resourceI
   var duration, vector;
   var bit = true;
   var calculatedIndex = index;
-  for (var i=0; i < taxonomyCombo.length; i++){
-    duration = serviceDurationByWorker[taxonomyCombo[i]][resourceId];
-    calculatedIndex = calculatedIndex + i * duration / SLOT_SIZE;
+  
+  duration = serviceDurationByWorker[taxonomyCombo[0]][resourceId];
+  bit =  bit&& serviceRoomVectors[taxonomyCombo[0]][resourceId][calculatedIndex];
+
+  for (var i=1; i < taxonomyCombo.length; i++){
+    calculatedIndex = calculatedIndex + i * parseInt(duration / SLOT_SIZE);
     bit =  bit&& serviceRoomVectors[taxonomyCombo[i]][resourceId][calculatedIndex];
+    duration = serviceDurationByWorker[taxonomyCombo[i]][resourceId];
   }
   return bit ? 1: 0;
 }
@@ -415,9 +419,12 @@ function getWorkerVector(serviceRoomVectors, resourceId, serviceDurationByWorker
 
   var combinations = taxonomyCombo(taxonomies);
   var vector = initBusyVector();
-  for (var i=0 ; i< combinations.length; i++){
-    for (var j=0;j<vector.length;j++){
+  for (var j=0;j<vector.length;j++){
+    for (var i=0 ; i< combinations.length; i++){
       vector[j] = vector[j] || checkSlotTaxonomyCombo(j,serviceRoomVectors,combinations[i],resourceId,serviceDurationByWorker);
+      if (vector[j] == 1){
+        break;
+      }
     }
   }
   return vector;
@@ -464,7 +471,7 @@ function initBusyVector() {
 }
 
 function checkFree(bistSet, index, duration) {
-  var bits = duration / SLOT_SIZE;
+  var bits = parseInt(duration / SLOT_SIZE);
   for (var i = index; i < index + bits; i++) {
     if (bistSet[i] == 0) {
       return 0;
@@ -475,7 +482,7 @@ function checkFree(bistSet, index, duration) {
 
 function fixBitSetAccordingToDuration(bitset,duration){
   var calculatedBitSet = [];
-  var durationInSlots = duration / SLOT_SIZE;
+  var durationInSlots = parseInt(duration / SLOT_SIZE);
   for (var i=0; i< bitset.length;i++){
     calculatedBitSet[i] = isBitAvailable(bitset,i,durationInSlots);
   }
@@ -528,15 +535,15 @@ export function prepareSlots(cracResult, business, taxonomies, resources, taxono
   finalSlots.excludedResource = [];
 
   var businessTaxonomies = _.filter(business.taxonomies, function (t) {
-    return taxonomies.indexOf(t.id) > -1;
+    return t.active && taxonomies.indexOf(t.id) > -1;
   });
-  var busniessWorkers = _.filter(business.resources, function (t) {
-    return resources.indexOf(t.id) > -1;
+  var businessWorkers = _.filter(business.resources, function (r) {
+    return r.status == 'ACTIVE' && resources.indexOf(r.id) > -1;
   });
 
-  var serviceDurationByWorker = getServiceDurationByWorker(busniessWorkers, businessTaxonomies);
+  var serviceDurationByWorker = getServiceDurationByWorker(businessWorkers, businessTaxonomies);
   var totalServicesDurationByWorker = getSlotDurationByWorker(serviceDurationByWorker, taxonomies, resources);
-  var roomCapacityByService = getRoomCapacityByService(business.taxonomy_tree_capacity, taxonomiesRooms, taxonomies);
+  var roomCapacityByService = getRoomCapacityByService(business.taxonomy_tree_capacity, taxonomiesRooms);
 
   cracResult.forEach(function (cracSlot) {
     var bitSets = getBitSetsFromCracSlots(cracSlot, roomCapacityByService, taxonomies, resources, taxonomiesRooms);
@@ -556,16 +563,14 @@ export function prepareSlots(cracResult, business, taxonomies, resources, taxono
       });
     });
 
+    var anyAvailableVector = initBusyVector()
     resources.forEach(function (rId) {
       finalWorkersVector[rId] = getWorkerVector(serviceRoomVectors, rId, serviceDurationByWorker, taxonomies,taxonomiesRooms);
-    });
-
-    resources.forEach(function (rId) {
       var resourceSlots = calcResourceSlots(finalWorkersVector[rId]);
       daySlots.resources.push({ id: rId, slots: resourceSlots });
-      var mergedSlots = mergeUniqueSlots(daySlots.slots, resourceSlots);
-      daySlots.slots = _.sortBy(mergedSlots, function(o) { return o.time; })
+      anyAvailableVector = setUnion(anyAvailableVector,finalWorkersVector[rId])
     });
+    daySlots.slots = calcResourceSlots(anyAvailableVector)
     daySlots.available = daySlots.slots.length > 0;
     finalSlots.days.push(daySlots);
   });
