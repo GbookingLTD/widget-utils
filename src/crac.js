@@ -503,20 +503,14 @@ function isoDateForDayOff(date) {
    * @param {Array} resources 
    * @param {Object} slots 
    */
-  function calExcludedResource(resources, allDaysSlots) {
+  function calExcludedResource(resources,excludedHash) {
     var excludedResources = [];
-    resources.forEach(function(r){
-      var slotExist = false;
-      allDaysSlots.forEach(function (daySlots){
-        var resourceSlots = _.find(daySlots,{id:r})
-        if (resourceSlots && resourceSlots.slots && resourceSlots.slots.length > 0){
-          slotExist = true;
-        }
-      })
-      if (!slotExist){
-        excludedResources.push(r)
+    resources.forEach(function(rId){
+      if (!excludedHash[rId]){
+        excludedResources.push(rId)
       }
     })
+    return excludedResources;
   }
   
 
@@ -644,7 +638,7 @@ function isoDateForDayOff(date) {
       daySlots.available = daySlots.slots.length > 0;
       finalSlots.days.push(daySlots);
     });
-    finalSlots.excludedResource = calExcludedResource(resources, finalSlots.days);
+    finalSlots.excludedResource = calExcludedResource(resources,excludedHash);
     return finalSlots;
   }
 

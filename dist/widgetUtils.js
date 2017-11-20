@@ -853,20 +853,15 @@ var Booking = Object.freeze({
    * @param {Array} resources 
    * @param {Object} slots 
    */
-  function calExcludedResource(resources, allDaysSlots) {
+  function calExcludedResource(resources,excludedHash) {
     var excludedResources = [];
-    resources.forEach(function(r){
-      var slotExist = false;
-      allDaysSlots.forEach(function (daySlots){
-        var resourceSlots = _.find(daySlots,{id:r})
-        if (resourceSlots && resourceSlots.slots && resourceSlots.slots.length > 0){
-          slotExist = true;
-        }
-      })
-      if (!slotExist){
-        excludedResources.push(r)
+    resources.forEach(function(rId){
+      if (!excludedHash[rId]){
+        excludedResources.push(rId)
       }
+      
     })
+    return excludedResources;
   }
   
 
@@ -964,7 +959,7 @@ var Booking = Object.freeze({
     var serviceDurationByWorker = getServiceDurationByWorker(businessWorkers, businessTaxonomies);
     var totalServicesDurationByWorker = getSlotDurationByWorker(serviceDurationByWorker, taxonomies, resources);
     var roomCapacityByService = getRoomCapacityByService(business.taxonomy_tree_capacity, taxonomiesRooms);
-
+    var excludedHash = {};
     cracResult.forEach(function (cracSlot) {
       var bitSets = getBitSetsFromCracSlots(cracSlot, roomCapacityByService, taxonomies, resources, taxonomiesRooms);
       var daySlots = {};
@@ -988,13 +983,15 @@ var Booking = Object.freeze({
         finalWorkersVector[rId] = getWorkerVector(serviceRoomVectors, rId, serviceDurationByWorker, taxonomies,taxonomiesRooms);
         var resourceSlots = calcResourceSlots(finalWorkersVector[rId]);
         daySlots.resources.push({ id: rId, slots: resourceSlots });
+        excludedHash[rId] = resourceSlots.length ? false : true;
         anyAvailableVector = setUnion(anyAvailableVector,finalWorkersVector[rId])
       });
       daySlots.slots = calcResourceSlots(anyAvailableVector)
       daySlots.available = daySlots.slots.length > 0;
       finalSlots.days.push(daySlots);
     });
-    finalSlots.excludedResource = calExcludedResource(resources, finalSlots.days);
+
+    finalSlots.excludedResource = calExcludedResource(resources,excludedHash);
     return finalSlots;
   }
 
