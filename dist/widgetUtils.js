@@ -853,10 +853,10 @@ var Booking = Object.freeze({
    * @param {Array} resources 
    * @param {Object} slots 
    */
-  function calExcludedResource(resources,excludedHash) {
+  function calExcludedResource(resources,availableResoueceHash) {
     var excludedResources = [];
     resources.forEach(function(rId){
-      if (!excludedHash[rId]){
+      if (availableResoueceHash[rId] !== true){
         excludedResources.push(rId)
       }
       
@@ -959,7 +959,7 @@ var Booking = Object.freeze({
     var serviceDurationByWorker = getServiceDurationByWorker(businessWorkers, businessTaxonomies);
     var totalServicesDurationByWorker = getSlotDurationByWorker(serviceDurationByWorker, taxonomies, resources);
     var roomCapacityByService = getRoomCapacityByService(business.taxonomy_tree_capacity, taxonomiesRooms);
-    var excludedHash = {};
+    var availableResoueceHash = {};
     cracResult.forEach(function (cracSlot) {
       var bitSets = getBitSetsFromCracSlots(cracSlot, roomCapacityByService, taxonomies, resources, taxonomiesRooms);
       var daySlots = {};
@@ -983,7 +983,9 @@ var Booking = Object.freeze({
         finalWorkersVector[rId] = getWorkerVector(serviceRoomVectors, rId, serviceDurationByWorker, taxonomies,taxonomiesRooms);
         var resourceSlots = calcResourceSlots(finalWorkersVector[rId]);
         daySlots.resources.push({ id: rId, slots: resourceSlots });
-        excludedHash[rId] = resourceSlots.length ? false : true;
+        if (resourceSlots.length>0){
+          availableResoueceHash[rId] = true;
+        }
         anyAvailableVector = setUnion(anyAvailableVector,finalWorkersVector[rId])
       });
       daySlots.slots = calcResourceSlots(anyAvailableVector)
@@ -991,7 +993,7 @@ var Booking = Object.freeze({
       finalSlots.days.push(daySlots);
     });
 
-    finalSlots.excludedResource = calExcludedResource(resources,excludedHash);
+    finalSlots.excludedResource = calExcludedResource(resources,availableResoueceHash);
     return finalSlots;
   }
 

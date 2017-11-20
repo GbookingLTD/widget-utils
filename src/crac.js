@@ -590,7 +590,7 @@ function isoDateForDayOff(date) {
    * @param {Array} taxonomiesRooms 
    */
   export function prepareSlots(cracResult, business, taxonomies, resources, taxonomiesRooms) {
-
+  
     var excludedResource = [];
     var finalSlots = {};
     var businessData = business;
@@ -608,7 +608,7 @@ function isoDateForDayOff(date) {
     var serviceDurationByWorker = getServiceDurationByWorker(businessWorkers, businessTaxonomies);
     var totalServicesDurationByWorker = getSlotDurationByWorker(serviceDurationByWorker, taxonomies, resources);
     var roomCapacityByService = getRoomCapacityByService(business.taxonomy_tree_capacity, taxonomiesRooms);
-
+    var availableResoueceHash = {};
     cracResult.forEach(function (cracSlot) {
       var bitSets = getBitSetsFromCracSlots(cracSlot, roomCapacityByService, taxonomies, resources, taxonomiesRooms);
       var daySlots = {};
@@ -632,13 +632,17 @@ function isoDateForDayOff(date) {
         finalWorkersVector[rId] = getWorkerVector(serviceRoomVectors, rId, serviceDurationByWorker, taxonomies,taxonomiesRooms);
         var resourceSlots = calcResourceSlots(finalWorkersVector[rId]);
         daySlots.resources.push({ id: rId, slots: resourceSlots });
+        if (resourceSlots.length>0){
+          availableResoueceHash[rId] = true;
+        }
         anyAvailableVector = setUnion(anyAvailableVector,finalWorkersVector[rId])
       });
       daySlots.slots = calcResourceSlots(anyAvailableVector)
       daySlots.available = daySlots.slots.length > 0;
       finalSlots.days.push(daySlots);
     });
-    finalSlots.excludedResource = calExcludedResource(resources,excludedHash);
+
+    finalSlots.excludedResource = calExcludedResource(resources,availableResoueceHash);
     return finalSlots;
   }
 
