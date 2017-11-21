@@ -343,7 +343,7 @@ function isoDateForDayOff(date) {
     resources.forEach(function (r) {
       var cracResource = _.find(cracSlot.resources, { resourceId: r });
       if (cracResource) {
-        bitSets.resources[r] = cracValueToBits(cracResource.bitset);
+        bitSets.resources[r] = cracValueToBits(cracResource.bitset).reverse();
       } else {
         bitSets.resources[r] = initBusyVector();
       }
@@ -358,7 +358,7 @@ function isoDateForDayOff(date) {
         for (var i = 0; i < capacity; i++) {
           var cracRoom = _.find(cracSlot.rooms, { roomId: roomId + "_" + i });
           if (cracRoom) {
-            bitSets.rooms[roomId][i] = cracValueToBits(cracRoom.bitset);
+            bitSets.rooms[roomId][i] = cracValueToBits(cracRoom.bitset).reverse();
           } else {
             bitSets.rooms[roomId][i] = initFreeVector();
           }
