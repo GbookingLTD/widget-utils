@@ -9,7 +9,7 @@ const VECTOR_SIZE = 24 * 60 / SLOT_SIZE
 
 // Convert minutes to date in ISO format
 function minutesToDate(date, minutes) {
-  return moment(date).startOf('day').add(minutes, 'minutes').utc().toDate().toISOString();
+  return moment.utc(date).startOf('day').add(minutes, 'minutes').toISOString();
 }
 
 
