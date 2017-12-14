@@ -353,7 +353,7 @@ var Booking = Object.freeze({
 
   // Convert minutes to date in ISO format
   function minutesToDate(date, minutes) {
-    return moment(date).startOf('day').add(minutes, 'minutes').utc().toDate().toString();
+    return moment(date).startOf('day').add(minutes, 'minutes').utc().toDate().toISOString();
   }
 
   // Compute start_time/end_time according to given day schedule.
