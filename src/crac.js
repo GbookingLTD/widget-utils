@@ -6,6 +6,7 @@ import moment from 'moment';
 
 const SLOT_SIZE = 5;
 const VECTOR_SIZE = 24 * 60 / SLOT_SIZE
+const FIRST_DAY_OF_WEEK = 1;
 
 // Convert minutes to date in ISO format
 function minutesToDate(date, minutes) {
@@ -55,6 +56,57 @@ function getDayBoundsFromTimetable(date, timetable) {
   return null;
 }
 
+function getEvenOddType (startPeriod, startTime) {
+  if(startPeriod == 'month') {
+    return startTime.date() % 2 ? 'odd' : 'even';
+  }
+  if(startPeriod == 'week') {
+    let firstDay = FIRST_DAY_OF_WEEK;
+    let correction = firstDay === 0 ? 1 : 0,
+        dayNum = startTime.day();
+    dayNum = dayNum === 0 && firstDay === 1 ? 7 : dayNum;
+    var isOdd = !!((dayNum + correction) % 2);
+    return !isOdd ? 'even' : 'odd';
+  }
+}
+
+function getDayOffNum (daysToSub) {
+  let dayOffNum = 7 - Math.abs(FIRST_DAY_OF_WEEK - daysToSub);
+  return dayOffNum == 7 ? 0 : dayOffNum;
+}
+
+function getEvenOddTimetableFrames (date,timetable) {
+  let dayNum = date.day(),
+      type = getEvenOddType(timetable.startPeriod, date);
+
+  if ((!timetable.workAtFirstDayOff && dayNum == getDayOffNum(2)) ||
+      (!timetable.workAtSecondDayOff && dayNum == getDayOffNum(1))) {
+    return [];
+  } else {
+    return timetable[type];
+  }
+}
+
+function combineFrames (dayScheduleArray) {
+  var start = 1440,end = 0;
+  dayScheduleArray.forEach(function(f){
+    if (f.start < start) {
+      start = f.start;
+    }
+    if (f.end > end) {
+      end = f.end;
+    }
+  })
+  return {start:start,end:end};
+}
+
+function getDayBoundsFromEvenOddTimetable (date, timetable){
+  var dateMoment = moment(date);
+  var dayScheduleArray = getEvenOddTimetableFrames(dateMoment,timetable);
+  var daySchedule = combineFrames (dayScheduleArray);
+  var dayBounds = getDayBoundsFromShedule(daySchedule, dateMoment);
+  return dayBounds;
+}
 function getDayBoundsFromCracSlot(date,slot){
   let allDayBounds = null;
   const bitmask = cracValueToBits(slot.bitset);
@@ -82,11 +134,17 @@ function getDayBoundsFromCracSlot(date,slot){
 // This function takes day bounds from getDayBoundsFromTimetable for every timetables
 // and computes min-start and max-end bounds from all given timetables.
 // It allows us to show correct day bounds for 'any free worker' option.
-function getDayBoundsFromAllTimetables(date, timetables) {
+function getDayBoundsFromAllTimetables(date, timetablesDefult,timetablesEvenOdd,timeTableType) {
   let allDayBounds = null;
-
+  timeTableType = timeTableType ||'DEFAULT';
+  var timetables = timeTableType == 'EVENODD' ? timetablesEvenOdd : timetablesDefult;
   timetables.forEach(tt => {
-    const dayBounds = getDayBoundsFromTimetable(date, tt);
+    var dayBounds
+    if (timeTableType == 'EVENODD'){
+      dayBounds = getDayBoundsFromEvenOddTimetable(date, tt);
+    } else {
+      dayBounds = getDayBoundsFromTimetable(date, tt);
+    }
 
     if (!dayBounds) {
       return;
@@ -661,15 +719,17 @@ export function toBusySlots(cracSlots, business, taxonomyIDs, resourceIds = []) 
   const excludedResourcesCountMap = {};
   let maxSlotDuration = -1;
   const resourceTimetables = [];
-
+  const resourceEvenOddTimeTable = [];
+  const timetableType = business.backoffice_configuration && business.backoffice_configuration.resourceTimetableType ? business.backoffice_configuration.resourceTimetableType : 'DEFAULT';
   business.resources.forEach(rr => {
     if (resourceIds.indexOf(rr.id) < 0) {
       return;
     }
-    resourceTimetables.push((rr.timetable && rr.timetable.active === true) ?
-                              rr.timetable :
-                              businessTimetable
-                            );
+    if (timetableType == 'EVENODD'){
+      resourceEvenOddTimeTable.push(rr.evenOddTimetable);
+    } else {
+      resourceTimetables.push(rr.timetable && rr.timetable.active === true ? rr.timetable : businessTimetable);
+    }
   });
 
   if (resourceTimetables.length < 1) {
@@ -704,8 +764,8 @@ export function toBusySlots(cracSlots, business, taxonomyIDs, resourceIds = []) 
     excludedResources,
     days: _.map(cracSlots, function(cracSlot) {
       const { date } = cracSlot;
-
-      var dayBounds = getDayBoundsFromAllTimetables(date, resourceTimetables);
+      var dayBounds;
+      dayBounds = getDayBoundsFromAllTimetables(date, resourceTimetables,resourceEvenOddTimeTable,timetableType);
 
       if (!dayBounds){
         dayBounds = getDayBoundsFromCracSlot(date,cracSlot);

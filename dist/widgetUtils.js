@@ -350,6 +350,7 @@ var Booking = Object.freeze({
 
   var SLOT_SIZE = 5;
   var VECTOR_SIZE = 24 * 60 / SLOT_SIZE;
+  var FIRST_DAY_OF_WEEK = 1;
 
   // Convert minutes to date in ISO format
   function minutesToDate(date, minutes) {
@@ -405,6 +406,57 @@ var Booking = Object.freeze({
     return null;
   }
 
+  function getEvenOddType(startPeriod, startTime) {
+    if (startPeriod == 'month') {
+      return startTime.date() % 2 ? 'odd' : 'even';
+    }
+    if (startPeriod == 'week') {
+      var firstDay = FIRST_DAY_OF_WEEK;
+      var correction = firstDay === 0 ? 1 : 0,
+          dayNum = startTime.day();
+      dayNum = dayNum === 0 && firstDay === 1 ? 7 : dayNum;
+      var isOdd = !!((dayNum + correction) % 2);
+      return !isOdd ? 'even' : 'odd';
+    }
+  }
+
+  function getDayOffNum(daysToSub) {
+    var dayOffNum = 7 - Math.abs(FIRST_DAY_OF_WEEK - daysToSub);
+    return dayOffNum == 7 ? 0 : dayOffNum;
+  }
+
+  function getEvenOddTimetableFrames(date, timetable) {
+    var dayNum = date.day(),
+        type = getEvenOddType(timetable.startPeriod, date);
+
+    if (!timetable.workAtFirstDayOff && dayNum == getDayOffNum(2) || !timetable.workAtSecondDayOff && dayNum == getDayOffNum(1)) {
+      return [];
+    } else {
+      return timetable[type];
+    }
+  }
+
+  function combineFrames(dayScheduleArray) {
+    var start = 1440,
+        end = 0;
+    dayScheduleArray.forEach(function (f) {
+      if (f.start < start) {
+        start = f.start;
+      }
+      if (f.end > end) {
+        end = f.end;
+      }
+    });
+    return { start: start, end: end };
+  }
+
+  function getDayBoundsFromEvenOddTimetable(date, timetable) {
+    var dateMoment = moment(date);
+    var dayScheduleArray = getEvenOddTimetableFrames(dateMoment, timetable);
+    var daySchedule = combineFrames(dayScheduleArray);
+    var dayBounds = getDayBoundsFromShedule(daySchedule, dateMoment);
+    return dayBounds;
+  }
   function getDayBoundsFromCracSlot(date, slot) {
     var allDayBounds = null;
     var bitmask = cracValueToBits(slot.bitset);
@@ -432,26 +484,34 @@ var Booking = Object.freeze({
   // This function takes day bounds from getDayBoundsFromTimetable for every timetables
   // and computes min-start and max-end bounds from all given timetables.
   // It allows us to show correct day bounds for 'any free worker' option.
-  function getDayBoundsFromAllTimetables(date, timetables) {
+  function getDayBoundsFromAllTimetables(date, timetablesDefult, timetablesEvenOdd, timeTableType) {
     var allDayBounds = null;
-
+    timeTableType = timeTableType || 'DEFAULT';
+    var timetables = timeTableType == 'EVENODD' ? timetablesEvenOdd : timetablesDefult;
     timetables.forEach(function (tt) {
-      var dayBounds = getDayBoundsFromTimetable(date, tt);
+      var dayBounds;
+      if (timeTableType == 'EVENODD') {
+        dayBounds = getDayBoundsFromEvenOddTimetable(date, tt);
+      } else {
+        dayBounds = getDayBoundsFromTimetable(date, tt);
+      }
 
       if (!dayBounds) {
         return;
       } else if (!allDayBounds) {
-        var start_time = dayBounds.start_time,
-            start = dayBounds.start,
-            end_time = dayBounds.end_time,
-            end = dayBounds.end;
+        var _dayBounds = dayBounds,
+            start_time = _dayBounds.start_time,
+            start = _dayBounds.start,
+            end_time = _dayBounds.end_time,
+            end = _dayBounds.end;
 
         allDayBounds = { start_time: start_time, start: start, end_time: end_time, end: end };
       } else {
-        var _start_time = dayBounds.start_time,
-            _start = dayBounds.start,
-            _end_time = dayBounds.end_time,
-            _end = dayBounds.end;
+        var _dayBounds2 = dayBounds,
+            _start_time = _dayBounds2.start_time,
+            _start = _dayBounds2.start,
+            _end_time = _dayBounds2.end_time,
+            _end = _dayBounds2.end;
 
         if (allDayBounds.start > _start) {
           allDayBounds.start = _start;
@@ -610,12 +670,12 @@ var Booking = Object.freeze({
   function isoDateForDayOff(date) {
     return moment(date).toISOString().replace('.000Z', 'Z');
   }
-  
+
   /**
-   * return excution time of taxonomy by specific worker
-   * @param {Object} businessWorker 
-   * @param {Object} businessTaxonomy 
-   */
+     * return excution time of taxonomy by specific worker
+     * @param {Object} businessWorker 
+     * @param {Object} businessTaxonomy 
+     */
   function resourceTaxonomyDuration(businessWorker, businessTaxonomy) {
     var duration = businessTaxonomy.duration;
     if (businessWorker.taxonomyLevels && businessWorker.taxonomyLevels.length > 0) {
@@ -733,20 +793,20 @@ var Booking = Object.freeze({
     var finalVector = initBusyVector();
     for (var i = 0; i < workerBitSets.length; i++) {
       workerFree = checkFree(workerBitSets, i, totalDuration);
-      if (workerFree == 1){
+      if (workerFree == 1) {
         roomFree = true;
-        if (roomsBitSets.length > 0){
-          roomFree = false;  
+        if (roomsBitSets.length > 0) {
+          roomFree = false;
         }
         for (var j = 0; j < roomsBitSets.length; j++) {
           roomFree = roomFree || checkFree(roomsBitSets[j], i, serviceDuration[workerId]);
         }
         finalVector[i] = roomFree;
-      } 
+      }
     }
     return finalVector;
   }
-  
+
   /**
    * return all combination of setting elements in array 
    * example: taxonomyCombo(["a","b","c"]) return
@@ -754,10 +814,10 @@ var Booking = Object.freeze({
    * ["b", "c", "a"],["c", "a", "b"],["c", "b", "a"]]
    * @param {Array} input 
    */
-  function taxonomyCombo(input){
+  function taxonomyCombo(input) {
     var permArr = [],
-      usedChars = [];
-  
+        usedChars = [];
+
     function permute(input) {
       var i, ch;
       for (i = 0; i < input.length; i++) {
@@ -785,20 +845,20 @@ var Booking = Object.freeze({
    * @param {String} resourceId 
    * @param {Object} serviceDurationByWorker 
    */
-  function checkSlotTaxonomyCombo(index,serviceRoomVectors,taxonomyCombo,resourceId,serviceDurationByWorker){
+  function checkSlotTaxonomyCombo(index, serviceRoomVectors, taxonomyCombo, resourceId, serviceDurationByWorker) {
     var duration, vector;
     var bit = true;
     var calculatedIndex = index;
-    
-    duration = serviceDurationByWorker[taxonomyCombo[0]][resourceId];
-    bit =  bit&& serviceRoomVectors[taxonomyCombo[0]][resourceId][calculatedIndex];
 
-    for (var i=1; i < taxonomyCombo.length; i++){
+    duration = serviceDurationByWorker[taxonomyCombo[0]][resourceId];
+    bit = bit && serviceRoomVectors[taxonomyCombo[0]][resourceId][calculatedIndex];
+
+    for (var i = 1; i < taxonomyCombo.length; i++) {
       calculatedIndex = calculatedIndex + i * parseInt(duration / SLOT_SIZE);
-      bit =  bit&& serviceRoomVectors[taxonomyCombo[i]][resourceId][calculatedIndex];
+      bit = bit && serviceRoomVectors[taxonomyCombo[i]][resourceId][calculatedIndex];
       duration = serviceDurationByWorker[taxonomyCombo[i]][resourceId];
     }
-    return bit ? 1: 0;
+    return bit ? 1 : 0;
   }
 
   /**
@@ -815,18 +875,18 @@ var Booking = Object.freeze({
    */
   function getWorkerVector(serviceRoomVectors, resourceId, serviceDurationByWorker, taxonomies, taxonomiesRooms) {
     var rooms = [];
-    taxonomiesRooms.forEach(function(t){
-      if (rooms.indexOf(t.room) == -1){
+    taxonomiesRooms.forEach(function (t) {
+      if (rooms.indexOf(t.room) == -1) {
         rooms.push(t.room);
       }
-    })
+    });
 
     var combinations = taxonomyCombo(taxonomies);
     var vector = initBusyVector();
-    for (var j=0;j<vector.length;j++){
-      for (var i=0 ; i< combinations.length; i++){
-        vector[j] = vector[j] || checkSlotTaxonomyCombo(j,serviceRoomVectors,combinations[i],resourceId,serviceDurationByWorker);
-        if (vector[j] == 1){
+    for (var j = 0; j < vector.length; j++) {
+      for (var i = 0; i < combinations.length; i++) {
+        vector[j] = vector[j] || checkSlotTaxonomyCombo(j, serviceRoomVectors, combinations[i], resourceId, serviceDurationByWorker);
+        if (vector[j] == 1) {
           break;
         }
       }
@@ -840,9 +900,9 @@ var Booking = Object.freeze({
    */
   function calcResourceSlots(resourceVector) {
     var resourceSlots = [];
-    for (var i = 0; i< resourceVector.length ; i++){
-      if (resourceVector[i]){
-        resourceSlots.push({ time: i*SLOT_SIZE, duration: SLOT_SIZE , space_left: 1 ,discount:10});
+    for (var i = 0; i < resourceVector.length; i++) {
+      if (resourceVector[i]) {
+        resourceSlots.push({ time: i * SLOT_SIZE, duration: SLOT_SIZE, space_left: 1, discount: 10 });
       }
     }
     return resourceSlots;
@@ -853,17 +913,15 @@ var Booking = Object.freeze({
    * @param {Array} resources 
    * @param {Object} slots 
    */
-  function calExcludedResource(resources,availableResoueceHash) {
+  function calExcludedResource(resources, excludedHash) {
     var excludedResources = [];
-    resources.forEach(function(rId){
-      if (availableResoueceHash[rId] !== true){
-        excludedResources.push(rId)
+    resources.forEach(function (rId) {
+      if (!excludedHash[rId]) {
+        excludedResources.push(rId);
       }
-      
-    })
+    });
     return excludedResources;
   }
-  
 
   /**
    * intialize bitset with 1 in all bits
@@ -902,35 +960,21 @@ var Booking = Object.freeze({
     }
     return 1;
   }
-  
-  /**
-   * And operation by bit between 2 sets
-   * 
-   * @param {*bitset} setA 
-   * @param {*bitset} setB 
-   */
-  function setAnd (setA,setB){
-    var unifiedSet = [];
-    for (var i=0; i< setA.length; i++){
-        unifiedSet[i] = setA[i] && setB[i] 
-    }
-    return unifiedSet;
-  }
-  
+
   /**
    * OR operation by bit between 2 sets
    * 
    * @param {*bitset} setA 
    * @param {*bitset} setB 
    */
-  function setUnion (setA,setB){
+  function setUnion(setA, setB) {
     var unifiedSet = [];
-    for (var i=0; i< setA.length; i++){
-        unifiedSet[i] = setA[i] || setB[i] 
+    for (var i = 0; i < setA.length; i++) {
+      unifiedSet[i] = setA[i] || setB[i];
     }
     return unifiedSet;
   }
-  
+
   /**
    *  Return slots of each resource and the union slot for any available view
    * 
@@ -978,22 +1022,22 @@ var Booking = Object.freeze({
         });
       });
 
-      var anyAvailableVector = initBusyVector()
+      var anyAvailableVector = initBusyVector();
       resources.forEach(function (rId) {
-        finalWorkersVector[rId] = getWorkerVector(serviceRoomVectors, rId, serviceDurationByWorker, taxonomies,taxonomiesRooms);
+        finalWorkersVector[rId] = getWorkerVector(serviceRoomVectors, rId, serviceDurationByWorker, taxonomies, taxonomiesRooms);
         var resourceSlots = calcResourceSlots(finalWorkersVector[rId]);
         daySlots.resources.push({ id: rId, slots: resourceSlots });
-        if (resourceSlots.length>0){
+        if (resourceSlots.length > 0) {
           availableResoueceHash[rId] = true;
         }
-        anyAvailableVector = setUnion(anyAvailableVector,finalWorkersVector[rId])
+        anyAvailableVector = setUnion(anyAvailableVector, finalWorkersVector[rId]);
       });
-      daySlots.slots = calcResourceSlots(anyAvailableVector)
+      daySlots.slots = calcResourceSlots(anyAvailableVector);
       daySlots.available = daySlots.slots.length > 0;
       finalSlots.days.push(daySlots);
     });
 
-    finalSlots.excludedResource = calExcludedResource(resources,availableResoueceHash);
+    finalSlots.excludedResource = calExcludedResource(resources, availableResoueceHash);
     return finalSlots;
   }
 
@@ -1014,12 +1058,17 @@ var Booking = Object.freeze({
     var excludedResourcesCountMap = {};
     var maxSlotDuration = -1;
     var resourceTimetables = [];
-
+    var resourceEvenOddTimeTable = [];
+    var timetableType = business.backoffice_configuration && business.backoffice_configuration.resourceTimetableType ? business.backoffice_configuration.resourceTimetableType : 'DEFAULT';
     business.resources.forEach(function (rr) {
       if (resourceIds.indexOf(rr.id) < 0) {
         return;
       }
-      resourceTimetables.push(rr.timetable && rr.timetable.active === true ? rr.timetable : businessTimetable);
+      if (timetableType == 'EVENODD') {
+        resourceEvenOddTimeTable.push(rr.evenOddTimetable);
+      } else {
+        resourceTimetables.push(rr.timetable && rr.timetable.active === true ? rr.timetable : businessTimetable);
+      }
     });
 
     if (resourceTimetables.length < 1) {
@@ -1053,8 +1102,8 @@ var Booking = Object.freeze({
       days: _.map(cracSlots, function (cracSlot) {
         var date = cracSlot.date;
 
-
-        var dayBounds = getDayBoundsFromAllTimetables(date, resourceTimetables);
+        var dayBounds;
+        dayBounds = getDayBoundsFromAllTimetables(date, resourceTimetables, resourceEvenOddTimeTable, timetableType);
 
         if (!dayBounds) {
           dayBounds = getDayBoundsFromCracSlot(date, cracSlot);
@@ -1237,12 +1286,12 @@ var Crac = Object.freeze({
     return "+" + p.country_code + "(" + p.area_code + ") " + p1 + "-" + p2;
   }
 
-  function getCountryPhoneDigits(country){
+  function getCountryPhoneDigits(country) {
     return countryPhoneDigits[country] || 11;
   }
 
   var countryPhoneDigits = {
-    'UZ': 12,
+    'UZ': 12
   };
 
   var phoneData = {
