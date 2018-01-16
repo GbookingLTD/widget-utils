@@ -350,113 +350,6 @@ var Booking = Object.freeze({
 
   var SLOT_SIZE = 5;
   var VECTOR_SIZE = 24 * 60 / SLOT_SIZE;
-  var FIRST_DAY_OF_WEEK = 1;
-
-  // Convert minutes to date in ISO format
-  function minutesToDate(date, minutes) {
-    return moment.utc(date).startOf('day').add(minutes, 'minutes').toISOString();
-  }
-
-  // Compute start_time/end_time according to given day schedule.
-  function getDayBoundsFromShedule(daySchedule, date) {
-    return {
-      start_time: minutesToDate(date, daySchedule.start),
-      start: daySchedule.start,
-
-      end_time: minutesToDate(date, daySchedule.end),
-      end: daySchedule.end
-    };
-  }
-
-  // Return day bounds for day from timetable using cache.
-  function getDayBoundsFromTimetable(date, timetable) {
-    if (timetable.active !== true) {
-      return null;
-    }
-
-    var weekday = moment(date).weekday();
-
-    var dayScheduleArray = void 0;
-    switch (weekday) {
-      case 7:
-      case 0:
-        dayScheduleArray = timetable.week.mon;break;
-      case 1:
-        dayScheduleArray = timetable.week.tue;break;
-      case 2:
-        dayScheduleArray = timetable.week.wed;break;
-      case 3:
-        dayScheduleArray = timetable.week.thu;break;
-      case 4:
-        dayScheduleArray = timetable.week.fri;break;
-      case 5:
-        dayScheduleArray = timetable.week.sat;break;
-      case 6:
-        dayScheduleArray = timetable.week.sun;break;
-      default:
-        return null;
-    }
-
-    var daySchedule = dayScheduleArray && dayScheduleArray[0];
-    if (daySchedule) {
-      var dayBounds = getDayBoundsFromShedule(daySchedule, date);
-      return dayBounds;
-    }
-
-    return null;
-  }
-
-  function getEvenOddType(startPeriod, startTime) {
-    if (startPeriod == 'month') {
-      return startTime.date() % 2 ? 'odd' : 'even';
-    }
-    if (startPeriod == 'week') {
-      var firstDay = FIRST_DAY_OF_WEEK;
-      var correction = firstDay === 0 ? 1 : 0,
-          dayNum = startTime.day();
-      dayNum = dayNum === 0 && firstDay === 1 ? 7 : dayNum;
-      var isOdd = !!((dayNum + correction) % 2);
-      return !isOdd ? 'even' : 'odd';
-    }
-  }
-
-  function getDayOffNum(daysToSub) {
-    var dayOffNum = 7 - Math.abs(FIRST_DAY_OF_WEEK - daysToSub);
-    return dayOffNum == 7 ? 0 : dayOffNum;
-  }
-
-  function getEvenOddTimetableFrames(date, timetable) {
-    var dayNum = date.day(),
-        type = getEvenOddType(timetable.startPeriod, date);
-
-    if (!timetable.workAtFirstDayOff && dayNum == getDayOffNum(2) || !timetable.workAtSecondDayOff && dayNum == getDayOffNum(1)) {
-      return [];
-    } else {
-      return timetable[type];
-    }
-  }
-
-  function combineFrames(dayScheduleArray) {
-    var start = 1440,
-        end = 0;
-    dayScheduleArray.forEach(function (f) {
-      if (f.start < start) {
-        start = f.start;
-      }
-      if (f.end > end) {
-        end = f.end;
-      }
-    });
-    return { start: start, end: end };
-  }
-
-  function getDayBoundsFromEvenOddTimetable(date, timetable) {
-    var dateMoment = moment(date);
-    var dayScheduleArray = getEvenOddTimetableFrames(dateMoment, timetable);
-    var daySchedule = combineFrames(dayScheduleArray);
-    var dayBounds = getDayBoundsFromShedule(daySchedule, dateMoment);
-    return dayBounds;
-  }
   function getDayBoundsFromCracSlot(date, slot) {
     var allDayBounds = null;
     var bitmask = cracValueToBits(slot.bitset);
@@ -481,52 +374,6 @@ var Booking = Object.freeze({
     console.log(bitmask);
     return allDayBounds;
   }
-  // This function takes day bounds from getDayBoundsFromTimetable for every timetables
-  // and computes min-start and max-end bounds from all given timetables.
-  // It allows us to show correct day bounds for 'any free worker' option.
-  function getDayBoundsFromAllTimetables(date, timetablesDefult, timetablesEvenOdd, timeTableType) {
-    var allDayBounds = null;
-    timeTableType = timeTableType || 'DEFAULT';
-    var timetables = timeTableType == 'EVENODD' ? timetablesEvenOdd : timetablesDefult;
-    timetables.forEach(function (tt) {
-      var dayBounds;
-      if (timeTableType == 'EVENODD') {
-        dayBounds = getDayBoundsFromEvenOddTimetable(date, tt);
-      } else {
-        dayBounds = getDayBoundsFromTimetable(date, tt);
-      }
-
-      if (!dayBounds) {
-        return;
-      } else if (!allDayBounds) {
-        var _dayBounds = dayBounds,
-            start_time = _dayBounds.start_time,
-            start = _dayBounds.start,
-            end_time = _dayBounds.end_time,
-            end = _dayBounds.end;
-
-        allDayBounds = { start_time: start_time, start: start, end_time: end_time, end: end };
-      } else {
-        var _dayBounds2 = dayBounds,
-            _start_time = _dayBounds2.start_time,
-            _start = _dayBounds2.start,
-            _end_time = _dayBounds2.end_time,
-            _end = _dayBounds2.end;
-
-        if (allDayBounds.start > _start) {
-          allDayBounds.start = _start;
-          allDayBounds.start_time = _start_time;
-        }
-        if (allDayBounds.end < _end) {
-          allDayBounds.end = _end;
-          allDayBounds.end_time = _end_time;
-        }
-      }
-    });
-
-    return allDayBounds;
-  }
-
   function cracValueToBits(value) {
     var bits = [];
     // Fastest way to parse stringifyed bitmask
@@ -1103,11 +950,8 @@ var Booking = Object.freeze({
         var date = cracSlot.date;
 
         var dayBounds;
-        dayBounds = getDayBoundsFromAllTimetables(date, resourceTimetables, resourceEvenOddTimeTable, timetableType);
-
-        if (!dayBounds) {
-          dayBounds = getDayBoundsFromCracSlot(date, cracSlot);
-        }
+        //dayBounds = getDayBoundsFromAllTimetables(date, resourceTimetables,resourceEvenOddTimeTable,timetableType);
+        dayBounds = getDayBoundsFromCracSlot(date, cracSlot);
 
         if (!dayBounds) {
           var dayOffDate = isoDateForDayOff(date);

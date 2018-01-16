@@ -765,11 +765,9 @@ export function toBusySlots(cracSlots, business, taxonomyIDs, resourceIds = []) 
     days: _.map(cracSlots, function(cracSlot) {
       const { date } = cracSlot;
       var dayBounds;
-      dayBounds = getDayBoundsFromAllTimetables(date, resourceTimetables,resourceEvenOddTimeTable,timetableType);
-
-      if (!dayBounds){
-        dayBounds = getDayBoundsFromCracSlot(date,cracSlot);
-      }
+      //dayBounds = getDayBoundsFromAllTimetables(date, resourceTimetables,resourceEvenOddTimeTable,timetableType);
+      dayBounds = getDayBoundsFromCracSlot(date,cracSlot);
+      
 
       if (!dayBounds) {
         const dayOffDate = isoDateForDayOff(date);
