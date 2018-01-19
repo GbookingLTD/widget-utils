@@ -520,8 +520,8 @@ var Booking = Object.freeze({
 
   /**
      * return excution time of taxonomy by specific worker
-     * @param {Object} businessWorker
-     * @param {Object} businessTaxonomy
+     * @param {Object} businessWorker 
+     * @param {Object} businessTaxonomy 
      */
   function resourceTaxonomyDuration(businessWorker, businessTaxonomy) {
     var duration = businessTaxonomy.duration;
@@ -539,8 +539,8 @@ var Booking = Object.freeze({
 
   /**
    * return map of taxonomies, and foreach taxonomy map of resources and durations
-   * @param {Array} businessResources
-   * @param {Array} businessTaxonomies
+   * @param {Array} businessResources 
+   * @param {Array} businessTaxonomies 
    */
   function getServiceDurationByWorker(businessResources, businessTaxonomies) {
     var taxonomyDuration = {};
@@ -555,9 +555,9 @@ var Booking = Object.freeze({
 
   /**
    * return map of resources each resource the total duaration to execute all taxonomies
-   * @param {*} ServiceDurationByWorker
-   * @param {*} taxonomies
-   * @param {*} resources
+   * @param {*} ServiceDurationByWorker 
+   * @param {*} taxonomies 
+   * @param {*} resources 
    */
   function getSlotDurationByWorker(ServiceDurationByWorker, taxonomies, resources) {
     var duration = {};
@@ -572,8 +572,8 @@ var Booking = Object.freeze({
 
   /**
    * excute the capacity of each taxonomy from request Crac.GetRoomsFromTaxonomies
-   * @param {Object} taxonomyTreeCapacity
-   * @param {Object} taxonomiesRooms
+   * @param {Object} taxonomyTreeCapacity 
+   * @param {Object} taxonomiesRooms 
    */
   function getRoomCapacityByService(taxonomyTreeCapacity, taxonomiesRooms) {
     var capacity = {};
@@ -587,11 +587,11 @@ var Booking = Object.freeze({
 
   /**
    * convert crac bitset response into bitset vectors
-   * @param {Object} cracSlot
-   * @param {Object} roomCapacityByService
-   * @param {Array} taxonomies
-   * @param {Array} resources
-   * @param {Array} taxonomiesRooms
+   * @param {Object} cracSlot 
+   * @param {Object} roomCapacityByService 
+   * @param {Array} taxonomies 
+   * @param {Array} resources 
+   * @param {Array} taxonomiesRooms 
    */
   function getBitSetsFromCracSlots(cracSlot, roomCapacityByService, taxonomies, resources, taxonomiesRooms) {
     var bitSets = {};
@@ -627,13 +627,13 @@ var Booking = Object.freeze({
 
   /**
    * return vector:true mean the resource is free for total duration of all taxonomies and rooms are available for these taxonomies
-   * @param {Array} workerBitSets
-   * @param {string} workerId
-   * @param {Array} roomsBitSets
-   * @param {Int} totalDuration
-   * @param {Int} serviceDuration
-   * @param {String} resources
-   * @param {Array} taxonomies
+   * @param {Array} workerBitSets 
+   * @param {string} workerId 
+   * @param {Array} roomsBitSets 
+   * @param {Int} totalDuration 
+   * @param {Int} serviceDuration 
+   * @param {String} resources 
+   * @param {Array} taxonomies 
    */
   function getServiceRoomVector(workerBitSets, workerId, roomsBitSets, totalDuration, serviceDuration, resources, taxonomies) {
     var workerFree, roomFree;
@@ -655,11 +655,11 @@ var Booking = Object.freeze({
   }
 
   /**
-   * return all combination of setting elements in array
+   * return all combination of setting elements in array 
    * example: taxonomyCombo(["a","b","c"]) return
    * [["a", "b", "c"],["a", "c", "b"],["b", "a", "c"],
    * ["b", "c", "a"],["c", "a", "b"],["c", "b", "a"]]
-   * @param {Array} input
+   * @param {Array} input 
    */
   function taxonomyCombo(input) {
     var permArr = [],
@@ -683,14 +683,14 @@ var Booking = Object.freeze({
   }
 
   /**
-   *
+   * 
    * Check if serious of taxonomies can be executed by specific worker at specfic bit
-   *
-   * @param {int} index
-   * @param {Object} serviceRoomVectors
-   * @param {Array} taxonomyCombo
-   * @param {String} resourceId
-   * @param {Object} serviceDurationByWorker
+   * 
+   * @param {int} index 
+   * @param {Object} serviceRoomVectors 
+   * @param {Array} taxonomyCombo 
+   * @param {String} resourceId 
+   * @param {Object} serviceDurationByWorker 
    */
   function checkSlotTaxonomyCombo(index, serviceRoomVectors, taxonomyCombo, resourceId, serviceDurationByWorker) {
     var duration, vector;
@@ -709,16 +709,16 @@ var Booking = Object.freeze({
   }
 
   /**
-   *
+   * 
    * return resource vector; bit true when atleast 1 combination of taxonomy can be done
    * for example: in case of padicure and manicure service in request, true grante that worker can execute the
    * services by doing padicure first or manicure first
-   *
-   * @param {Object} serviceRoomVectors
-   * @param {String} resourceId
-   * @param {Object} serviceDurationByWorker
-   * @param {Array} taxonomies
-   * @param {Array} taxonomiesRooms
+   * 
+   * @param {Object} serviceRoomVectors 
+   * @param {String} resourceId 
+   * @param {Object} serviceDurationByWorker 
+   * @param {Array} taxonomies 
+   * @param {Array} taxonomiesRooms 
    */
   function getWorkerVector(serviceRoomVectors, resourceId, serviceDurationByWorker, taxonomies, taxonomiesRooms) {
     var rooms = [];
@@ -743,7 +743,7 @@ var Booking = Object.freeze({
 
   /**
    * create widget solts from bitset
-   * @param {bitset} resourceVector
+   * @param {bitset} resourceVector 
    */
   function calcResourceSlots(resourceVector) {
     var resourceSlots = [];
@@ -755,10 +755,10 @@ var Booking = Object.freeze({
     return resourceSlots;
   }
   /**
-   * return array of excluded resources
+   * return array of excluded resources 
    * retource excluded in case he dont have any free slot in request dates
-   * @param {Array} resources
-   * @param {Object} slots
+   * @param {Array} resources 
+   * @param {Object} slots 
    */
   function calExcludedResource(resources, excludedHash) {
     var excludedResources = [];
@@ -793,10 +793,10 @@ var Booking = Object.freeze({
   }
 
   /**
-   * check of bitset has serious of true from index to fit duration
-   * @param {bitset} bistSet
-   * @param {int} index
-   * @param {int} duration
+   * check of bitset has serious of true from index to fit duration 
+   * @param {bitset} bistSet 
+   * @param {int} index 
+   * @param {int} duration 
    */
   function checkFree(bistSet, index, duration) {
     var bits = parseInt(duration / SLOT_SIZE);
@@ -810,9 +810,9 @@ var Booking = Object.freeze({
 
   /**
    * OR operation by bit between 2 sets
-   *
-   * @param {*bitset} setA
-   * @param {*bitset} setB
+   * 
+   * @param {*bitset} setA 
+   * @param {*bitset} setB 
    */
   function setUnion(setA, setB) {
     var unifiedSet = [];
@@ -824,12 +824,12 @@ var Booking = Object.freeze({
 
   /**
    *  Return slots of each resource and the union slot for any available view
-   *
-   * @param {Object} cracResult
-   * @param {Object} business
-   * @param {Array} taxonomies
-   * @param {Array} resources
-   * @param {Array} taxonomiesRooms
+   * 
+   * @param {Object} cracResult 
+   * @param {Object} business 
+   * @param {Array} taxonomies 
+   * @param {Array} resources 
+   * @param {Array} taxonomiesRooms 
    */
   function prepareSlots(cracResult, business, taxonomies, resources, taxonomiesRooms) {
 
@@ -1511,9 +1511,10 @@ var langUtils = Object.freeze({
   function setupChildishnes(taxonomies, resources) {
     var strictInclusion = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : true;
 
-    var childOnly = {};
-    var adultOnly = {};
-    var common = {};
+    var C = {}; //child taxonomies
+    var P = {}; //adult taxonomies
+    var N = {}; //common taxonomies
+
 
     if (!Array.isArray(taxonomies) || !Array.isArray(resources)) {
       console.log('empty data');
@@ -1522,42 +1523,22 @@ var langUtils = Object.freeze({
 
     resources.forEach(function (r) {
       if (r.taxonomyChildren && r.taxonomyChildren.length > 0) {
-        var childs = [];
-        var adults = [];
+        var rChildID = {}; // all tax id where children=true
+        var rParentID = {}; // all tax id where children=false
 
         r.taxonomyChildren.forEach(function (c) {
-          var tax = c.taxonomyID;
-          var childIndex = childs.indexOf(tax);
-          var adultIndex = adults.indexOf(tax);
-          if (childIndex < 0 && adultIndex < 0) {
-            c.children === true ? childs.push(tax) : adults.push(tax);
-          } else {
-            if (!common[tax]) {
-              common[tax] = true;
-            }
-            if (childIndex >= 0) {
-              childs.splice(childIndex, 1);
-            } else {
-              adults.splice(adultIndex, 1);
-            }
-          }
+          c.children === true ? rChildID[c.taxonomyID] = true : rParentID[c.taxonomyID] = true;
         });
 
-        childs.map(function (tax) {
-          if (!childOnly[tax]) {
-            childOnly[tax] = true;
-          }
-        });
-        adults.map(function (tax) {
-          if (!adultOnly[tax]) {
-            adultOnly[tax] = true;
-          }
+        r.taxonomyChildren.forEach(function (c) {
+          // если услуга встречается 2-ды - как взрослая и как детская
+          if (rChildID[c.taxonomyID] && rParentID[c.taxonomyID]) N[c.taxonomyID] = true;else if (rChildID[c.taxonomyID]) C[c.taxonomyID] = true;else if (rParentID[c.taxonomyID]) P[c.taxonomyID] = true;
         });
       }
     });
 
     taxonomies.forEach(function (t) {
-      t.childrenTypes = getTaxonomyTypes(childOnly, adultOnly, common, t.id);
+      t.childrenTypes = getTaxonomyTypes(C, P, N, parseInt(t.id));
     });
     return taxonomies;
   };

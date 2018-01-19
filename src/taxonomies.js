@@ -5,9 +5,10 @@ var TAXONOMY_ADULT = 'PARENT';
 var TAXONOMY_COMMON = 'COMMON';
 
 export function setupChildishnes(taxonomies, resources, strictInclusion = true) {
-  var childOnly = {};
-  var adultOnly = {};
-  var common = {};
+  var C = {}; //child taxonomies
+  var P = {}; //adult taxonomies
+  var N = {}; //common taxonomies
+
 
   if(!Array.isArray(taxonomies) || !Array.isArray(resources) ){
     console.log('empty data');
@@ -16,43 +17,25 @@ export function setupChildishnes(taxonomies, resources, strictInclusion = true) 
 
 
   resources.forEach(function (r) {
-    if(r.taxonomyChildren && r.taxonomyChildren.length > 0){
-      var childs = [];
-      var adults = [];
+    if (r.taxonomyChildren && r.taxonomyChildren.length > 0) {
+      var rChildID = {}; // all tax id where children=true
+      var rParentID = {}; // all tax id where children=false
 
       r.taxonomyChildren.forEach(function (c) {
-        var tax = c.taxonomyId;
-        var childIndex = childs.indexOf(tax);
-        var adultIndex = adults.indexOf(tax);
-        if(childIndex < 0 && adultIndex < 0){
-          c.children===true ? childs.push(tax) : adults.push(tax);
-        }else{
-          if(!common[tax]){
-            common[tax] = true;
-          }
-          if(childIndex>=0){
-            childs.splice(childIndex,1)
-          }else{
-            adults.splice(adultIndex,1)
-          }
-        }
+        c.children === true ? rChildID[c.taxonomyID] = true : rParentID[c.taxonomyID] = true;
       });
 
-      childs.map(function(tax){
-        if(!childOnly[tax]){
-          childOnly[tax] = true;
-        }
-      });
-      adults.map(function(tax){
-        if(!adultOnly[tax]){
-          adultOnly[tax] = true;
-        }
+      r.taxonomyChildren.forEach(function(c) {
+        // если услуга встречается 2-ды - как взрослая и как детская
+        if (rChildID[c.taxonomyID] && rParentID[c.taxonomyID]) N[c.taxonomyID] = true;
+        else if (rChildID[c.taxonomyID]) C[c.taxonomyID] = true;
+        else if (rParentID[c.taxonomyID]) P[c.taxonomyID] = true;
       });
     }
   });
 
   taxonomies.forEach(function (t) {
-    t.childrenTypes = getTaxonomyTypes(childOnly, adultOnly, common, t.id);
+    t.childrenTypes = getTaxonomyTypes(C, P, N, parseInt(t.id));
   })
   return taxonomies;
 };
