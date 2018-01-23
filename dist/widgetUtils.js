@@ -364,7 +364,7 @@ var Booking = Object.freeze({
         lastActiveBit = ii;
       }
     }
-    if (firstActiveBit != bitmask.length - 1 || firstActiveBit == bitmask.length - 1 && lastActiveBit == 1) {
+    if (firstActiveBit != bitmask.length - 1 || firstActiveBit == bitmask.length - 1 && lastActiveBit > 1) {
       allDayBounds = {};
       allDayBounds.start = (bitmask.length - 1 - firstActiveBit) * SLOT_SIZE;
       allDayBounds.start_time = moment(date).add(allDayBounds.start, 'minutes').toISOString();
