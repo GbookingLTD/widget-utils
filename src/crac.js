@@ -121,14 +121,17 @@ function getDayBoundsFromCracSlot(date,slot){
       lastActiveBit = ii;
     }
   }
-  if (firstActiveBit != bitmask.length){
+  if ( (firstActiveBit != bitmask.length-1) || (firstActiveBit == bitmask.length-1 && lastActiveBit == 1)){
     allDayBounds = {};
     allDayBounds.start = (bitmask.length -1 - firstActiveBit) * SLOT_SIZE;
     allDayBounds.start_time = moment(date).add(allDayBounds.start,'minutes').toISOString();
-    allDayBounds.end = (bitmask.length - lastActiveBit) * SLOT_SIZE;
+    if (lastActiveBit == 1){
+      allDayBounds.end = bitmask.length * SLOT_SIZE;
+    } else {
+      allDayBounds.end = (bitmask.length - lastActiveBit) * SLOT_SIZE;
+    }
     allDayBounds.end_time = moment(date).add(allDayBounds.end,'minutes').toISOString();
   }
-  console.log(bitmask);
   return allDayBounds;
 }
 // This function takes day bounds from getDayBoundsFromTimetable for every timetables
