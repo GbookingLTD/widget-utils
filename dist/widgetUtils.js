@@ -356,7 +356,7 @@ var Booking = Object.freeze({
     var firstActiveBit = bitmask.length;
     var daySize = 24 * 60 / SLOT_SIZE;
     var lastActiveBit = bitmask.length - daySize;
-    for (var ii = bitmask.length - 1; ii > bitmask.length - 24 * 60 / SLOT_SIZE; ii--) {
+    for (var ii = bitmask.length - 1; ii >= bitmask.length - 24 * 60 / SLOT_SIZE; ii--) {
       if (bitmask[ii] == 1 && firstActiveBit == bitmask.length) {
         firstActiveBit = ii;
       }
