@@ -22,14 +22,18 @@ export function setupChildishnes(taxonomies, resources, strictInclusion = true) 
       var rParentID = {}; // all tax id where children=false
 
       r.taxonomyChildren.forEach(function (c) {
+        if(c !== null && typeof c.children != 'undefined' && typeof c.taxonomyID != 'undefined'){
         c.children === true ? rChildID[c.taxonomyID] = true : rParentID[c.taxonomyID] = true;
+        }
       });
 
       r.taxonomyChildren.forEach(function(c) {
+        if(c !== null && typeof c.children != 'undefined' && typeof c.taxonomyID != 'undefined'){
         // если услуга встречается 2-ды - как взрослая и как детская
         if (rChildID[c.taxonomyID] && rParentID[c.taxonomyID]) N[c.taxonomyID] = true;
         else if (rChildID[c.taxonomyID]) C[c.taxonomyID] = true;
         else if (rParentID[c.taxonomyID]) P[c.taxonomyID] = true;
+        }
       });
     }
   });
