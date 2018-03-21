@@ -324,25 +324,21 @@ var BusySlots = Object.freeze({
       return moment(d.date).isSame(day.date, 'day');
     });
     if (slotDay) {
-      var startTime = new Date(slotDay.start_time);
-      var endTime = new Date(slotDay.end_time);
+      var startTime = moment.utc(slotDay.start_time);
+      var endTime = moment.utc(slotDay.end_time);
 
       var businessNow = moment.utc();
       setBusinessDateTZ(businessData, businessNow);
       var businessNowLikeUTC = getDateLikeUTC(businessNow);
 
-      businessData.business.general_info.min_booking_time && businessNowLikeUTC.add('hours', businessData.business.general_info.min_booking_time);
+      businessData.business.general_info.min_booking_time && startTime.add('hours', businessData.business.general_info.min_booking_time);
 
-      if (businessNowLikeUTC.isSame(moment.utc(startTime), 'day') && moment.utc(startTime) < businessNowLikeUTC) {
-        startTime = alignSlotTime(moment.utc(startTime), slotSize, businessNowLikeUTC);
-      }
-
-      while (startTime.getTime() < endTime.getTime()) {
-        var dateCheck = checkDate(slotDay.slots, startTime);
+      for (var slot_time = startTime; slot_time.isBefore(endTime);) {
+        var dateCheck = checkDate(slotDay.slots, slot_time);
         if (dateCheck[0] !== 0) {
-          return moment.utc(startTime);
+          return slot_time;
         }
-        startTime.setUTCMinutes(startTime.getMinutes() + dateCheck[1]);
+        slot_time.add('minutes', slotSize);
       }
     }
   }
