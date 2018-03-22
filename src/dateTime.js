@@ -100,8 +100,11 @@ export function alignTimeByQuantum(minutes, quantum) {
   return Math.ceil(minutes / quantum) * quantum;
 }
 
-export function alignSlotTime(startTime, slotSize, m) {
+export function alignSlotTime(startTime, slotSize, m, isMoment) {
   var diff = m.diff(startTime, 'minute');
   var alignedDiff = alignTimeByQuantum(diff, slotSize);
+  if(isMoment){
+    return startTime.add(alignedDiff, 'minute');
+  }
   return startTime.add(alignedDiff, 'minute').toDate();
 }
