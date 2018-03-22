@@ -28,12 +28,14 @@ export function calendarBookingTime(businessData, busySlots, slotSize, day, isGT
     var startTime = moment.utc(slotDay.start_time);
     var endTime = moment.utc(slotDay.end_time);
 
-    var businessNow = moment.utc();
-    setBusinessDateTZ(businessData, businessNow);
-    var businessNowLikeUTC = getDateLikeUTC(businessNow);
+    var now = moment.utc();
+    var businessOffset = moment.tz(now, businessData.business.general_info.timezone);
+    var businessNow = moment.utc().add(businessOffset._offset,'m');
 
-    businessData.business.general_info.min_booking_time &&
-    startTime.add('hours', businessData.business.general_info.min_booking_time);
+    if (businessNow.isSame(startTime, 'day') && businessNow > startTime) {
+      startTime = alignSlotTime(startTime, slotSize, businessNow, true);
+    }
+    businessData.business.general_info.min_booking_time && startTime.add('hours', businessData.business.general_info.min_booking_time);
 
     for (var slot_time = startTime; slot_time.isBefore(endTime);) {
       var dateCheck = checkDate(slotDay.slots, slot_time);

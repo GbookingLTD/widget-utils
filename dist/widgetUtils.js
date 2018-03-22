@@ -104,9 +104,12 @@
     return Math.ceil(minutes / quantum) * quantum;
   }
 
-  function alignSlotTime(startTime, slotSize, m) {
+  function alignSlotTime(startTime, slotSize, m, isMoment) {
     var diff = m.diff(startTime, 'minute');
     var alignedDiff = alignTimeByQuantum(diff, slotSize);
+    if (isMoment) {
+      return startTime.add(alignedDiff, 'minute');
+    }
     return startTime.add(alignedDiff, 'minute').toDate();
   }
 
@@ -327,10 +330,13 @@ var BusySlots = Object.freeze({
       var startTime = moment.utc(slotDay.start_time);
       var endTime = moment.utc(slotDay.end_time);
 
-      var businessNow = moment.utc();
-      setBusinessDateTZ(businessData, businessNow);
-      var businessNowLikeUTC = getDateLikeUTC(businessNow);
+      var now = moment.utc();
+      var businessOffset = moment.tz(now, businessData.business.general_info.timezone);
+      var businessNow = moment.utc().add(businessOffset._offset, 'm');
 
+      if (businessNow.isSame(startTime, 'day') && businessNow > startTime) {
+        startTime = alignSlotTime(startTime, slotSize, businessNow, true);
+      }
       businessData.business.general_info.min_booking_time && startTime.add('hours', businessData.business.general_info.min_booking_time);
 
       for (var slot_time = startTime; slot_time.isBefore(endTime);) {
@@ -1550,14 +1556,14 @@ var langUtils = Object.freeze({
 
         r.taxonomyChildren.forEach(function (c) {
           if (c !== null && typeof c.children != 'undefined' && typeof c.taxonomyID != 'undefined') {
-          c.children === true ? rChildID[c.taxonomyID] = true : rParentID[c.taxonomyID] = true;
+            c.children === true ? rChildID[c.taxonomyID] = true : rParentID[c.taxonomyID] = true;
           }
         });
 
         r.taxonomyChildren.forEach(function (c) {
           if (c !== null && typeof c.children != 'undefined' && typeof c.taxonomyID != 'undefined') {
-          // если услуга встречается 2-ды - как взрослая и как детская
-          if (rChildID[c.taxonomyID] && rParentID[c.taxonomyID]) N[c.taxonomyID] = true;else if (rChildID[c.taxonomyID]) C[c.taxonomyID] = true;else if (rParentID[c.taxonomyID]) P[c.taxonomyID] = true;
+            // если услуга встречается 2-ды - как взрослая и как детская
+            if (rChildID[c.taxonomyID] && rParentID[c.taxonomyID]) N[c.taxonomyID] = true;else if (rChildID[c.taxonomyID]) C[c.taxonomyID] = true;else if (rParentID[c.taxonomyID]) P[c.taxonomyID] = true;
           }
         });
       }
