@@ -1031,9 +1031,14 @@ var Booking = Object.freeze({
     return busySlotsResponse;
   }
 
+  function setSlotSize(slotSize) {
+    SLOT_SIZE = slotSize;
+  }
+
 var Crac = Object.freeze({
     prepareSlots: prepareSlots,
-    toBusySlots: toBusySlots
+    toBusySlots: toBusySlots,
+    setSlotSize: setSlotSize
   });
 
   function roundNumberUsingRule(input, businessData, noCommas) {
