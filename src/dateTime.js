@@ -96,7 +96,6 @@ export function busySlotsInterval(date, businessData, daysToFetch) {
 }
 
 export function alignTimeByQuantum(minutes, quantum) {
-  if (quantum === 0 || 60 % quantum !== 0) throw new Error('invalid time quantum');
   return Math.ceil(minutes / quantum) * quantum;
 }
 
