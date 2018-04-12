@@ -378,6 +378,12 @@ var Booking = Object.freeze({
   function getDayBoundsFromCracSlot(date, slot) {
     var allDayBounds = null;
     var bitmask = cracValueToBits(slot.bitset);
+    var bitmaskTaxonomy = cracValueToBits(slot.taxonomyBitset ||"");
+    if (bitmaskTaxonomy.indexOf(0) > -1){
+      for (var i=0; i< bitmask.length; i++){
+        bitmask[i] = bitmask[i] ? bitmask[i] && bitmaskTaxonomy[i] :bitmaskTaxonomy[i];
+      }
+    }
     var firstActiveBit = bitmask.length;
     var daySize = 24 * 60 / SLOT_SIZE;
     var lastActiveBit = bitmask.length - daySize;
@@ -425,7 +431,7 @@ var Booking = Object.freeze({
     var bitmaskTaxonomy = cracValueToBits(cracSlot.taxonomyBitset || "");
     if (bitmaskTaxonomy.indexOf(0) > -1) {
       for (var i = 0; i < bitmask.length; i++) {
-        bitmask[i] = bitmask[i] && bitmaskTaxonomy[i];
+        bitmask[i] =bitmask[i] ? bitmask[i] && bitmaskTaxonomy[i] :bitmaskTaxonomy[i];
       }
     }
     var reverseOffset = bitmask.length - 1;

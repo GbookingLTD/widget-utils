@@ -108,7 +108,13 @@ function getDayBoundsFromEvenOddTimetable (date, timetable){
 }
 function getDayBoundsFromCracSlot(date,slot){
   let allDayBounds = null;
-  const bitmask = cracValueToBits(slot.bitset);
+  var bitmask = cracValueToBits(slot.bitset);
+  var bitmaskTaxonomy = cracValueToBits(slot.taxonomyBitset ||"");
+  if (bitmaskTaxonomy.indexOf(0) > -1){
+    for (var i=0; i< bitmask.length; i++){
+      bitmask[i] = bitmask[i] ? bitmask[i] && bitmaskTaxonomy[i] :bitmaskTaxonomy[i];
+    }
+  }
   var firstActiveBit = bitmask.length;
   var daySize = 24 * 60 / SLOT_SIZE;
   var lastActiveBit = bitmask.length - daySize;
@@ -193,7 +199,7 @@ function getCrunchSlotsFromCrac(cracSlot, date, startMinutes, endMinutes, maxSlo
   var bitmaskTaxonomy = cracValueToBits(cracSlot.taxonomyBitset ||"");
   if (bitmaskTaxonomy.indexOf(0) > -1){
     for (var i=0; i< bitmask.length; i++){
-      bitmask[i] =bitmask[i] && bitmaskTaxonomy[i] 
+      bitmask[i] =bitmask[i] ? bitmask[i] && bitmaskTaxonomy[i] :bitmaskTaxonomy[i];
     }
   }
   const reverseOffset = bitmask.length - 1;
