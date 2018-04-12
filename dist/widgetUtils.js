@@ -100,7 +100,6 @@
   }
 
   function alignTimeByQuantum(minutes, quantum) {
-    if (quantum === 0 || 60 % quantum !== 0) throw new Error('invalid time quantum');
     return Math.ceil(minutes / quantum) * quantum;
   }
 
@@ -1396,23 +1395,30 @@ var Crac = Object.freeze({
     },
     'UZ': {
       code: '998',
-      mask: '+998(dd) ddd-dddd',
+      mask: '+998dd ddd-dddd',
       rules: {
         "9": null,
         "d": /\d/
       },
       phoneExtractorWidget: function phoneExtractorWidget(value) {
         var digits = value.replace(/\D/g, '');
-        return [digits.substring(0, 3), digits.substring(3)];
+        return ['', digits.substring(digits.length - 9)];
       },
       phoneExtractor: function phoneExtractor(value) {
         var digits = value.replace(/\D/g, '');
         if (digits.length >= 10) {
-          return ['', '998', digits.substring(digits.length - 9, digits.length - 6), digits.substring(digits.length - 6), ''];
+          return ['', '998', '', digits.substring(digits.length - 9), ''];
         }
         return ['', '998', '', '', ''];
       },
-      phoneStringMaker: defaultStringMaker
+      phoneStringMaker: function phoneStringMaker(p) {
+        if (!p || !p.number) return '';
+        var p1 = p.number.length > 3 ? p.number.substr(0, 2) : '';
+        var p2 = p.number.length > 3 ? p.number.substr(2, 3) : '';
+        var p3 = p.number.length > 3 ? p.number.substr(5, 4) : '';
+        var area_code = p.area_code.length ? "(" + p.area_code + ") " : "";
+        return "+" + p.country_code + area_code + p1 + " " + p2 + "-" + p3;
+      }
     },
     'BLR': {
       code: '7',
