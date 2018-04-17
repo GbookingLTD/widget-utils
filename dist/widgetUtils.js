@@ -1173,7 +1173,8 @@ var Crac = Object.freeze({
   }
 
   var countryPhoneDigits = {
-    'UZ': 12
+    'UZ': 12,
+    'UA': 12
   };
 
   var phoneData = {
