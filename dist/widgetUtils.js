@@ -377,10 +377,10 @@ var Booking = Object.freeze({
   function getDayBoundsFromCracSlot(date, slot) {
     var allDayBounds = null;
     var bitmask = cracValueToBits(slot.bitset);
-    var bitmaskTaxonomy = cracValueToBits(slot.taxonomyBitset ||"");
-    if (bitmaskTaxonomy.indexOf(0) > -1){
-      for (var i=0; i< bitmask.length; i++){
-        bitmask[i] = bitmask[i] ? bitmask[i] && bitmaskTaxonomy[i] :bitmaskTaxonomy[i];
+    var bitmaskTaxonomy = cracValueToBits(slot.taxonomyBitset || "");
+    if (bitmaskTaxonomy.indexOf(0) > -1) {
+      for (var i = 0; i < bitmask.length; i++) {
+        bitmask[i] = bitmask[i] ? bitmask[i] && bitmaskTaxonomy[i] : bitmaskTaxonomy[i];
       }
     }
     var firstActiveBit = bitmask.length;
@@ -430,7 +430,7 @@ var Booking = Object.freeze({
     var bitmaskTaxonomy = cracValueToBits(cracSlot.taxonomyBitset || "");
     if (bitmaskTaxonomy.indexOf(0) > -1) {
       for (var i = 0; i < bitmask.length; i++) {
-        bitmask[i] =bitmask[i] ? bitmask[i] && bitmaskTaxonomy[i] :bitmaskTaxonomy[i];
+        bitmask[i] = bitmask[i] ? bitmask[i] && bitmaskTaxonomy[i] : bitmaskTaxonomy[i];
       }
     }
     var reverseOffset = bitmask.length - 1;
@@ -1298,6 +1298,10 @@ var Crac = Object.freeze({
     'UA': {
       code: '380',
       mask: '+380(dd) ddd-dddd',
+      rules: {
+        "9": null,
+        "d": /\d/
+      },
       phoneExtractorWidget: function phoneExtractorWidget(value) {
         var digits = value.replace(/\D/g, '');
         return [digits.substring(0, 2), digits.substring(2)];

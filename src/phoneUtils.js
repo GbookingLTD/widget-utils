@@ -198,6 +198,10 @@ function defaultStringMaker(p) {
       'UA': {
         code: '380',
         mask: '+380(dd) ddd-dddd',
+        rules: {
+          "9": null,
+          "d": /\d/
+        },
         phoneExtractorWidget: function (value) {
           var digits = value.replace(/\D/g, '');
           return [digits.substring(0, 2), digits.substring(2)];
