@@ -100,13 +100,15 @@
   }
 
   function alignTimeByQuantum(minutes, quantum) {
-    if (quantum === 0 || 60 % quantum !== 0) throw new Error('invalid time quantum');
     return Math.ceil(minutes / quantum) * quantum;
   }
 
-  function alignSlotTime(startTime, slotSize, m) {
+  function alignSlotTime(startTime, slotSize, m, isMoment) {
     var diff = m.diff(startTime, 'minute');
     var alignedDiff = alignTimeByQuantum(diff, slotSize);
+    if (isMoment) {
+      return startTime.add(alignedDiff, 'minute');
+    }
     return startTime.add(alignedDiff, 'minute').toDate();
   }
 
@@ -312,35 +314,57 @@ var BusySlots = Object.freeze({
    * @param day
    * @returns {boolean}
    */
-  function calendarBookingTime(businessData, busySlots, slotSize, day) {
+  function calendarBookingTime(businessData, busySlots, slotSize, day, isGT) {
     var widgetConfiguration = businessData.business.widget_configuration;
     if (isDateForbidden(widgetConfiguration, day.date)) {
       return;
+    }
+    if (isGT) {
+      return calendarBookingTimeGT(businessData, busySlots, slotSize, day);
     }
     var slotDay = _$1(busySlots.days).find(function (d) {
       return moment(d.date).isSame(day.date, 'day');
     });
     if (slotDay) {
-      var startTime = new Date(slotDay.start_time);
-      var endTime = new Date(slotDay.end_time);
+      var startTime = moment.utc(slotDay.start_time);
+      var endTime = moment.utc(slotDay.end_time);
 
-      var businessNow = moment.utc();
-      setBusinessDateTZ(businessData, businessNow);
-      var businessNowLikeUTC = getDateLikeUTC(businessNow);
+      var now = moment.utc();
+      var businessOffset = moment.tz(now, businessData.business.general_info.timezone);
+      var businessNow = moment.utc().add(businessOffset._offset, 'm');
 
-      businessData.business.general_info.min_booking_time && businessNowLikeUTC.add('hours', businessData.business.general_info.min_booking_time);
-
-      if (businessNowLikeUTC.isSame(moment.utc(startTime), 'day') && moment.utc(startTime) < businessNowLikeUTC) {
-        startTime = alignSlotTime(moment.utc(startTime), slotSize, businessNowLikeUTC);
+      if (businessNow.isSame(startTime, 'day') && businessNow > startTime) {
+        startTime = alignSlotTime(startTime, slotSize, businessNow, true);
       }
+      businessData.business.general_info.min_booking_time && startTime.add('hours', businessData.business.general_info.min_booking_time);
 
-      while (startTime.getTime() < endTime.getTime()) {
-        var dateCheck = checkDate(slotDay.slots, startTime);
+      for (var slot_time = startTime; slot_time.isBefore(endTime);) {
+        var dateCheck = checkDate(slotDay.slots, slot_time);
         if (dateCheck[0] !== 0) {
-          return moment.utc(startTime);
+          return slot_time;
         }
-        startTime.setUTCMinutes(startTime.getMinutes() + dateCheck[1]);
+        slot_time.add('minutes', slotSize);
       }
+    }
+  }
+
+  function calendarBookingTimeGT(businessData, slots, slotSize, day) {
+
+    var slotDay = _$1(slots.days).find(function (d) {
+      return moment(d.date).isSame(day.date, 'day');
+    });
+    var selectedSlot = undefined;
+    if (slotDay && slotDay.slots && slotDay.slots.length > 0) {
+      for (var i = 0; i < slotDay.slots.length; i++) {
+        if (slotDay.slots[i].space_left > 0) {
+          var checkSlot = moment.utc(slotDay.date).add(slotDay.slots[i].time, 'm');
+          if (checkSlot > moment.utc()) {
+            selectedSlot = checkSlot;
+            break;
+          }
+        }
+      }
+      return selectedSlot;
     }
   }
 
@@ -359,6 +383,12 @@ var Booking = Object.freeze({
   function getDayBoundsFromCracSlot(date, slot) {
     var allDayBounds = null;
     var bitmask = cracValueToBits(slot.bitset);
+    var bitmaskTaxonomy = cracValueToBits(slot.taxonomyBitset || "");
+    if (bitmaskTaxonomy.indexOf(0) > -1) {
+      for (var i = 0; i < bitmask.length; i++) {
+        bitmask[i] = bitmask[i] ? bitmask[i] && bitmaskTaxonomy[i] : bitmaskTaxonomy[i];
+      }
+    }
     var firstActiveBit = bitmask.length;
     var daySize = 24 * 60 / SLOT_SIZE;
     var lastActiveBit = bitmask.length - daySize;
@@ -406,7 +436,7 @@ var Booking = Object.freeze({
     var bitmaskTaxonomy = cracValueToBits(cracSlot.taxonomyBitset || "");
     if (bitmaskTaxonomy.indexOf(0) > -1) {
       for (var i = 0; i < bitmask.length; i++) {
-        bitmask[i] = bitmask[i] && bitmaskTaxonomy[i];
+        bitmask[i] = bitmask[i] ? bitmask[i] && bitmaskTaxonomy[i] : bitmaskTaxonomy[i];
       }
     }
     var reverseOffset = bitmask.length - 1;
@@ -1020,11 +1050,16 @@ var Booking = Object.freeze({
     return busySlotsResponse;
   }
 
+  function setSlotSize(slotSize) {
+    SLOT_SIZE = slotSize;
+  }
+
 
 
   var Crac = Object.freeze({
     prepareSlots: prepareSlots,
-    toBusySlots: toBusySlots
+    toBusySlots: toBusySlots,
+    setSlotSize: setSlotSize
   });
 
   function roundNumberUsingRule(input, businessData, noCommas) {
@@ -1154,7 +1189,8 @@ var Booking = Object.freeze({
   }
 
   var countryPhoneDigits = {
-    'UZ': 12
+    'UZ': 12,
+    'UA': 12
   };
 
   var phoneData = {
@@ -1279,6 +1315,10 @@ var Booking = Object.freeze({
     'UA': {
       code: '380',
       mask: '+380(dd) ddd-dddd',
+      rules: {
+        "9": null,
+        "d": /\d/
+      },
       phoneExtractorWidget: function phoneExtractorWidget(value) {
         var digits = value.replace(/\D/g, '');
         return [digits.substring(0, 2), digits.substring(2)];
@@ -1376,23 +1416,30 @@ var Booking = Object.freeze({
     },
     'UZ': {
       code: '998',
-      mask: '+998(dd) ddd-dddd',
+      mask: '+998dd ddd-dddd',
       rules: {
         "9": null,
         "d": /\d/
       },
       phoneExtractorWidget: function phoneExtractorWidget(value) {
         var digits = value.replace(/\D/g, '');
-        return [digits.substring(0, 3), digits.substring(3)];
+        return ['', digits.substring(digits.length - 9)];
       },
       phoneExtractor: function phoneExtractor(value) {
         var digits = value.replace(/\D/g, '');
         if (digits.length >= 10) {
-          return ['', '998', digits.substring(digits.length - 9, digits.length - 6), digits.substring(digits.length - 6), ''];
+          return ['', '998', '', digits.substring(digits.length - 9), ''];
         }
         return ['', '998', '', '', ''];
       },
-      phoneStringMaker: defaultStringMaker
+      phoneStringMaker: function phoneStringMaker(p) {
+        if (!p || !p.number) return '';
+        var p1 = p.number.length > 3 ? p.number.substr(0, 2) : '';
+        var p2 = p.number.length > 3 ? p.number.substr(2, 3) : '';
+        var p3 = p.number.length > 3 ? p.number.substr(5, 4) : '';
+        var area_code = p.area_code.length ? "(" + p.area_code + ") " : "";
+        return "+" + p.country_code + area_code + p1 + " " + p2 + "-" + p3;
+      }
     },
     'BLR': {
       code: '7',

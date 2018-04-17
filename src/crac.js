@@ -4,7 +4,7 @@ import _ from 'lodash';
 import moment from 'moment';
 
 
-const SLOT_SIZE = 5;
+let SLOT_SIZE = 5;
 const VECTOR_SIZE = 24 * 60 / SLOT_SIZE
 const FIRST_DAY_OF_WEEK = 1;
 
@@ -24,7 +24,6 @@ function getDayBoundsFromShedule(daySchedule, date) {
     end: daySchedule.end,
   };
 }
-
 
 // Return day bounds for day from timetable using cache.
 function getDayBoundsFromTimetable(date, timetable) {
@@ -109,7 +108,13 @@ function getDayBoundsFromEvenOddTimetable (date, timetable){
 }
 function getDayBoundsFromCracSlot(date,slot){
   let allDayBounds = null;
-  const bitmask = cracValueToBits(slot.bitset);
+  var bitmask = cracValueToBits(slot.bitset);
+  var bitmaskTaxonomy = cracValueToBits(slot.taxonomyBitset ||"");
+  if (bitmaskTaxonomy.indexOf(0) > -1){
+    for (var i=0; i< bitmask.length; i++){
+      bitmask[i] = bitmask[i] ? bitmask[i] && bitmaskTaxonomy[i] :bitmaskTaxonomy[i];
+    }
+  }
   var firstActiveBit = bitmask.length;
   var daySize = 24 * 60 / SLOT_SIZE;
   var lastActiveBit = bitmask.length - daySize;
@@ -194,7 +199,7 @@ function getCrunchSlotsFromCrac(cracSlot, date, startMinutes, endMinutes, maxSlo
   var bitmaskTaxonomy = cracValueToBits(cracSlot.taxonomyBitset ||"");
   if (bitmaskTaxonomy.indexOf(0) > -1){
     for (var i=0; i< bitmask.length; i++){
-      bitmask[i] =bitmask[i] && bitmaskTaxonomy[i] 
+      bitmask[i] =bitmask[i] ? bitmask[i] && bitmaskTaxonomy[i] :bitmaskTaxonomy[i];
     }
   }
   const reverseOffset = bitmask.length - 1;
@@ -817,4 +822,8 @@ export function toBusySlots(cracSlots, business, taxonomyIDs, resourceIds = []) 
   }
 
   return busySlotsResponse;
+}
+
+export function setSlotSize (slotSize){
+  SLOT_SIZE = slotSize;
 }
