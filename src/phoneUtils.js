@@ -74,6 +74,7 @@ function defaultStringMaker(p) {
 
   var countryPhoneDigits = {
     'UZ': 12,
+    'UA': 12
   };
 
   var phoneData =  {
