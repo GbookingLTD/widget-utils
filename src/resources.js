@@ -11,7 +11,7 @@ import _ from 'lodash';
  */
 export function filterWorkersByTaxonomies(businessData, serviceId, multiServices, options) {
   options = options || {};
-  let showInactiveWorkers = options.showInactiveWorkers || false;
+  var showInactiveWorkers = options.showInactiveWorkers || false;
 
   if (serviceId && serviceId === 'multiservicebooking' && multiServices && multiServices.length) {
     var services = _.map(multiServices, 'id');
