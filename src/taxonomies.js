@@ -4,6 +4,19 @@ var TAXONOMY_CHILDREN = 'CHILDREN';
 var TAXONOMY_ADULT = 'PARENT';
 var TAXONOMY_COMMON = 'COMMON';
 
+export function getServiceDuration(taxonomy, resource) {
+  if (resource) {
+    var taxLevel = (_.find(resource.taxonomyLevels, {id: taxonomy.id}) || {}).level;
+    if (typeof taxLevel !== 'undefined') {
+      var level = _.find(taxonomy.additionalDurations,{level:taxLevel});
+      if (level) {
+        return level.duration ? level.duration : taxonomy.duration;
+      }
+    }
+  }
+  return taxonomy.duration;
+}
+
 export function setupChildishnes(taxonomies, resources, strictInclusion = true) {
   var C = {}; //child taxonomies
   var P = {}; //adult taxonomies

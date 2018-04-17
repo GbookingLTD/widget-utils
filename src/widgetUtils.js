@@ -6,6 +6,8 @@ import { roundNumberUsingRule } from './roundNumberUsingRule';
 import * as phoneUtils from './phoneUtils';
 import * as langUtils from './langUtils';
 import * as taxonomies from './taxonomies';
+import * as Resources from './resources';
+import * as Discounts from './discounts';
 
 export default {
   DateTime,
@@ -15,5 +17,8 @@ export default {
   roundNumberUsingRule,
   phoneUtils,
   langUtils,
-  taxonomies
+  taxonomies,
+  Taxonomies: taxonomies,
+  Resources,
+  Discounts
 };

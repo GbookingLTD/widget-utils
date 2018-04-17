@@ -1,10 +1,10 @@
 (function (global, factory) {
   typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory(require('lodash'), require('moment')) :
   typeof define === 'function' && define.amd ? define(['lodash', 'moment'], factory) :
-  (global.WidgetUtils = factory(global._,global.moment));
-}(this, function (_,moment) { 'use strict';
+  (global.WidgetUtils = factory(global._$1,global.moment));
+}(this, function (_$1,moment) { 'use strict';
 
-  _ = 'default' in _ ? _['default'] : _;
+  _$1 = 'default' in _$1 ? _$1['default'] : _$1;
   moment = 'default' in moment ? moment['default'] : moment;
 
   function setBusinessDateTZ(businessData, date) {
@@ -40,14 +40,14 @@
    * @param utcDate
    */
   function startBusinessTZDay(businessData, utcDate) {
-    var originalDateUnits = _.reduce(['year', 'month', 'date'], function (ret, unit) {
+    var originalDateUnits = _$1.reduce(['year', 'month', 'date'], function (ret, unit) {
       ret[unit] = utcDate.get(unit);
       return ret;
     }, {});
 
     setBusinessDateTZ(businessData, utcDate);
 
-    _.each(originalDateUnits, function (value, unit) {
+    _$1.each(originalDateUnits, function (value, unit) {
       utcDate.set(unit, value);
     });
 
@@ -190,7 +190,7 @@ var DateTime = Object.freeze({
   function calculateDaySlotsV2(day, taxonomy, slotSize, busySlots) {
     var slots = [];
     day.slots.forEach(function (slot) {
-      if (!_.isUndefined(slot.busy) && slot.busy && _.isUndefined(slot.space_left)) {
+      if (!_$1.isUndefined(slot.busy) && slot.busy && _$1.isUndefined(slot.space_left)) {
         return;
       }
       var businessNow = moment.utc();
@@ -199,7 +199,7 @@ var DateTime = Object.freeze({
       var slot_time = moment.utc(day.date).add(slot.time, 'm');
       var duration = slot.duration || slotSize;
       var spaceLeft;
-      if (!_.isUndefined(slot.space_left)) {
+      if (!_$1.isUndefined(slot.space_left)) {
         spaceLeft = slot.space_left;
         if (spaceLeft === 1 && busySlots.maxSlotCapacity > 0) {
           spaceLeft = busySlots.maxSlotCapacity;
@@ -260,7 +260,7 @@ var DateTime = Object.freeze({
   function isBusyDay(day, crunchv2, taxonomy, slotSize, busySlots, businessData) {
     var calculateDaySlots = crunchv2 ? calculateDaySlotsV2 : calculateDaySlotsV1;
     var slots = calculateDaySlots(day, taxonomy, slotSize, busySlots, businessData);
-    var hasFreeSlot = _.find(slots, { busy: false });
+    var hasFreeSlot = _$1.find(slots, { busy: false });
     return !hasFreeSlot;
   }
 
@@ -317,7 +317,7 @@ var BusySlots = Object.freeze({
     if (isDateForbidden(widgetConfiguration, day.date)) {
       return;
     }
-    var slotDay = _(busySlots.days).find(function (d) {
+    var slotDay = _$1(busySlots.days).find(function (d) {
       return moment(d.date).isSame(day.date, 'day');
     });
     if (slotDay) {
@@ -347,6 +347,12 @@ var BusySlots = Object.freeze({
 var Booking = Object.freeze({
     calendarBookingTime: calendarBookingTime
   });
+
+  var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) {
+    return typeof obj;
+  } : function (obj) {
+    return obj && typeof Symbol === "function" && obj.constructor === Symbol ? "symbol" : typeof obj;
+  };
 
   var SLOT_SIZE = 5;
   var VECTOR_SIZE = 24 * 60 / SLOT_SIZE;
@@ -529,9 +535,9 @@ var Booking = Object.freeze({
   function resourceTaxonomyDuration(businessWorker, businessTaxonomy) {
     var duration = businessTaxonomy.duration;
     if (businessWorker.taxonomyLevels && businessWorker.taxonomyLevels.length > 0) {
-      var taxonomyLevel = _.find(businessWorker.taxonomyLevels, { id: businessTaxonomy.id });
+      var taxonomyLevel = _$1.find(businessWorker.taxonomyLevels, { id: businessTaxonomy.id });
       if (taxonomyLevel) {
-        var additionalDuration = _.find(businessTaxonomy.additionalDurations, { level: taxonomyLevel.level });
+        var additionalDuration = _$1.find(businessTaxonomy.additionalDurations, { level: taxonomyLevel.level });
         if (additionalDuration && additionalDuration.duration) {
           duration = additionalDuration.duration;
         }
@@ -581,7 +587,7 @@ var Booking = Object.freeze({
   function getRoomCapacityByService(taxonomyTreeCapacity, taxonomiesRooms) {
     var capacity = {};
     taxonomiesRooms.forEach(function (t) {
-      var treeCapacity = _.find(taxonomyTreeCapacity, { parent_id: t.room });
+      var treeCapacity = _$1.find(taxonomyTreeCapacity, { parent_id: t.room });
       var tCapacity = treeCapacity && treeCapacity.capacity ? treeCapacity.capacity : 0;
       capacity[t.taxonomy] = tCapacity;
     });
@@ -601,7 +607,7 @@ var Booking = Object.freeze({
     bitSets.resources = {};
     bitSets.rooms = {};
     resources.forEach(function (r) {
-      var cracResource = _.find(cracSlot.resources, { resourceId: r });
+      var cracResource = _$1.find(cracSlot.resources, { resourceId: r });
       if (cracResource) {
         bitSets.resources[r] = cracValueToBits(cracResource.bitset).reverse();
       } else {
@@ -611,12 +617,12 @@ var Booking = Object.freeze({
 
     taxonomies.forEach(function (tId) {
       var capacity = roomCapacityByService[tId];
-      var room = _.find(taxonomiesRooms, { taxonomy: tId });
+      var room = _$1.find(taxonomiesRooms, { taxonomy: tId });
       if (room && !bitSets.rooms[room.room]) {
         var roomId = room.room;
         bitSets.rooms[roomId] = [];
         for (var i = 0; i < capacity; i++) {
-          var cracRoom = _.find(cracSlot.rooms, { roomId: roomId + "_" + i });
+          var cracRoom = _$1.find(cracSlot.rooms, { roomId: roomId + "_" + i });
           if (cracRoom) {
             bitSets.rooms[roomId][i] = cracValueToBits(cracRoom.bitset).reverse();
           } else {
@@ -843,10 +849,10 @@ var Booking = Object.freeze({
     finalSlots.days = [];
     finalSlots.excludedResource = [];
 
-    var businessTaxonomies = _.filter(business.taxonomies, function (t) {
+    var businessTaxonomies = _$1.filter(business.taxonomies, function (t) {
       return t.active && taxonomies.indexOf(t.id) > -1;
     });
-    var businessWorkers = _.filter(business.resources, function (r) {
+    var businessWorkers = _$1.filter(business.resources, function (r) {
       return r.status == 'ACTIVE' && resources.indexOf(r.id) > -1;
     });
 
@@ -865,7 +871,7 @@ var Booking = Object.freeze({
 
       taxonomies.forEach(function (tId) {
         serviceRoomVectors[tId] = {};
-        var room = _.find(taxonomiesRooms, { taxonomy: tId });
+        var room = _$1.find(taxonomiesRooms, { taxonomy: tId });
         var roomBitSet = room ? bitSets.rooms[room.room] : [];
         resources.forEach(function (rId) {
           serviceRoomVectors[tId][rId] = getServiceRoomVector(bitSets.resources[rId], rId, roomBitSet, totalServicesDurationByWorker[rId], serviceDurationByWorker[tId], resources, taxonomies);
@@ -900,7 +906,7 @@ var Booking = Object.freeze({
    * @return {CrunBusySlot|Object}           Crunch response format
    */
   function toBusySlots(cracSlots, business, taxonomyIDs) {
-    var resourceIds = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : [];
+    var resourceIds = arguments.length <= 3 || arguments[3] === undefined ? [] : arguments[3];
 
     var businessTimetable = business.general_info.timetable;
     var daysOff = [];
@@ -926,11 +932,11 @@ var Booking = Object.freeze({
     }
 
     if (taxonomyIDs && taxonomyIDs.length) {
-      var taxonomies = _.filter(business.taxonomies, function (tt) {
+      var taxonomies = _$1.filter(business.taxonomies, function (tt) {
         return taxonomyIDs.indexOf(String(tt.id)) >= 0;
       });
 
-      var maxTaxonomyDuration = _.max(taxonomies, 'duration');
+      var maxTaxonomyDuration = _$1.max(taxonomies, 'duration');
       if (maxTaxonomyDuration) {
         maxSlotDuration = maxTaxonomyDuration.duration;
       }
@@ -949,7 +955,7 @@ var Booking = Object.freeze({
       maxSlotCapacity: 1,
       daysOff: daysOff,
       excludedResources: excludedResources,
-      days: _.map(cracSlots, function (cracSlot) {
+      days: _$1.map(cracSlots, function (cracSlot) {
         var date = cracSlot.date;
 
         var dayBounds;
@@ -957,18 +963,24 @@ var Booking = Object.freeze({
         dayBounds = getDayBoundsFromCracSlot(date, cracSlot);
 
         if (!dayBounds) {
-          var dayOffDate = isoDateForDayOff(date);
-          business.resources.forEach(function (rr) {
-            return excludedResource(rr.id, dayOffDate);
-          });
+          var _ret = function () {
+            var dayOffDate = isoDateForDayOff(date);
+            business.resources.forEach(function (rr) {
+              return excludedResource(rr.id, dayOffDate);
+            });
 
-          return {
-            date: date,
-            slots: {
-              busy: [],
-              available: false
-            }
-          };
+            return {
+              v: {
+                date: date,
+                slots: {
+                  busy: [],
+                  available: false
+                }
+              }
+            };
+          }();
+
+          if ((typeof _ret === 'undefined' ? 'undefined' : _typeof(_ret)) === "object") return _ret.v;
         } else {
           var dayStart = dayBounds.start;
           var startTime = dayBounds.start_time;
@@ -977,10 +989,12 @@ var Booking = Object.freeze({
           var slots = getCrunchSlotsFromCrac(cracSlot, date, dayStart, dayEnd, maxSlotDuration);
 
           if (cracSlot.excludedResources) {
-            var _dayOffDate = isoDateForDayOff(date);
-            cracSlot.excludedResources.forEach(function (rid) {
-              return excludedResource(rid, _dayOffDate);
-            });
+            (function () {
+              var dayOffDate = isoDateForDayOff(date);
+              cracSlot.excludedResources.forEach(function (rid) {
+                return excludedResource(rid, dayOffDate);
+              });
+            })();
           }
 
           return {
@@ -1006,7 +1020,9 @@ var Booking = Object.freeze({
     return busySlotsResponse;
   }
 
-var Crac = Object.freeze({
+
+
+  var Crac = Object.freeze({
     prepareSlots: prepareSlots,
     toBusySlots: toBusySlots
   });
@@ -1052,10 +1068,10 @@ var Crac = Object.freeze({
         }
         //return output;
       } else if (roundSettings.rule === 'NEAREST_INTEGER') {
-        output = Math.round(input);
-      } else {
-        output = input.toFixed(2);
-      }
+          output = Math.round(input);
+        } else {
+          output = input.toFixed(2);
+        }
     } else {
       output = input.toFixed(2);
     }
@@ -1511,13 +1527,25 @@ var langUtils = Object.freeze({
   var TAXONOMY_ADULT = 'PARENT';
   var TAXONOMY_COMMON = 'COMMON';
 
+  function getServiceDuration(taxonomy, resource) {
+    if (resource) {
+      var taxLevel = (_.find(resource.taxonomyLevels, { id: taxonomy.id }) || {}).level;
+      if (typeof taxLevel !== 'undefined') {
+        var level = _.find(taxonomy.additionalDurations, { level: taxLevel });
+        if (level) {
+          return level.duration ? level.duration : taxonomy.duration;
+        }
+      }
+    }
+    return taxonomy.duration;
+  }
+
   function setupChildishnes(taxonomies, resources) {
-    var strictInclusion = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : true;
+    var strictInclusion = arguments.length <= 2 || arguments[2] === undefined ? true : arguments[2];
 
     var C = {}; //child taxonomies
     var P = {}; //adult taxonomies
     var N = {}; //common taxonomies
-
 
     if (!Array.isArray(taxonomies) || !Array.isArray(resources)) {
       console.log('empty data');
@@ -1531,14 +1559,14 @@ var langUtils = Object.freeze({
 
         r.taxonomyChildren.forEach(function (c) {
           if (c !== null && typeof c.children != 'undefined' && typeof c.taxonomyID != 'undefined') {
-          c.children === true ? rChildID[c.taxonomyID] = true : rParentID[c.taxonomyID] = true;
+            c.children === true ? rChildID[c.taxonomyID] = true : rParentID[c.taxonomyID] = true;
           }
         });
 
         r.taxonomyChildren.forEach(function (c) {
           if (c !== null && typeof c.children != 'undefined' && typeof c.taxonomyID != 'undefined') {
-          // если услуга встречается 2-ды - как взрослая и как детская
-          if (rChildID[c.taxonomyID] && rParentID[c.taxonomyID]) N[c.taxonomyID] = true;else if (rChildID[c.taxonomyID]) C[c.taxonomyID] = true;else if (rParentID[c.taxonomyID]) P[c.taxonomyID] = true;
+            // если услуга встречается 2-ды - как взрослая и как детская
+            if (rChildID[c.taxonomyID] && rParentID[c.taxonomyID]) N[c.taxonomyID] = true;else if (rChildID[c.taxonomyID]) C[c.taxonomyID] = true;else if (rParentID[c.taxonomyID]) P[c.taxonomyID] = true;
           }
         });
       }
@@ -1565,7 +1593,259 @@ var langUtils = Object.freeze({
   }
 
 var taxonomies = Object.freeze({
+    getServiceDuration: getServiceDuration,
     setupChildishnes: setupChildishnes
+  });
+
+  /**
+   * Выбираем только тех работников, которые выполяют указанную услугу (услуги).
+   *
+   * @param businessData
+   * @param serviceId
+   * @param multiServices
+   * @param options
+   * @returns {[]}
+   */
+  function filterWorkersByTaxonomies(businessData, serviceId, multiServices, options) {
+    options = options || {};
+    var showInactiveWorkers = options.showInactiveWorkers || false;
+
+    if (serviceId && serviceId === 'multiservicebooking' && multiServices && multiServices.length) {
+      var services = _$1.map(multiServices, 'id');
+      return businessData.business.resources.filter(function (resource) {
+        var intersection = _$1.intersection(resource.taxonomies, services);
+        return (showInactiveWorkers || resource.displayInWidget) && intersection && intersection.length === services.length;
+      });
+    }
+
+    return businessData.business.resources.filter(function (resource) {
+      return (showInactiveWorkers || resource.displayInWidget) && resource.taxonomies.indexOf('' + serviceId) !== -1;
+    });
+  }
+
+  /**
+   * Подготавливает список работников и кабинетов для их отображения на виджете.
+   *
+   * @param $scope
+   * @param workers
+   * @param cabinets
+   * @param options
+   */
+  function prepareWorkers($scope, workers, cabinets, options) {
+    options = options || {};
+    options.showInactiveWorkers = options.showInactiveWorkers || false;
+    options.cabinetsEnabled = options.cabinetsEnabled || false;
+
+    var activeWorkers = options.showInactiveWorkers ? workers : _$1.filter(workers, { 'status': 'ACTIVE' });
+    var hasOrder = _$1.all(activeWorkers, 'order');
+
+    $scope.workers = _$1.sortBy(activeWorkers, hasOrder ? 'order' : 'name');
+    for (var intIndex = 0; intIndex < $scope.workers.length; intIndex++) {
+      $scope.workers[intIndex].showDescription = ($scope.workers[intIndex].description || '').substring(0, 70);
+      $scope.workers[intIndex].isFullDescription = ($scope.workers[intIndex].description || '').length <= 70;
+    }
+
+    if (options.cabinetsEnabled) {
+      (function () {
+        var activeCabinets = _$1.filter(cabinets, function (cab) {
+          return cab.active && !cab.isSpecial;
+        });
+        var tmp = _$1.sortBy(activeCabinets, 'name');
+        var specCabinet = _$1.find(cabinets, function (cab) {
+          return cab.isSpecial;
+        });
+
+        $scope.cabinets = specCabinet ? [specCabinet].concat(tmp) : tmp;
+        if (specCabinet) {
+          setTimeout(function () {
+            $scope.selectCabinet(specCabinet);
+          }, 0);
+        }
+      })();
+    }
+  }
+
+var Resources = Object.freeze({
+    filterWorkersByTaxonomies: filterWorkersByTaxonomies,
+    prepareWorkers: prepareWorkers
+  });
+
+  var days = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+  var weekDaysMap = {
+    "sun": 0,
+    "mon": 1,
+    "tue": 2,
+    "wed": 3,
+    "thu": 4,
+    "fri": 5,
+    "sat": 6
+  };
+
+  function getServiceActiveDiscounts(service, startTime) {
+    if (!service.discounts || !service.discounts.length) {
+      return [];
+    }
+    startTime = moment.utc(startTime);
+    return service.discounts.filter(function (d) {
+      return d.active && moment.utc(d.start).isBefore(startTime) && moment.utc(d.start).startOf('w').add('w', d.weeklyRepeat).isAfter(startTime);
+    });
+  }
+
+  function getServiceDiscount(service, time) {
+    if (!service.discounts) {
+      return [];
+    }
+    time = moment.utc(time);
+    var activeDiscountsItems = service.discounts.filter(function (d) {
+      return d.active && d.days.indexOf(days[time.day()]) !== -1 && moment.utc(d.start).isBefore(time) && moment.utc(d.start).startOf('w').add('w', d.weeklyRepeat).isAfter(time);
+    });
+    var discounts = activeDiscountsItems.map(function (d) {
+      var slot = _$1.find(d.slots, function (slot) {
+        var slotStart = moment(time).startOf('day').add('m', slot.time.start);
+        var slotEnd = moment(time).startOf('day').add('m', slot.time.end - 1);
+        return moment.range(slotStart, slotEnd).contains(time);
+      });
+      return slot ? slot.amount : undefined;
+    }).filter(function (d) {
+      return d;
+    });
+    return _$1.first(discounts);
+  }
+
+  //recursively checks for parent's (ancestor's) discounts
+  function checkForParentDiscounts(businessData, taxonomyParentID, time) {
+    var parentDiscount = {
+      //discount: 0,
+      //provider: 'LOCAL'
+    };
+    var timeInMinutes = time.hour() * 60 + time.minute();
+
+    var t = businessData.business.taxonomies.filter(function (t) {
+      return t.id === taxonomyParentID;
+    });
+    if (t && t[0]) {
+      if (!parentDiscount.discount && typeof t[0].discounts.regular !== 'undefined') {
+        t[0].discounts.regular.forEach(function (discount) {
+          var end = moment(discount.start).add(discount.weeklyRepeat, 'weeks');
+          if (discount.active && (discount.unlimWeeklyRepeat || time.isAfter(discount.start) && time.isBefore(end))) {
+            for (var day in discount.week) {
+              discount.week[day].forEach(function (slot) {
+                if (time.day() === weekDaysMap[day] && timeInMinutes >= slot.start && timeInMinutes <= slot.end) {
+                  parentDiscount = slot;
+                }
+              });
+            }
+          }
+        });
+      } else {
+        if (!parentDiscount.discount && typeof t[0].taxonomyParentID !== "undefined" && t[0].taxonomyParentID) {
+          parentDiscount = checkForParentDiscounts(t[0].taxonomyParentID, time);
+        }
+      }
+    }
+
+    return parentDiscount;
+  }
+
+  //recursively checks for parent's (ancestor's) discount exceptions
+  function checkForParentDiscountExceptions(businessData, taxonomyParentID, time) {
+    var parentDiscount = {
+      //discount: 0,
+      provider: 'LOCAL'
+    };
+    var timeInMinutes = time.hour() * 60 + time.minute();
+
+    businessData.business.taxonomies.forEach(function (t) {
+      if (t.id === taxonomyParentID && typeof t.discounts.exceptions !== 'undefined') {
+        t.discounts.exceptions.forEach(function (exception) {
+          var date = moment(exception.date);
+          if (exception.active && time.format("YYYY-MM-DD") === date.format("YYYY-MM-DD")) {
+            exception.slots.forEach(function (slot) {
+              if (timeInMinutes >= slot.start && timeInMinutes <= slot.end) {
+                parentDiscount = slot;
+              }
+            });
+          }
+        });
+
+        //if no discount exception found, check for parent's discount exceptions recursively
+        if ((typeof parentDiscount.discount === 'undefined' || parentDiscount.discount == null) && typeof service.taxonomyParentID !== "undefined" && service.taxonomyParentID) {
+          parentDiscount = checkForParentDiscountExceptions(taxonomyParentID, time);
+        }
+        return;
+      }
+    });
+    return parentDiscount;
+  }
+
+  function getServiceDiscountsAndExceptions(bData, service, time, campaignProvider) {
+    if (!service || !service.discounts) {
+      return 0;
+    }
+
+    var slot = {
+      //discount: 0
+    };
+
+    var timeInMinutes = time.hour() * 60 + time.minute();
+
+    //Checking for Exception Discounts, it has higher priority than Regular Discounts
+    if (typeof service.discounts.exceptions !== 'undefined') {
+      service.discounts.exceptions.forEach(function (exception) {
+        var date = moment(exception.date);
+        if (exception.active && time.format("YYYY-MM-DD") === date.format("YYYY-MM-DD")) {
+          exception.slots.forEach(function (s) {
+            if (timeInMinutes >= s.start && timeInMinutes <= s.end) {
+              slot = s;
+              slot.isException = true;
+            }
+          });
+        }
+      });
+    }
+
+    //Checking for Campaign & Regular Discounts, Regular Discounts has lower priority than Campaign Discounts
+    if (!slot.discount && typeof service.discounts.regular !== 'undefined') {
+      service.discounts.regular.forEach(function (discount) {
+        var end = moment(discount.start).add(discount.weeklyRepeat, 'weeks');
+        if (discount.active && (time.isAfter(discount.start) && time.isBefore(end) || discount.unlimWeeklyRepeat)) {
+          for (var day in discount.week) {
+            discount.week[day].forEach(function (s) {
+              if (time.day() === weekDaysMap[day] && timeInMinutes >= s.start && timeInMinutes <= s.end) {
+                //If Discount from Campagin is found, then overwrite even d. exceptions are set
+                if (campaignProvider && s.provider === campaignProvider.toUpperCase()) {
+                  slot = s;
+                  return;
+                }
+                //set regular Discount, if Discount Exception is not found
+                else if (!slot.discount && s.provider === "LOCAL") {
+                    slot = s;
+                  }
+              }
+            });
+          }
+        }
+      });
+    }
+
+    //If no Discount Exception found, check for Parent's (Ancestor's) Discount Exceptions recursively
+    if ((typeof slot.discount === 'undefined' || slot.discount == null) && typeof service.taxonomyParentID !== "undefined" && service.taxonomyParentID) {
+      slot = checkForParentDiscountExceptions(bData, service.taxonomyParentID, time);
+      slot.isException = true;
+    }
+
+    //If no Regular Discount found, check for Parent's (Ancestor's) Regular Discounts recursively
+    if ((typeof slot.discount === 'undefined' || slot.discount == null) && typeof service.taxonomyParentID !== "undefined" && service.taxonomyParentID) {
+      slot = checkForParentDiscounts(bData, service.taxonomyParentID, time);
+    }
+
+    return slot;
+  }
+
+var Discounts = Object.freeze({
+    getServiceActiveDiscounts: getServiceActiveDiscounts,
+    getServiceDiscount: getServiceDiscount,
+    getServiceDiscountsAndExceptions: getServiceDiscountsAndExceptions
   });
 
   var widgetUtils = {
@@ -1576,7 +1856,10 @@ var taxonomies = Object.freeze({
     roundNumberUsingRule: roundNumberUsingRule,
     phoneUtils: phoneUtils,
     langUtils: langUtils,
-    taxonomies: taxonomies
+    taxonomies: taxonomies,
+    Taxonomies: taxonomies,
+    Resources: Resources,
+    Discounts: Discounts
   };
 
   return widgetUtils;
