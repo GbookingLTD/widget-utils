@@ -200,14 +200,19 @@ function defaultStringMaker(p) {
         code: '380',
         mask: '+380(dd) ddd-dddd',
         rules: {
-          "9": null,
+          "0": null,
           "d": /\d/
         },
         phoneExtractorWidget: function (value) {
           var digits = value.replace(/\D/g, '');
           return [digits.substring(0, 2), digits.substring(2)];
         },
-        phoneExtractor: defaultExtractor,
+        phoneExtractor: function phoneExtractor(value) {
+          var digits = value.replace(/\D/g, '');
+          if (digits.length >= 11) {
+            return ['', '380', digits.substring(digits.length - 9, digits.length - 7), digits.substring(digits.length - 7), ''];
+          }
+        },
         phoneStringMaker: defaultStringMaker
       },
       'LV': {
