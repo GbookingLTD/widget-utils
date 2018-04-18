@@ -16,10 +16,10 @@ var includePathOptions = {
 gulp.task('compile', function() {
   return gulp.src('src/widgetUtils.js', {read: false})
     .pipe($.rollup({
-      external: [
-        'lodash',
-        'moment'
-      ],
+      globals: {
+        'lodash': '_',
+        'moment': 'moment'
+      },
       sourceMap: false,
       format: 'umd',
       moduleName: 'WidgetUtils',
