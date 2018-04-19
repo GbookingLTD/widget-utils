@@ -75,7 +75,7 @@ function checkForParentDiscounts(businessData, taxonomyParentID, time) {
       });
     } else {
       if (!parentDiscount.discount && typeof t[0].taxonomyParentID !== "undefined" && t[0].taxonomyParentID) {
-        parentDiscount = checkForParentDiscounts(t[0].taxonomyParentID, time);
+        parentDiscount = checkForParentDiscounts(businessData, t[0].taxonomyParentID, time);
       }
     }
   }
