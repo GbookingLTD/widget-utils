@@ -1681,17 +1681,21 @@ var taxonomies = Object.freeze({
    * @param $scope
    * @param workers
    * @param cabinets
-   * @param options
+   * @param {Object} options
+   * @param {Function} options.sortByFn
+   * @param {Boolean} options.showInactiveWorkers
+   * @param {Boolean} options.cabinetsEnabled
    */
   function prepareWorkers($scope, workers, cabinets, options) {
     options = options || {};
+    options.sortByFn = options.sortByFn || null;
     options.showInactiveWorkers = options.showInactiveWorkers || false;
     options.cabinetsEnabled = options.cabinetsEnabled || false;
 
     var activeWorkers = options.showInactiveWorkers ? workers : _$1.filter(workers, { 'status': 'ACTIVE' });
     var hasOrder = _$1.all(activeWorkers, 'order');
 
-    $scope.workers = _$1.sortBy(activeWorkers, hasOrder ? 'order' : 'name');
+    $scope.workers = _$1.sortBy(activeWorkers, options.sortByFn || (hasOrder ? 'order' : 'name'));
     for (var intIndex = 0; intIndex < $scope.workers.length; intIndex++) {
       $scope.workers[intIndex].showDescription = ($scope.workers[intIndex].description || '').substring(0, 70);
       $scope.workers[intIndex].isFullDescription = ($scope.workers[intIndex].description || '').length <= 70;
@@ -1720,6 +1724,44 @@ var taxonomies = Object.freeze({
 var Resources = Object.freeze({
     filterWorkersByTaxonomies: filterWorkersByTaxonomies,
     prepareWorkers: prepareWorkers
+  });
+
+  /*
+   В данном файле реализована стратегия показа списка работников "most_free".
+   Следите, чтобы сигнатуры функций из этого файла совпадали с сигнатурами функций из resources.js и наоборот.
+   */
+
+  /**
+   * 
+   * @param {Object} workloadIndex
+   * @param {Object} worker
+   * @private
+   */
+  function _sortByWorkload(workloadIndex, worker) {
+    return 10000000 - workloadIndex[worker.id].weight;
+  }
+
+  /**
+   * Подготавливает список работников и кабинетов для их отображения на виджете.
+   *
+   * @param $scope
+   * @param workers
+   * @param cabinets
+   * @param {Object} options
+   * @param {Object} options.workloadIndex
+   * @param {Function} options.sortByFn
+   * @param {Boolean} options.showInactiveWorkers
+   * @param {Boolean} options.cabinetsEnabled
+   */
+  function prepareWorkers$1($scope, workers, cabinets, options) {
+    options = options || {};
+    options.sortByFn = _sortByWorkload.bind(null, options.workloadIndex);
+    return prepareWorkers($scope, workers, cabinets, options);
+  }
+
+var ResourcesMostFree = Object.freeze({
+    _sortByWorkload: _sortByWorkload,
+    prepareWorkers: prepareWorkers$1
   });
 
   var days = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
@@ -1911,6 +1953,7 @@ var Discounts = Object.freeze({
     taxonomies: taxonomies,
     Taxonomies: taxonomies,
     Resources: Resources,
+    ResourcesMostFree: ResourcesMostFree,
     Discounts: Discounts
   };
 

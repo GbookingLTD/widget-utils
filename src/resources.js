@@ -32,17 +32,21 @@ export function filterWorkersByTaxonomies(businessData, serviceId, multiServices
  * @param $scope
  * @param workers
  * @param cabinets
- * @param options
+ * @param {Object} options
+ * @param {Function} options.sortByFn
+ * @param {Boolean} options.showInactiveWorkers
+ * @param {Boolean} options.cabinetsEnabled
  */
 export function prepareWorkers($scope, workers, cabinets, options) {
   options = options || {};
+  options.sortByFn = options.sortByFn || null;
   options.showInactiveWorkers = options.showInactiveWorkers || false;
   options.cabinetsEnabled = options.cabinetsEnabled || false;
 
   let activeWorkers = options.showInactiveWorkers ? workers : _.filter(workers, {'status': 'ACTIVE'});
   let hasOrder = _.all(activeWorkers, 'order');
 
-  $scope.workers = _.sortBy(activeWorkers, hasOrder ? 'order' : 'name');
+  $scope.workers = _.sortBy(activeWorkers, options.sortByFn || (hasOrder ? 'order' : 'name'));
   for (let intIndex = 0; intIndex < $scope.workers.length; intIndex++) {
     $scope.workers[intIndex].showDescription = ($scope.workers[intIndex].description || '').substring(0, 70);
     $scope.workers[intIndex].isFullDescription = ($scope.workers[intIndex].description || '').length <= 70;
