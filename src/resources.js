@@ -4,25 +4,29 @@ import _ from 'lodash';
  * Выбираем только тех работников, которые выполяют указанную услугу (услуги).
  *
  * @param businessData
- * @param serviceId
- * @param multiServices
+ * @param {Array<String>} services
  * @param options
  * @returns {[]}
  */
-export function filterWorkersByTaxonomies(businessData, serviceId, multiServices, options) {
+export function filterWorkersByTaxonomies(businessData, services, options) {
+  if (!(services && services.length)) {
+    console.warn("Services not passed in worker filter!");
+    return [];
+  }
+  
   options = options || {};
   var showInactiveWorkers = options.showInactiveWorkers || false;
 
-  if (serviceId && serviceId === 'multiservicebooking' && multiServices && multiServices.length) {
-    var services = _.map(multiServices, 'id');
+  if (services.length > 1) {
     return businessData.business.resources.filter(function (resource) {
-      var intersection = _.intersection(resource.taxonomies, services);
+      // worker should execute all services
+      let intersection = _.intersection(resource.taxonomies, services);
       return (showInactiveWorkers || resource.displayInWidget) && intersection && intersection.length === services.length;
     });
   }
 
   return businessData.business.resources.filter(function (resource) {
-    return (showInactiveWorkers || resource.displayInWidget) && resource.taxonomies.indexOf('' + serviceId) !== -1;
+    return (showInactiveWorkers || resource.displayInWidget) && resource.taxonomies.indexOf('' + services[0]) !== -1;
   });
 }
 

@@ -17,6 +17,28 @@ export function getServiceDuration(taxonomy, resource) {
   return taxonomy.duration;
 }
 
+/**
+ * Возвращает минимальную длительность из всех услуг.
+ * 
+ * Необходимо, например, для получения ближайшего доступного для записи по услуге(-ам) дня.
+ * 
+ * @param taxonomies
+ * @param resources
+ */
+export function findMinResourceServiceDuration(taxonomies, resources) {
+  var minDuration = Number.MAX_SAFE_INTEGER;
+  taxonomies.forEach(function (tax) {
+    resources.forEach(function (res) {
+      let duration = getServiceDuration(tax, res);
+      if (duration < minDuration) {
+        minDuration = duration;
+      }
+    });
+  });
+
+  return minDuration;
+}
+
 export function setupChildishnes(taxonomies, resources, strictInclusion = true) {
   var C = {}; //child taxonomies
   var P = {}; //adult taxonomies

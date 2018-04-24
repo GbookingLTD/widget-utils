@@ -1592,6 +1592,28 @@ var langUtils = Object.freeze({
     return taxonomy.duration;
   }
 
+  /**
+   * Возвращает минимальную длительность из всех услуг.
+   * 
+   * Необходимо, например, для получения ближайшего доступного для записи по услуге(-ам) дня.
+   * 
+   * @param taxonomies
+   * @param resources
+   */
+  function findMinResourceServiceDuration(taxonomies, resources) {
+    var minDuration = Number.MAX_SAFE_INTEGER;
+    taxonomies.forEach(function (tax) {
+      resources.forEach(function (res) {
+        var duration = getServiceDuration(tax, res);
+        if (duration < minDuration) {
+          minDuration = duration;
+        }
+      });
+    });
+
+    return minDuration;
+  }
+
   function setupChildishnes(taxonomies, resources) {
     var strictInclusion = arguments.length <= 2 || arguments[2] === undefined ? true : arguments[2];
 
@@ -1646,6 +1668,7 @@ var langUtils = Object.freeze({
 
 var taxonomies = Object.freeze({
     getServiceDuration: getServiceDuration,
+    findMinResourceServiceDuration: findMinResourceServiceDuration,
     setupChildishnes: setupChildishnes
   });
 
@@ -1653,25 +1676,29 @@ var taxonomies = Object.freeze({
    * Выбираем только тех работников, которые выполяют указанную услугу (услуги).
    *
    * @param businessData
-   * @param serviceId
-   * @param multiServices
+   * @param {Array<String>} services
    * @param options
    * @returns {[]}
    */
-  function filterWorkersByTaxonomies(businessData, serviceId, multiServices, options) {
+  function filterWorkersByTaxonomies(businessData, services, options) {
+    if (!(services && services.length)) {
+      console.warn("Services not passed in worker filter!");
+      return [];
+    }
+
     options = options || {};
     var showInactiveWorkers = options.showInactiveWorkers || false;
 
-    if (serviceId && serviceId === 'multiservicebooking' && multiServices && multiServices.length) {
-      var services = _$1.map(multiServices, 'id');
+    if (services.length > 1) {
       return businessData.business.resources.filter(function (resource) {
+        // worker should execute all services
         var intersection = _$1.intersection(resource.taxonomies, services);
         return (showInactiveWorkers || resource.displayInWidget) && intersection && intersection.length === services.length;
       });
     }
 
     return businessData.business.resources.filter(function (resource) {
-      return (showInactiveWorkers || resource.displayInWidget) && resource.taxonomies.indexOf('' + serviceId) !== -1;
+      return (showInactiveWorkers || resource.displayInWidget) && resource.taxonomies.indexOf('' + services[0]) !== -1;
     });
   }
 
