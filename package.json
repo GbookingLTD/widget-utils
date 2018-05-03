@@ -6,7 +6,7 @@
     "build": "./node_modules/.bin/gulp build",
     "start": "npm run build"
   },
-  "main": ".dist/widgetUtils.js",
+  "main": "dist/widgetUtils.js",
   "devDependencies": {
     "babel-preset-es2015-rollup": "3.0.0",
     "del": "2.2.0",
