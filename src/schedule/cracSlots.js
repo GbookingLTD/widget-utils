@@ -10,24 +10,20 @@ const ANY = 'ANY';
  * @param date date in YYYY-MM-DD format
  * @param bitset resource CRAC bitset
  * @param vectorSlotSize CRAC bitset slot size
- * @param business business data
- * @param taxonomyIDs array of required taxonomies
- * @param resourceID specific resource ID. Could be 'ANY' for any available
+ * @param scheduleSlotSize business data
  * @param strategy slot strategy
  * @returns {Array} day slots
  */
-function cutSlots(date, bitset, vectorSlotSize, business, taxonomyIDs, resourceID, strategy) {
-
+function cutSlots(date, bitset, vectorSlotSize, scheduleSlotSize, strategy) {
   const dayBounds = getFirstLastMinutes(bitset, vectorSlotSize);
-  const slotSize = strategy.getSlotSize(business, taxonomyIDs, resourceID);
 
   let slots = [];
   for (let slotMinute = dayBounds.start; slotMinute <= dayBounds.end;) {
-    const available = isSlotAvailable(bitset, slotMinute, slotMinute + slotSize, vectorSlotSize);
+    const available = isSlotAvailable(bitset, slotMinute, slotMinute + scheduleSlotSize, vectorSlotSize);
 
     let slot = {
       start: slotMinute,
-      end: slotMinute + slotSize,
+      end: slotMinute + scheduleSlotSize,
       available: available
     };
     if (strategy.enhanceSlot) {
@@ -35,8 +31,8 @@ function cutSlots(date, bitset, vectorSlotSize, business, taxonomyIDs, resourceI
     }
 
     const newSlot = strategy.getNextSlotMinute(bitset, slot.start, slot.end, vectorSlotSize);
-    if (newSlot < slotMinute + slotSize) {
-      throw new Error("New slot start: " + newSlot + " is less then previous end: " + (slotMinute + slotSize));
+    if (newSlot < slotMinute + scheduleSlotSize) {
+      throw new Error("New slot start: " + newSlot + " is less then previous end: " + (slotMinute + scheduleSlotSize));
     }
     slotMinute = newSlot;
     slots.push(slot);

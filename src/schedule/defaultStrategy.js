@@ -1,7 +1,7 @@
 "use strict";
 
 import _ from 'lodash';
-import * as TaxonomyUtils from '../taxonomies';
+import {getServiceDuration} from '../taxonomies';
 
 export default {
   getSlotSize,
@@ -18,21 +18,20 @@ export default {
  * @param resourceID specific resource ID. Could be 'ANY' for any available
  * @returns {*}
  */
-function getSlotSize(business, taxonomyIDs, resourceID) {
+export function getSlotSize(business, taxonomyIDs, resourceID) {
   const widgetConfiguration = business.widget_configuration;
   if (widgetConfiguration && widgetConfiguration.displaySlotSize) {
     return widgetConfiguration.displaySlotSize;
   }
 
   const resourceObj = _.find(business.resources, {id: String(resourceID)});
-  const totalDuration = business.taxonomies.filter(function (tax) {
+  return business.taxonomies.filter(function (tax) {
     return taxonomyIDs.indexOf(String(tax.id)) >= 0;
   }).map(function (tax) {
-    return TaxonomyUtils.getServiceDuration(tax, resourceObj);
+    return getServiceDuration(tax, resourceObj);
   }).reduce(function (ret, duration) {
     return ret + duration;
   }, 0);
-  return totalDuration;
 }
 
 /**
