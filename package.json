@@ -4,10 +4,11 @@
   "scripts": {
     "dev": "./node_modules/.bin/gulp dev",
     "build": "./node_modules/.bin/gulp build",
-    "start": "npm run build"
+    "_startMinutes": "npm run build"
   },
   "main": "dist/widgetUtils.js",
   "devDependencies": {
+    "babel-cli": "^6.26.0",
     "babel-preset-es2015-rollup": "3.0.0",
     "del": "2.2.0",
     "gulp": "3.9.1",

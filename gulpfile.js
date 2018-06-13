@@ -10,11 +10,11 @@ var rollupIncludePaths = require('rollup-plugin-includepaths');
 var babel = require('rollup-plugin-babel');
 
 var includePathOptions = {
-    paths: ['src/']
+    paths: ['../../bower_components/crac-utils/src/vector', 'src/']
 };
 
 gulp.task('compile', function() {
-  return gulp.src('src/widgetUtils.js', {read: false})
+  return gulp.src('src/index.js', {read: false})
     .pipe($.rollup({
       globals: {
         'lodash': '_',
@@ -25,6 +25,7 @@ gulp.task('compile', function() {
       moduleName: 'WidgetUtils',
       plugins: [
         babel({
+          "babelrc": false,
           "presets": ["es2015-rollup"],
         }),
         rollupIncludePaths(includePathOptions)
@@ -39,7 +40,7 @@ gulp.task('watch', function() {
   return $.watch('src/**/*.js', function() {
     gulp.start('build');
   });
-})
+});
 
 gulp.task('clean', function () {
   return $.del(['dist/**']);

@@ -7,7 +7,7 @@
     "alexz <alex.zhukov@gbooking.ru>"
   ],
   "description": "",
-  "main": "dist/widgetUtils.js",
+  "main": "dist/index.js",
   "moduleType": [],
   "license": "MIT",
   "homepage": "",
@@ -18,5 +18,7 @@
     "bower_components",
     "test",
     "tests"
-  ]
+  ],
+  "dependencies": {
+  }
 }
