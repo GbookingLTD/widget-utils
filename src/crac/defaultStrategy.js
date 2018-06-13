@@ -13,10 +13,6 @@ export default {
 
 const INT_BITS = 32;
 
-function minutesFromBitset(bucket, slotIndex, vectorSlotSize) {
-  return ((bucket << 5) + slotIndex) * vectorSlotSize;
-}
-
 /**
  * Calculate day start and end time
  *
@@ -84,7 +80,7 @@ function getSlotSize(business, taxonomyIDs, resourceID) {
 }
 
 /**
- * Caclulate next slot start minute
+ * Calculate next slot start minute
  *
  * @param bitset CRAC bitset
  * @param prevSlotStart prev slot start

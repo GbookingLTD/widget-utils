@@ -1,64 +1,9 @@
 "use strict";
 
+import {defaultVectorSlotSize, prepareBitset, getFirstLastMinutes, isSlotAvailable} from '../../bower_components/crac-utils/src';
 import defaultStrategy from './defaultStrategy';
 
-const DEFAULT_CRAC_VECTOR_SLOT_SIZE = 5;
-const MINUTES_IN_DAY = 24 * 60;
-const INT_BITS = 32;
 const ANY = 'ANY';
-
-/**
- * Convert string bitset into int32 array
- * @param bitsetString bitset in string representation
- * @param vectorSlotSize CRAC bitset slot size
- * @returns {Array} int32 bitset
- */
-function bitsetStrToInt32Array(bitsetString, vectorSlotSize) {
-  const vector = bitsetString.replace(/\./g, '');
-  const numberOfTimeUnits = Math.ceil(MINUTES_IN_DAY / vectorSlotSize);
-
-  if (vector.length !== numberOfTimeUnits) {
-    throw new Error('Unexpected CRAC vector size. Expected ' + numberOfTimeUnits);
-  }
-  var int32Count = numberOfTimeUnits >> 5;
-  var i, bi, bs = [];
-  // fill bitset array
-  for (i = 0; i < int32Count; ++i) {
-    bs[i] = 0;
-  }
-  for (i = vector.length - 1; i >= 0; i--) {
-    // i  - char index: from numberOfTimeUnits - 1 to 0
-    // bi - byte index: from 0 to 8
-    bi = (numberOfTimeUnits - 1 - i) >> 5;
-    bs[bi] = bs[bi] << 1 | (vector[i] === "1");
-  }
-  return bs;
-}
-
-function prepareBitset(bitset, vectorSlotSize) {
-  return (typeof bitset === "string") ? bitsetStrToInt32Array(bitset, vectorSlotSize) : bitset;
-}
-
-/**
- * Checking slot availability
- * @param bitset CRAC bitset
- * @param start start time in minutes
- * @param end end time in minutes
- * @param vectorSlotSize CRAC bitset slot size
- * @returns {boolean} availability
- */
-function isSlotAvailable(bitset, start, end, vectorSlotSize) {
-  for (let time = start; time < end; time += vectorSlotSize) {
-    const cracSlotIndex = parseInt(time / vectorSlotSize),
-      bucket = cracSlotIndex >> 5,
-      bitIndex = cracSlotIndex % INT_BITS;
-    const slot = bitset[bucket] & (1 << INT_BITS - bitIndex - 1);
-    if (!slot) {
-      return false;
-    }
-  }
-  return true;
-}
 
 /**
  * Create day slots from raw CRAC data.
@@ -73,7 +18,7 @@ function isSlotAvailable(bitset, start, end, vectorSlotSize) {
  */
 function cutSlots(date, bitset, vectorSlotSize, business, taxonomyIDs, resourceID, strategy) {
 
-  const dayBounds = strategy.getDayBounds(bitset, vectorSlotSize);
+  const dayBounds = getFirstLastMinutes(bitset, vectorSlotSize);
   const slotSize = strategy.getSlotSize(business, taxonomyIDs, resourceID);
 
   let slots = [];
@@ -109,7 +54,7 @@ function cutSlots(date, bitset, vectorSlotSize, business, taxonomyIDs, resourceI
  * @returns {Object} slots
  */
 export function makeSlots(cracData, business, taxonomyIDs, resourceID, strategy) {
-  const vectorSlotSize = business.widget_configuration.cracSlotSize || DEFAULT_CRAC_VECTOR_SLOT_SIZE;
+  const vectorSlotSize = business.widget_configuration.cracSlotSize || defaultVectorSlotSize;
 
   return cracData.slots.reduce(function (ret, day) {
     const dayKey = day.date.substr(0, 10);
