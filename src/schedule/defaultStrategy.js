@@ -4,55 +4,11 @@ import _ from 'lodash';
 import * as TaxonomyUtils from '../taxonomies';
 
 export default {
-  getDayBounds,
   getSlotSize,
   getNextSlotMinute,
   enhanceSlot,
   postProcessing
 };
-
-const INT_BITS = 32;
-
-/**
- * Calculate day start and end time
- *
- * @param bitset CRAC bitset
- * @param vectorSlotSize CRAC bitset slot size
- * @returns {{start: *, end: *}}
- */
-function getDayBounds(bitset, vectorSlotSize) {
-  let startBoundMinutes, endBoundMinutes;
-  let startBoundBucket, startBoundIndex, endBoundBucket, endBoundIndex;
-  for (let bucket = 1; bucket <= bitset.length; bucket++) {
-    if (bitset[bucket] === 0) {
-      continue;
-    }
-    for (let slotIndex = INT_BITS - 1; slotIndex !== 0; slotIndex--) {
-      const slotAvailable = bitset[bucket] & (1 << slotIndex);
-      if (slotAvailable) {
-        if (!startBoundIndex) {
-          startBoundBucket = bucket;
-          startBoundIndex = INT_BITS - slotIndex - 1;
-        }
-
-        endBoundBucket = bucket;
-        endBoundIndex = INT_BITS - slotIndex - 1;
-      }
-    }
-  }
-
-  if (startBoundIndex) {
-    startBoundMinutes = minutesFromBitset(startBoundBucket, startBoundIndex, vectorSlotSize);
-  }
-  if (endBoundIndex) {
-    endBoundMinutes = minutesFromBitset(endBoundBucket, endBoundIndex + 1, vectorSlotSize);
-  }
-
-  return {
-    start: startBoundMinutes,
-    end: endBoundMinutes
-  };
-}
 
 /**
  * Calculate slot size

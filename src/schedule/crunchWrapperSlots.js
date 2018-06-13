@@ -4,7 +4,7 @@ import _ from 'lodash';
 import moment from 'moment';
 
 let SLOT_SIZE = 5;
-const VECTOR_SIZE = 24 * 60 / SLOT_SIZE
+const VECTOR_SIZE = 24 * 60 / SLOT_SIZE;
 const FIRST_DAY_OF_WEEK = 1;
 
 // Convert minutes to date in ISO format
@@ -14,7 +14,7 @@ function minutesToDate(date, minutes) {
 
 
 // Compute start_time/end_time according to given day schedule.
-function getDayBoundsFromShedule(daySchedule, date) {
+function getDayBoundsFromSchedule(daySchedule, date) {
   return {
     start_time: minutesToDate(date, daySchedule.start),
     start: daySchedule.start,
@@ -47,18 +47,17 @@ function getDayBoundsFromTimetable(date, timetable) {
 
   const daySchedule = dayScheduleArray && dayScheduleArray[0];
   if (daySchedule) {
-    const dayBounds = getDayBoundsFromShedule(daySchedule, date);
-    return dayBounds;
+    return getDayBoundsFromSchedule(daySchedule, date);
   }
 
   return null;
 }
 
 function getEvenOddType (startPeriod, startTime) {
-  if(startPeriod == 'month') {
+  if(startPeriod === 'month') {
     return startTime.date() % 2 ? 'odd' : 'even';
   }
-  if(startPeriod == 'week') {
+  if(startPeriod === 'week') {
     let firstDay = FIRST_DAY_OF_WEEK;
     let correction = firstDay === 0 ? 1 : 0,
       dayNum = startTime.day();
@@ -70,15 +69,15 @@ function getEvenOddType (startPeriod, startTime) {
 
 function getDayOffNum (daysToSub) {
   let dayOffNum = 7 - Math.abs(FIRST_DAY_OF_WEEK - daysToSub);
-  return dayOffNum == 7 ? 0 : dayOffNum;
+  return dayOffNum === 7 ? 0 : dayOffNum;
 }
 
 function getEvenOddTimetableFrames (date,timetable) {
   let dayNum = date.day(),
     type = getEvenOddType(timetable.startPeriod, date);
 
-  if ((!timetable.workAtFirstDayOff && dayNum == getDayOffNum(2)) ||
-    (!timetable.workAtSecondDayOff && dayNum == getDayOffNum(1))) {
+  if ((!timetable.workAtFirstDayOff && dayNum === getDayOffNum(2)) ||
+    (!timetable.workAtSecondDayOff && dayNum === getDayOffNum(1))) {
     return [];
   } else {
     return timetable[type];
@@ -94,18 +93,18 @@ function combineFrames (dayScheduleArray) {
     if (f.end > end) {
       end = f.end;
     }
-  })
+  });
   return {start:start,end:end};
 }
 
-function getDayBoundsFromEvenOddTimetable (date, timetable){
+function getDayBoundsFromEvenOddTimetable (date, timetable) {
   var dateMoment = moment(date);
   var dayScheduleArray = getEvenOddTimetableFrames(dateMoment,timetable);
   var daySchedule = combineFrames (dayScheduleArray);
-  var dayBounds = getDayBoundsFromShedule(daySchedule, dateMoment);
-  return dayBounds;
+  return getDayBoundsFromSchedule(daySchedule, dateMoment);
 }
-function getDayBoundsFromCracSlot(date,slot){
+
+function getDayBoundsFromCracSlot (date,slot) {
   let allDayBounds = null;
   var bitmask = cracValueToBits(slot.bitset);
   var bitmaskTaxonomy = cracValueToBits(slot.taxonomyBitset ||"");
@@ -118,18 +117,18 @@ function getDayBoundsFromCracSlot(date,slot){
   var daySize = 24 * 60 / SLOT_SIZE;
   var lastActiveBit = bitmask.length - daySize;
   for (var ii=bitmask.length - 1; ii >= bitmask.length - 24 * 60 /SLOT_SIZE; ii--){
-    if ( bitmask[ii] == 1 &&  firstActiveBit ==  bitmask.length){
+    if (bitmask[ii] === 1 &&  firstActiveBit ===  bitmask.length) {
       firstActiveBit = ii;
     }
-    if ( bitmask[ii] == 1){
+    if (bitmask[ii] === 1) {
       lastActiveBit = ii;
     }
   }
-  if ( (firstActiveBit != bitmask.length-1) || (firstActiveBit == bitmask.length-1 && lastActiveBit > 1)){
+  if ((firstActiveBit !== bitmask.length-1) || (firstActiveBit === bitmask.length-1 && lastActiveBit > 1)) {
     allDayBounds = {};
     allDayBounds.start = (bitmask.length -1 - firstActiveBit) * SLOT_SIZE;
     allDayBounds.start_time = moment(date).add(allDayBounds.start,'minutes').toISOString();
-    if (lastActiveBit == 1){
+    if (lastActiveBit === 1){
       allDayBounds.end = bitmask.length * SLOT_SIZE;
     } else {
       allDayBounds.end = (bitmask.length - lastActiveBit) * SLOT_SIZE;
@@ -138,16 +137,17 @@ function getDayBoundsFromCracSlot(date,slot){
   }
   return allDayBounds;
 }
+
 // This function takes day bounds from getDayBoundsFromTimetable for every timetables
 // and computes min-start and max-end bounds from all given timetables.
 // It allows us to show correct day bounds for 'any free worker' option.
-function getDayBoundsFromAllTimetables(date, timetablesDefult,timetablesEvenOdd,timeTableType) {
+function getDayBoundsFromAllTimetables(date, timetablesDefault,timetablesEvenOdd,timeTableType) {
   let allDayBounds = null;
   timeTableType = timeTableType ||'DEFAULT';
-  var timetables = timeTableType == 'EVENODD' ? timetablesEvenOdd : timetablesDefult;
+  var timetables = timeTableType === 'EVENODD' ? timetablesEvenOdd : timetablesDefault;
   timetables.forEach(tt => {
     var dayBounds
-    if (timeTableType == 'EVENODD'){
+    if (timeTableType === 'EVENODD'){
       dayBounds = getDayBoundsFromEvenOddTimetable(date, tt);
     } else {
       dayBounds = getDayBoundsFromTimetable(date, tt);
@@ -196,9 +196,9 @@ function getCrunchSlotsFromCrac(cracSlot, date, startMinutes, endMinutes, maxSlo
 
   var bitmask = cracValueToBits(cracSlot.bitset);
   var bitmaskTaxonomy = cracValueToBits(cracSlot.taxonomyBitset ||"");
-  if (bitmaskTaxonomy.indexOf(0) > -1){
-    for (var i=0; i< bitmask.length; i++){
-      bitmask[i] =bitmask[i] ? bitmask[i] && bitmaskTaxonomy[i] :bitmaskTaxonomy[i];
+  if (bitmaskTaxonomy.indexOf(0) > -1) {
+    for (var i=0; i < bitmask.length; i++) {
+      bitmask[i] = bitmask[i] ? bitmask[i] && bitmaskTaxonomy[i] : bitmaskTaxonomy[i];
     }
   }
   const reverseOffset = bitmask.length - 1;
@@ -217,9 +217,6 @@ function getCrunchSlotsFromCrac(cracSlot, date, startMinutes, endMinutes, maxSlo
     currentSlot.startTS = time.unix();
     currentSlot.end = startMinutes + currentSlot.duration;
     busySlots.push(currentSlot);
-
-    // console.info('commitSlot', currentSlot.time, currentSlot.start, currentSlot.end, currentSlot.duration);
-
     currentSlot = undefined;
   }
 
@@ -231,11 +228,7 @@ function getCrunchSlotsFromCrac(cracSlot, date, startMinutes, endMinutes, maxSlo
       duration: SLOT_SIZE,
       partial_busy: null,
     };
-
-    // console.info('makeSlot', startMinutes);
   }
-
-  // console.log(date, bitmask.slice(reverseOffset - endBitIndex + 1, reverseOffset - startBitIndex).join(''));
 
   // Walking through bitmaks in reverse direction.
   for (var ii = startBitIndex; ii < endBitIndex; ii++) {
@@ -256,11 +249,8 @@ function getCrunchSlotsFromCrac(cracSlot, date, startMinutes, endMinutes, maxSlo
         makeSlot(minutes);
       } else{
         currentSlot.duration += SLOT_SIZE;
-        // console.log('currentSlot.duration:', currentSlot && currentSlot.duration);
-
         if (currentSlot.duration >= maxSlotSize) {
           commitSlot();
-          // console.info('separate by maxSlotSize', maxSlotSize);
           makeSlot(minutes);
         }
       }
@@ -269,7 +259,6 @@ function getCrunchSlotsFromCrac(cracSlot, date, startMinutes, endMinutes, maxSlo
   }
 
   if (currentSlot) {
-    // console.info('ensure last slot');
     commitSlot();
   }
 
@@ -387,8 +376,7 @@ function getRoomCapacityByService(taxonomyTreeCapacity, taxonomiesRooms) {
   var capacity = {};
   taxonomiesRooms.forEach(function (t) {
     var treeCapacity = _.find(taxonomyTreeCapacity, { parent_id: t.room });
-    var tCapacity = treeCapacity && treeCapacity.capacity ? treeCapacity.capacity : 0;
-    capacity[t.taxonomy] = tCapacity;
+    capacity[t.taxonomy] = treeCapacity && treeCapacity.capacity ? treeCapacity.capacity : 0;
   });
   return capacity;
 }
@@ -438,8 +426,8 @@ function getBitSetsFromCracSlots(cracSlot, roomCapacityByService, taxonomies, re
  * @param {Array} workerBitSets
  * @param {string} workerId
  * @param {Array} roomsBitSets
- * @param {Int} totalDuration
- * @param {Int} serviceDuration
+ * @param {Number} totalDuration
+ * @param {Number} serviceDuration
  * @param {String} resources
  * @param {Array} taxonomies
  */
@@ -448,9 +436,9 @@ function getServiceRoomVector(workerBitSets, workerId, roomsBitSets, totalDurati
   var finalVector = initBusyVector();
   for (var i = 0; i < workerBitSets.length; i++) {
     workerFree = checkFree(workerBitSets, i, totalDuration);
-    if (workerFree == 1){
+    if (workerFree === 1) {
       roomFree = true;
-      if (roomsBitSets.length > 0){
+      if (roomsBitSets.length > 0) {
         roomFree = false;
       }
       for (var j = 0; j < roomsBitSets.length; j++) {
@@ -469,7 +457,7 @@ function getServiceRoomVector(workerBitSets, workerId, roomsBitSets, totalDurati
  * ["b", "c", "a"],["c", "a", "b"],["c", "b", "a"]]
  * @param {Array} input
  */
-function taxonomyCombo(input){
+function taxonomyCombo(input) {
   var permArr = [],
     usedChars = [];
 
@@ -478,7 +466,7 @@ function taxonomyCombo(input){
     for (i = 0; i < input.length; i++) {
       ch = input.splice(i, 1)[0];
       usedChars.push(ch);
-      if (input.length == 0) {
+      if (input.length === 0) {
         permArr.push(usedChars.slice());
       }
       permute(input);
@@ -486,7 +474,7 @@ function taxonomyCombo(input){
       usedChars.pop();
     }
     return permArr;
-  };
+  }
   return permute(input);
 }
 
@@ -500,8 +488,8 @@ function taxonomyCombo(input){
  * @param {String} resourceId
  * @param {Object} serviceDurationByWorker
  */
-function checkSlotTaxonomyCombo(index,serviceRoomVectors,taxonomyCombo,resourceId,serviceDurationByWorker){
-  var duration, vector;
+function checkSlotTaxonomyCombo(index,serviceRoomVectors,taxonomyCombo,resourceId,serviceDurationByWorker) {
+  var duration;
   var bit = true;
   var calculatedIndex = index;
 
@@ -531,17 +519,17 @@ function checkSlotTaxonomyCombo(index,serviceRoomVectors,taxonomyCombo,resourceI
 function getWorkerVector(serviceRoomVectors, resourceId, serviceDurationByWorker, taxonomies, taxonomiesRooms) {
   var rooms = [];
   taxonomiesRooms.forEach(function(t){
-    if (rooms.indexOf(t.room) == -1){
+    if (rooms.indexOf(t.room) === -1){
       rooms.push(t.room);
     }
   })
 
   var combinations = taxonomyCombo(taxonomies);
   var vector = initBusyVector();
-  for (var j=0;j<vector.length;j++){
-    for (var i=0 ; i< combinations.length; i++){
-      vector[j] = vector[j] || checkSlotTaxonomyCombo(j,serviceRoomVectors,combinations[i],resourceId,serviceDurationByWorker);
-      if (vector[j] == 1){
+  for (var j = 0; j < vector.length; j++) {
+    for (var i = 0; i < combinations.length; i++) {
+      vector[j] = vector[j] || checkSlotTaxonomyCombo(j, serviceRoomVectors, combinations[i], resourceId, serviceDurationByWorker);
+      if (vector[j] === 1) {
         break;
       }
     }
@@ -555,9 +543,9 @@ function getWorkerVector(serviceRoomVectors, resourceId, serviceDurationByWorker
  */
 function calcResourceSlots(resourceVector) {
   var resourceSlots = [];
-  for (var i = 0; i< resourceVector.length ; i++){
-    if (resourceVector[i]){
-      resourceSlots.push({ time: i*SLOT_SIZE, duration: SLOT_SIZE , space_left: 1 ,discount:10});
+  for (var i = 0; i < resourceVector.length; i++) {
+    if (resourceVector[i]) {
+      resourceSlots.push({time: i * SLOT_SIZE, duration: SLOT_SIZE, space_left: 1, discount: 10});
     }
   }
   return resourceSlots;
@@ -566,15 +554,15 @@ function calcResourceSlots(resourceVector) {
  * return array of excluded resources
  * retource excluded in case he dont have any free slot in request dates
  * @param {Array} resources
- * @param {Object} slots
+ * @param {Object} excludedHash
  */
 function calExcludedResource(resources,excludedHash) {
   var excludedResources = [];
-  resources.forEach(function(rId){
-    if (!excludedHash[rId]){
+  resources.forEach(function (rId) {
+    if (!excludedHash[rId]) {
       excludedResources.push(rId)
     }
-  })
+  });
   return excludedResources;
 }
 
@@ -610,7 +598,7 @@ function initBusyVector() {
 function checkFree(bistSet, index, duration) {
   var bits = parseInt(duration / SLOT_SIZE);
   for (var i = index; i < index + bits; i++) {
-    if (bistSet[i] == 0) {
+    if (bistSet[i] === 0) {
       return 0;
     }
   }
@@ -620,8 +608,8 @@ function checkFree(bistSet, index, duration) {
 /**
  * And operation by bit between 2 sets
  *
- * @param {*bitset} setA
- * @param {*bitset} setB
+ * @param {Array<Number>} setA
+ * @param {Array<Number>} setB
  */
 function setAnd (setA,setB){
   var unifiedSet = [];
@@ -634,8 +622,8 @@ function setAnd (setA,setB){
 /**
  * OR operation by bit between 2 sets
  *
- * @param {*bitset} setA
- * @param {*bitset} setB
+ * @param {Array<Number>} setA
+ * @param {Array<Number>} setB
  */
 function setUnion (setA,setB){
   var unifiedSet = [];
@@ -656,9 +644,7 @@ function setUnion (setA,setB){
  */
 export function prepareSlots(cracResult, business, taxonomies, resources, taxonomiesRooms) {
 
-  var excludedResource = [];
   var finalSlots = {};
-  var businessData = business;
 
   finalSlots.days = [];
   finalSlots.excludedResource = [];
@@ -667,7 +653,7 @@ export function prepareSlots(cracResult, business, taxonomies, resources, taxono
     return t.active && taxonomies.indexOf(t.id) > -1;
   });
   var businessWorkers = _.filter(business.resources, function (r) {
-    return r.status == 'ACTIVE' && resources.indexOf(r.id) > -1;
+    return r.status === 'ACTIVE' && resources.indexOf(r.id) > -1;
   });
 
   var serviceDurationByWorker = getServiceDurationByWorker(businessWorkers, businessTaxonomies);
@@ -692,7 +678,7 @@ export function prepareSlots(cracResult, business, taxonomies, resources, taxono
       });
     });
 
-    var anyAvailableVector = initBusyVector()
+    var anyAvailableVector = initBusyVector();
     resources.forEach(function (rId) {
       finalWorkersVector[rId] = getWorkerVector(serviceRoomVectors, rId, serviceDurationByWorker, taxonomies,taxonomiesRooms);
       var resourceSlots = calcResourceSlots(finalWorkersVector[rId]);
@@ -702,7 +688,7 @@ export function prepareSlots(cracResult, business, taxonomies, resources, taxono
       }
       anyAvailableVector = setUnion(anyAvailableVector,finalWorkersVector[rId])
     });
-    daySlots.slots = calcResourceSlots(anyAvailableVector)
+    daySlots.slots = calcResourceSlots(anyAvailableVector);
     daySlots.available = daySlots.slots.length > 0;
     finalSlots.days.push(daySlots);
   });
@@ -716,8 +702,11 @@ export function prepareSlots(cracResult, business, taxonomies, resources, taxono
  *
  * Its need for soft migration from Crunch to CRAC
  *
- * @param  {CracBusySlots|Array<Object>} cracSlots CRAC response format
- * @return {CrunBusySlot|Object}           Crunch response format
+ * @param  {Array<Object>} cracSlots CRAC response format
+ * @param {{}} business
+ * @param {Array} taxonomyIDs
+ * @param {Array} [resourceIds = []]
+ * @return {{taxonomyId: *, slots_size: number, maxSlotCapacity: number, daysOff: Array, excludedResources: Array, days: *}}
  */
 export function toBusySlots(cracSlots, business, taxonomyIDs, resourceIds = []) {
   const businessTimetable = business.general_info.timetable;
@@ -732,7 +721,7 @@ export function toBusySlots(cracSlots, business, taxonomyIDs, resourceIds = []) 
     if (resourceIds.indexOf(rr.id) < 0) {
       return;
     }
-    if (timetableType == 'EVENODD'){
+    if (timetableType === 'EVENODD') {
       resourceEvenOddTimeTable.push(rr.evenOddTimetable);
     } else {
       resourceTimetables.push(rr.timetable && rr.timetable.active === true ? rr.timetable : businessTimetable);
@@ -756,8 +745,6 @@ export function toBusySlots(cracSlots, business, taxonomyIDs, resourceIds = []) 
     }
   }
 
-  // const now = moment();
-
   function excludedResource(resource_id, date) {
     excludedResourcesCountMap[resource_id] = (excludedResourcesCountMap[resource_id] || 0) + 1;
     daysOff.push({ date, resource_id });
@@ -772,8 +759,7 @@ export function toBusySlots(cracSlots, business, taxonomyIDs, resourceIds = []) 
     days: _.map(cracSlots, function(cracSlot) {
       const { date } = cracSlot;
       var dayBounds;
-      //dayBounds = getDayBoundsFromAllTimetables(date, resourceTimetables,resourceEvenOddTimeTable,timetableType);
-      dayBounds = getDayBoundsFromCracSlot(date,cracSlot);
+      dayBounds = getDayBoundsFromCracSlot(date, cracSlot);
 
 
       if (!dayBounds) {
@@ -823,6 +809,6 @@ export function toBusySlots(cracSlots, business, taxonomyIDs, resourceIds = []) 
   return busySlotsResponse;
 }
 
-export function setSlotSize (slotSize){
+export function setSlotSize (slotSize) {
   SLOT_SIZE = slotSize;
 }
