@@ -12,7 +12,7 @@ import * as resources from './resources';
  * @private
  */
 export function _sortByWorkload(workloadIndex, worker) {
-  return 10000000-workloadIndex[worker.id].weight;
+  return 10000000 - workloadIndex[worker.id].weight;
 }
 
 /**

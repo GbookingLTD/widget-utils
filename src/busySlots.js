@@ -9,6 +9,7 @@ import { getDateLikeUTC, setBusinessDateTZ } from './dateTime';
  *
  * Не предусматривает случай, когда дискаунт кампания как-то влияет на занятость дня.
  *
+ * @deprecated
  * @param day
  * @param taxonomy
  * @param slotSize
@@ -69,6 +70,14 @@ export function calculateDaySlotsV1(day, taxonomy, slotSize, busySlots, business
   return slots;
 }
 
+/**
+ * @deprecated
+ * @param day
+ * @param taxonomy
+ * @param slotSize
+ * @param busySlots
+ * @return {Array}
+ */
 export function calculateDaySlotsV2(day, taxonomy, slotSize, busySlots){
   var slots = [];
   day.slots.forEach(function(slot){
@@ -103,6 +112,13 @@ export function calculateDaySlotsV2(day, taxonomy, slotSize, busySlots){
   return slots;
 }
 
+/**
+ * @deprecated
+ * @param slots
+ * @param date
+ * @param defaultStep
+ * @return {*[]}
+ */
 export function checkDate(slots, date, defaultStep) {
   var result = [1, defaultStep];
   if (slots.busy && slots.busy.length) {
@@ -120,6 +136,13 @@ export function checkDate(slots, date, defaultStep) {
   return result;
 }
 
+/**
+ * @deprecated
+ * @param dayBusySlots
+ * @param date
+ * @param defaultStep
+ * @return {*[]}
+ */
 export function checkSlotInterval(dayBusySlots, date, defaultStep) {
   var result = [1, defaultStep];
   if (dayBusySlots.busy && dayBusySlots.busy.length) {
@@ -139,6 +162,16 @@ export function checkSlotInterval(dayBusySlots, date, defaultStep) {
   return result;
 }
 
+/**
+ * @deprecated
+ * @param day
+ * @param crunchv2
+ * @param taxonomy
+ * @param slotSize
+ * @param busySlots
+ * @param businessData
+ * @return {boolean}
+ */
 export function isBusyDay(day, crunchv2, taxonomy, slotSize, busySlots, businessData) {
   var calculateDaySlots = crunchv2 ? calculateDaySlotsV2 : calculateDaySlotsV1;
   var slots = calculateDaySlots(day, taxonomy, slotSize, busySlots, businessData);
@@ -146,6 +179,13 @@ export function isBusyDay(day, crunchv2, taxonomy, slotSize, busySlots, business
   return !hasFreeSlot;
 }
 
+/**
+ * @deprecated
+ * @param widgetConfiguration
+ * @param date
+ * @param ignoreStartDate
+ * @return {*}
+ */
 export function isDateForbidden(widgetConfiguration, date, ignoreStartDate) {
   if (ignoreStartDate === null || typeof ignoreStartDate == 'undefined') {
     ignoreStartDate = false;
