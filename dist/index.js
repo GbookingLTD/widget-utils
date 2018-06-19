@@ -2870,7 +2870,7 @@ var Crac = Object.freeze({
   // Remove this function after migration
   function calcCRACSlotIntermediate$1(slot, vectorSlotSize) {
     return slot.resources.reduce(function (ret, res) {
-      var bitset = setAnd$1(res.bitset, res.taxonomyBitSet);
+      var bitset = res.taxonomyBitSet ? setAnd$1(res.bitset, res.taxonomyBitSet) : res.bitset;
       return setUnion$1(ret, bitset);
     }, '0'.repeat(vectorSlotSize === 5 ? 288 : 1440).split('').map(function () {
       return 0;
