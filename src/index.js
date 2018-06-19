@@ -9,6 +9,7 @@ import * as taxonomies from './taxonomies';
 import * as Resources from './resources';
 import * as ResourcesMostFree from './resources.mostFree';
 import * as Discounts from './discounts';
+import * as Crac from './crac';
 import * as CracUtils from './crac-utils';
 
 export default {
@@ -24,5 +25,6 @@ export default {
   Resources,
   ResourcesMostFree,
   Discounts,
+  Crac,
   CracUtils
 };
