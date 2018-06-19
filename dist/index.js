@@ -880,13 +880,6 @@ var taxonomies = Object.freeze({
     return r;
   }
 
-  function calcCRACSlotIntermediate(slot) {
-    return slot.resources.reduce(function (ret, res) {
-      var bitset = setAnd(res.bitset, res.taxonomyBitSet);
-      return setUnion(ret, bitset);
-    }, newBusyBitset());
-  }
-
   var SLOT_SIZE = 5;
   var VECTOR_SIZE = 24 * 60 / SLOT_SIZE;
 
@@ -2654,6 +2647,20 @@ var Discounts = Object.freeze({
   }
 
   /**
+   * And operation by bit between 2 sets
+   * 
+   * @param {*bitset} setA 
+   * @param {*bitset} setB 
+   */
+  function setAnd$1(setA, setB) {
+    var unifiedSet = [];
+    for (var i = 0; i < setA.length; i++) {
+      unifiedSet[i] = setA[i] && setB[i];
+    }
+    return unifiedSet;
+  }
+
+  /**
    * OR operation by bit between 2 sets
    * 
    * @param {*bitset} setA 
@@ -2853,15 +2860,27 @@ var Discounts = Object.freeze({
   }
 
 var Crac = Object.freeze({
+    setAnd: setAnd$1,
+    setUnion: setUnion$1,
     prepareSlots: prepareSlots$1,
     toBusySlots: toBusySlots$1,
     setSlotSize: setSlotSize$2
   });
 
+  // Remove this function after migration
+  function calcCRACSlotIntermediate$1(slot, vectorSlotSize) {
+    return slot.resources.reduce(function (ret, res) {
+      var bitset = setAnd$1(res.bitset, res.taxonomyBitSet);
+      return setUnion$1(ret, bitset);
+    }, '0'.repeat(vectorSlotSize === 5 ? 288 : 1440).split('').map(function () {
+      return 0;
+    }));
+  }
+
 
 
   var CracUtils = Object.freeze({
-  	calcCRACSlotIntermediate: calcCRACSlotIntermediate
+    calcCRACSlotIntermediate: calcCRACSlotIntermediate$1
   });
 
   var index = {
