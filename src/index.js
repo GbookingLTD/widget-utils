@@ -9,6 +9,7 @@ import * as taxonomies from './taxonomies';
 import * as Resources from './resources';
 import * as ResourcesMostFree from './resources.mostFree';
 import * as Discounts from './discounts';
+import * as CracUtils from './crac-utils';
 
 export default {
   DateTime,
@@ -22,5 +23,6 @@ export default {
   Taxonomies: taxonomies,
   Resources,
   ResourcesMostFree,
-  Discounts
+  Discounts,
+  CracUtils
 };
