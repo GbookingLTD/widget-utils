@@ -180,7 +180,7 @@ function getDayBoundsFromAllTimetables(date, timetablesDefult,timetablesEvenOdd,
 }
 
 
-function cracValueToBits(value) {
+export function cracValueToBits(value) {
   const bits = [];
   // Fastest way to parse stringifyed bitmask
   Array.prototype.forEach.call(value, function(sign) {

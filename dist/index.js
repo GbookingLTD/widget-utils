@@ -2860,6 +2860,7 @@ var Discounts = Object.freeze({
   }
 
 var Crac = Object.freeze({
+    cracValueToBits: cracValueToBits,
     setAnd: setAnd$1,
     setUnion: setUnion$1,
     prepareSlots: prepareSlots$1,
@@ -2870,7 +2871,7 @@ var Crac = Object.freeze({
   // Remove this function after migration
   function calcCRACSlotIntermediate$1(slot, vectorSlotSize) {
     return slot.resources.reduce(function (ret, res) {
-      var bitset = res.taxonomyBitSet ? setAnd$1(res.bitset, res.taxonomyBitSet) : res.bitset;
+      var bitset = res.taxonomyBitSet ? setAnd$1(cracValueToBits(res.bitset), cracValueToBits(res.taxonomyBitSet)) : cracValueToBits(res.bitset);
       return setUnion$1(ret, bitset);
     }, '0'.repeat(vectorSlotSize === 5 ? 288 : 1440).split('').map(function () {
       return 0;
