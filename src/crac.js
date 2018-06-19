@@ -628,7 +628,7 @@ function isoDateForDayOff(date) {
    * @param {*bitset} setA 
    * @param {*bitset} setB 
    */
-  function setAnd (setA,setB){
+  export function setAnd (setA,setB){
     var unifiedSet = [];
     for (var i=0; i< setA.length; i++){
         unifiedSet[i] = setA[i] && setB[i] 
@@ -642,7 +642,7 @@ function isoDateForDayOff(date) {
    * @param {*bitset} setA 
    * @param {*bitset} setB 
    */
-  function setUnion (setA,setB){
+  export function setUnion (setA,setB){
     var unifiedSet = [];
     for (var i=0; i< setA.length; i++){
         unifiedSet[i] = setA[i] || setB[i] 
