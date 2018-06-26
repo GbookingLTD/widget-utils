@@ -119,10 +119,17 @@ function getDayBoundsFromCracSlot(date,slot){
       bitmask[i] = bitmask[i] ? bitmask[i] && bitmaskTaxonomy[i] :bitmaskTaxonomy[i];
     }
   }
+  
+  // Definition cracSlotSize by vector length per each worker
+  let cracSlotSize = 5;
+  if (bitmask.length > 288) {
+    cracSlotSize = 1;
+  }
+  
   var firstActiveBit = bitmask.length;
-  var daySize = 24 * 60 / SLOT_SIZE;
+  var daySize = 24 * 60 / cracSlotSize;
   var lastActiveBit = bitmask.length - daySize;
-  for (var ii=bitmask.length - 1; ii >= bitmask.length - 24 * 60 /SLOT_SIZE; ii--){
+  for (var ii=bitmask.length - 1; ii >= bitmask.length - 24 * 60 /cracSlotSize; ii--){
     if ( bitmask[ii] == 1 &&  firstActiveBit ==  bitmask.length){
       firstActiveBit = ii;
     }
@@ -132,12 +139,12 @@ function getDayBoundsFromCracSlot(date,slot){
   }
   if ( (firstActiveBit != bitmask.length-1) || (firstActiveBit == bitmask.length-1 && lastActiveBit > 1)){
     allDayBounds = {};
-    allDayBounds.start = (bitmask.length -1 - firstActiveBit) * SLOT_SIZE;
+    allDayBounds.start = (bitmask.length -1 - firstActiveBit) * cracSlotSize;
     allDayBounds.start_time = moment(date).add(allDayBounds.start,'minutes').toISOString();
     if (lastActiveBit == 1){
-      allDayBounds.end = bitmask.length * SLOT_SIZE;
+      allDayBounds.end = bitmask.length * cracSlotSize;
     } else {
-      allDayBounds.end = (bitmask.length - lastActiveBit) * SLOT_SIZE;
+      allDayBounds.end = (bitmask.length - lastActiveBit) * cracSlotSize;
     }
     allDayBounds.end_time = moment(date).add(allDayBounds.end,'minutes').toISOString();
   }
@@ -206,9 +213,16 @@ function getCrunchSlotsFromCrac(cracSlot, date, startMinutes, endMinutes, maxSlo
       bitmask[i] =bitmask[i] ? bitmask[i] && bitmaskTaxonomy[i] :bitmaskTaxonomy[i];
     }
   }
+  
+  // Definition cracSlotSize by vector length per each worker
+  let cracSlotSize = 5;
+  if (bitmask.length > 288) {
+    cracSlotSize = 1;
+  }
+  
   const reverseOffset = bitmask.length - 1;
-  let startBitIndex = typeof startMinutes === 'undefined' ? 0 : Math.floor(startMinutes / SLOT_SIZE);
-  let endBitIndex = typeof endMinutes === 'undefined' ? reverseOffset : Math.floor(endMinutes / SLOT_SIZE);
+  let startBitIndex = typeof startMinutes === 'undefined' ? 0 : Math.floor(startMinutes / cracSlotSize);
+  let endBitIndex = typeof endMinutes === 'undefined' ? reverseOffset : Math.floor(endMinutes / cracSlotSize);
   const resultDate = moment.utc(date);
 
   let currentSlot;
@@ -233,7 +247,7 @@ function getCrunchSlotsFromCrac(cracSlot, date, startMinutes, endMinutes, maxSlo
     currentSlot = {
       space_left: 0,
       start: startMinutes,
-      duration: SLOT_SIZE,
+      duration: cracSlotSize,
       partial_busy: null,
     };
 
@@ -246,7 +260,7 @@ function getCrunchSlotsFromCrac(cracSlot, date, startMinutes, endMinutes, maxSlo
   for (var ii = startBitIndex; ii < endBitIndex; ii++) {
     const bitIndex = reverseOffset - ii;
     var bit = bitmask[bitIndex];
-    const minutes = ii * SLOT_SIZE;
+    const minutes = ii * cracSlotSize;
   
 
   
@@ -260,7 +274,7 @@ function getCrunchSlotsFromCrac(cracSlot, date, startMinutes, endMinutes, maxSlo
       if (!currentSlot){
         makeSlot(minutes);
       } else{
-        currentSlot.duration += SLOT_SIZE;
+        currentSlot.duration += cracSlotSize;
         // console.log('currentSlot.duration:', currentSlot && currentSlot.duration);
 
         if (currentSlot.duration >= maxSlotSize) {

@@ -591,6 +591,10 @@ var taxonomies = Object.freeze({
     })
   };
 
+  function getCracVectorSlotSize(bitset) {
+    return bitset.length > 9 ? 1 : 5;
+  }
+
   /**
    * Convert string bitset into int32 array
    * @param str bitset in string representation
@@ -880,17 +884,10 @@ var taxonomies = Object.freeze({
     return r;
   }
 
-  var SLOT_SIZE = 5;
-  var VECTOR_SIZE = 24 * 60 / SLOT_SIZE;
-
-  function setSlotSize(slotSize) {
-    SLOT_SIZE = slotSize;
-    VECTOR_SIZE = 24 * 60 / SLOT_SIZE;
-  }
-
   function getDayBoundsFromCracSlot(date, bitset) {
-    bitset = prepareBitset(bitset, SLOT_SIZE);
-    var dayBounds = getFirstLastMinutes(bitset, SLOT_SIZE);
+    var cracSlotSize = getCracVectorSlotSize(bitset);
+    bitset = prepareBitset(bitset, cracSlotSize);
+    var dayBounds = getFirstLastMinutes(bitset, cracSlotSize);
     dayBounds.start_time = moment(date).add(dayBounds.start, 'minutes').toISOString();
     dayBounds.end_time = moment(date).add(dayBounds.end, 'minutes').toISOString();
     return dayBounds;
@@ -899,12 +896,13 @@ var taxonomies = Object.freeze({
   // Generate crunch-capable data from CRAC.
   // Complexity: O(N), where N = 24hours / 5 minutes
   function cutSlotsFromCrac(cracSlot, date, startMinutes, endMinutes, scheduleStrategy, scheduleSlotSize) {
-    var bitset = prepareBitset(cracSlot.bitset, SLOT_SIZE);
-    var bitsetTaxonomy = cracSlot.taxonomyBitset ? prepareBitset(cracSlot.taxonomyBitset, SLOT_SIZE) : newFreeBitset();
+    var cracSlotSize = getCracVectorSlotSize(cracSlot.bitset);
+    var bitset = prepareBitset(cracSlot.bitset, cracSlotSize);
+    var bitsetTaxonomy = cracSlot.taxonomyBitset ? prepareBitset(cracSlot.taxonomyBitset, cracSlotSize) : newFreeBitset();
     bitset = setAnd(bitset, bitsetTaxonomy);
 
     var dayBounds = getDayBoundsFromCracSlot(date, bitset);
-    var slots = cutSlots(date, bitset, SLOT_SIZE, scheduleSlotSize, scheduleStrategy || defaultStrategy);
+    var slots = cutSlots(date, bitset, cracSlotSize, scheduleSlotSize, scheduleStrategy || defaultStrategy);
     return {
       available: _$1.find(slots, { available: true }),
       busy: slots,
@@ -1117,8 +1115,13 @@ var taxonomies = Object.freeze({
     return capacity;
   }
 
-  var SLOT_SIZE$1 = 5;
-  var VECTOR_SIZE$1 = 24 * 60 / SLOT_SIZE$1;
+  var SLOT_SIZE = 5;
+  var VECTOR_SIZE = 24 * 60 / SLOT_SIZE;
+
+  function setSlotSize(slotSize) {
+    SLOT_SIZE = slotSize;
+    VECTOR_SIZE = 24 * 60 / SLOT_SIZE;
+  }
 
   /**
    * Return map of taxonomies, and foreach taxonomy map of resources and durations
@@ -1170,9 +1173,9 @@ var taxonomies = Object.freeze({
     resources.forEach(function (r) {
       var cracResource = _$1.find(cracSlot.resources, { resourceId: r });
       if (cracResource) {
-        bitSets.resources[r] = prepareBitset(cracResource.bitset, SLOT_SIZE$1);
+        bitSets.resources[r] = prepareBitset(cracResource.bitset, SLOT_SIZE);
       } else {
-        bitSets.resources[r] = newBusyBitset(SLOT_SIZE$1);
+        bitSets.resources[r] = newBusyBitset(SLOT_SIZE);
       }
     });
 
@@ -1185,9 +1188,9 @@ var taxonomies = Object.freeze({
         for (var i = 0; i < capacity; i++) {
           var cracRoom = _$1.find(cracSlot.rooms, { roomId: roomId + "_" + i });
           if (cracRoom) {
-            bitSets.rooms[roomId][i] = prepareBitset(cracRoom.bitset, SLOT_SIZE$1);
+            bitSets.rooms[roomId][i] = prepareBitset(cracRoom.bitset, SLOT_SIZE);
           } else {
-            bitSets.rooms[roomId][i] = newFreeBitset(SLOT_SIZE$1);
+            bitSets.rooms[roomId][i] = newFreeBitset(SLOT_SIZE);
           }
         }
       }
@@ -1206,7 +1209,7 @@ var taxonomies = Object.freeze({
     var slots = [];
     for (var i = 0; i < bookingVector.length; i++) {
       if (bookingVector[i]) {
-        slots.push({ time: i * SLOT_SIZE$1, duration: SLOT_SIZE$1, space_left: 1, discount: 10 });
+        slots.push({ time: i * SLOT_SIZE, duration: SLOT_SIZE, space_left: 1, discount: 10 });
       }
     }
     return slots;
@@ -1255,13 +1258,13 @@ var taxonomies = Object.freeze({
         var room = _$1.find(taxonomiesRooms, { taxonomy: tId });
         var roomBitSet = room ? bitSets.rooms[room.room] : [];
         resourceIDs.forEach(function (rId) {
-          serviceRoomVectors[tId][rId] = getServiceRoomVector(bitSets.resources[rId], rId, roomBitSet, totalServicesDurationByWorker[rId], serviceDurationByWorker[tId], SLOT_SIZE$1);
+          serviceRoomVectors[tId][rId] = getServiceRoomVector(bitSets.resources[rId], rId, roomBitSet, totalServicesDurationByWorker[rId], serviceDurationByWorker[tId], SLOT_SIZE);
         });
       });
 
-      var anyAvailableVector = newBusyBitset(SLOT_SIZE$1);
+      var anyAvailableVector = newBusyBitset(SLOT_SIZE);
       resourceIDs.forEach(function (rId) {
-        var workerBookingsVector = getWorkerBookingVector(serviceRoomVectors, rId, serviceDurationByWorker, taxonomyIDs, taxonomiesRooms, SLOT_SIZE$1);
+        var workerBookingsVector = getWorkerBookingVector(serviceRoomVectors, rId, serviceDurationByWorker, taxonomyIDs, taxonomiesRooms, SLOT_SIZE);
         var resourceSlots = getGreedySlots(workerBookingsVector);
         daySlots.resources.push({ id: rId, slots: resourceSlots });
         if (resourceSlots.length > 0) {
@@ -1363,8 +1366,8 @@ var taxonomies = Object.freeze({
 
   var Schedule = Object.freeze({
     Strategies: Strategies,
-    setSlotSize: setSlotSize,
     toBusySlots: toBusySlots,
+    setSlotSize: setSlotSize,
     prepareSlots: prepareSlots,
     makeSlots: makeSlots$1
   });
@@ -2177,8 +2180,8 @@ var Discounts = Object.freeze({
     getServiceDiscountsAndExceptions: getServiceDiscountsAndExceptions
   });
 
-  var SLOT_SIZE$2 = 5;
-  var VECTOR_SIZE$2 = 24 * 60 / SLOT_SIZE$2;
+  var SLOT_SIZE$1 = 5;
+  var VECTOR_SIZE$1 = 24 * 60 / SLOT_SIZE$1;
   function getDayBoundsFromCracSlot$1(date, slot) {
     var allDayBounds = null;
     var bitmask = cracValueToBits(slot.bitset);
@@ -2188,10 +2191,17 @@ var Discounts = Object.freeze({
         bitmask[i] = bitmask[i] ? bitmask[i] && bitmaskTaxonomy[i] : bitmaskTaxonomy[i];
       }
     }
+
+    // Definition cracSlotSize by vector length per each worker
+    var cracSlotSize = 5;
+    if (bitmask.length > 288) {
+      cracSlotSize = 1;
+    }
+
     var firstActiveBit = bitmask.length;
-    var daySize = 24 * 60 / SLOT_SIZE$2;
+    var daySize = 24 * 60 / cracSlotSize;
     var lastActiveBit = bitmask.length - daySize;
-    for (var ii = bitmask.length - 1; ii >= bitmask.length - 24 * 60 / SLOT_SIZE$2; ii--) {
+    for (var ii = bitmask.length - 1; ii >= bitmask.length - 24 * 60 / cracSlotSize; ii--) {
       if (bitmask[ii] == 1 && firstActiveBit == bitmask.length) {
         firstActiveBit = ii;
       }
@@ -2201,12 +2211,12 @@ var Discounts = Object.freeze({
     }
     if (firstActiveBit != bitmask.length - 1 || firstActiveBit == bitmask.length - 1 && lastActiveBit > 1) {
       allDayBounds = {};
-      allDayBounds.start = (bitmask.length - 1 - firstActiveBit) * SLOT_SIZE$2;
+      allDayBounds.start = (bitmask.length - 1 - firstActiveBit) * cracSlotSize;
       allDayBounds.start_time = moment(date).add(allDayBounds.start, 'minutes').toISOString();
       if (lastActiveBit == 1) {
-        allDayBounds.end = bitmask.length * SLOT_SIZE$2;
+        allDayBounds.end = bitmask.length * cracSlotSize;
       } else {
-        allDayBounds.end = (bitmask.length - lastActiveBit) * SLOT_SIZE$2;
+        allDayBounds.end = (bitmask.length - lastActiveBit) * cracSlotSize;
       }
       allDayBounds.end_time = moment(date).add(allDayBounds.end, 'minutes').toISOString();
     }
@@ -2238,9 +2248,16 @@ var Discounts = Object.freeze({
         bitmask[i] = bitmask[i] ? bitmask[i] && bitmaskTaxonomy[i] : bitmaskTaxonomy[i];
       }
     }
+
+    // Definition cracSlotSize by vector length per each worker
+    var cracSlotSize = 5;
+    if (bitmask.length > 288) {
+      cracSlotSize = 1;
+    }
+
     var reverseOffset = bitmask.length - 1;
-    var startBitIndex = typeof startMinutes === 'undefined' ? 0 : Math.floor(startMinutes / SLOT_SIZE$2);
-    var endBitIndex = typeof endMinutes === 'undefined' ? reverseOffset : Math.floor(endMinutes / SLOT_SIZE$2);
+    var startBitIndex = typeof startMinutes === 'undefined' ? 0 : Math.floor(startMinutes / cracSlotSize);
+    var endBitIndex = typeof endMinutes === 'undefined' ? reverseOffset : Math.floor(endMinutes / cracSlotSize);
     var resultDate = moment.utc(date);
 
     var currentSlot = void 0;
@@ -2265,7 +2282,7 @@ var Discounts = Object.freeze({
       currentSlot = {
         space_left: 0,
         start: startMinutes,
-        duration: SLOT_SIZE$2,
+        duration: cracSlotSize,
         partial_busy: null
       };
 
@@ -2278,7 +2295,7 @@ var Discounts = Object.freeze({
     for (var ii = startBitIndex; ii < endBitIndex; ii++) {
       var bitIndex = reverseOffset - ii;
       var bit = bitmask[bitIndex];
-      var minutes = ii * SLOT_SIZE$2;
+      var minutes = ii * cracSlotSize;
 
       if (bit === 1) {
         available = true;
@@ -2290,7 +2307,7 @@ var Discounts = Object.freeze({
         if (!currentSlot) {
           makeSlot(minutes);
         } else {
-          currentSlot.duration += SLOT_SIZE$2;
+          currentSlot.duration += cracSlotSize;
           // console.log('currentSlot.duration:', currentSlot && currentSlot.duration);
 
           if (currentSlot.duration >= maxSlotSize) {
@@ -2539,7 +2556,7 @@ var Discounts = Object.freeze({
     bit = bit && serviceRoomVectors[taxonomyCombo[0]][resourceId][calculatedIndex];
 
     for (var i = 1; i < taxonomyCombo.length; i++) {
-      calculatedIndex = calculatedIndex + i * parseInt(duration / SLOT_SIZE$2);
+      calculatedIndex = calculatedIndex + i * parseInt(duration / SLOT_SIZE$1);
       bit = bit && serviceRoomVectors[taxonomyCombo[i]][resourceId][calculatedIndex];
       duration = serviceDurationByWorker[taxonomyCombo[i]][resourceId];
     }
@@ -2587,7 +2604,7 @@ var Discounts = Object.freeze({
     var resourceSlots = [];
     for (var i = 0; i < resourceVector.length; i++) {
       if (resourceVector[i]) {
-        resourceSlots.push({ time: i * SLOT_SIZE$2, duration: SLOT_SIZE$2, space_left: 1, discount: 10 });
+        resourceSlots.push({ time: i * SLOT_SIZE$1, duration: SLOT_SIZE$1, space_left: 1, discount: 10 });
       }
     }
     return resourceSlots;
@@ -2613,7 +2630,7 @@ var Discounts = Object.freeze({
    */
   function initFreeVector() {
     var set = [];
-    for (var i = 0; i < VECTOR_SIZE$2; i++) {
+    for (var i = 0; i < VECTOR_SIZE$1; i++) {
       set[i] = 1;
     }
     return set;
@@ -2624,7 +2641,7 @@ var Discounts = Object.freeze({
    */
   function initBusyVector() {
     var set = [];
-    for (var i = 0; i < VECTOR_SIZE$2; i++) {
+    for (var i = 0; i < VECTOR_SIZE$1; i++) {
       set[i] = 0;
     }
     return set;
@@ -2637,7 +2654,7 @@ var Discounts = Object.freeze({
    * @param {int} duration 
    */
   function checkFree(bistSet, index, duration) {
-    var bits = parseInt(duration / SLOT_SIZE$2);
+    var bits = parseInt(duration / SLOT_SIZE$1);
     for (var i = index; i < index + bits; i++) {
       if (bistSet[i] == 0) {
         return 0;
@@ -2855,8 +2872,8 @@ var Discounts = Object.freeze({
     return busySlotsResponse;
   }
 
-  function setSlotSize$2(slotSize) {
-    SLOT_SIZE$2 = slotSize;
+  function setSlotSize$1(slotSize) {
+    SLOT_SIZE$1 = slotSize;
   }
 
 var Crac = Object.freeze({
@@ -2865,7 +2882,7 @@ var Crac = Object.freeze({
     setUnion: setUnion$1,
     prepareSlots: prepareSlots$1,
     toBusySlots: toBusySlots$1,
-    setSlotSize: setSlotSize$2
+    setSlotSize: setSlotSize$1
   });
 
   // Remove this function after migration

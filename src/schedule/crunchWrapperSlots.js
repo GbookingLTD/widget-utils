@@ -2,20 +2,13 @@
 
 import _ from 'lodash';
 import moment from 'moment';
-import {newFreeBitset, prepareBitset, getFirstLastMinutes, setAnd} from '../../bower_components/crac-utils/src';
+import {newFreeBitset, prepareBitset, getCracVectorSlotSize, getFirstLastMinutes, setAnd} from '../../bower_components/crac-utils/src';
 import defaultStrategy from "./defaultStrategy";
 
-let SLOT_SIZE = 5;
-let VECTOR_SIZE = 24 * 60 / SLOT_SIZE;
-
-export function setSlotSize (slotSize) {
-  SLOT_SIZE = slotSize;
-  VECTOR_SIZE = 24 * 60 / SLOT_SIZE;
-}
-
 function getDayBoundsFromCracSlot(date, bitset) {
-  bitset = prepareBitset(bitset, SLOT_SIZE);
-  let dayBounds = getFirstLastMinutes(bitset, SLOT_SIZE);
+  let cracSlotSize = getCracVectorSlotSize(bitset);
+  bitset = prepareBitset(bitset, cracSlotSize);
+  let dayBounds = getFirstLastMinutes(bitset, cracSlotSize);
   dayBounds.start_time = moment(date).add(dayBounds.start, 'minutes').toISOString();
   dayBounds.end_time = moment(date).add(dayBounds.end, 'minutes').toISOString();
   return dayBounds;
@@ -25,13 +18,14 @@ function getDayBoundsFromCracSlot(date, bitset) {
 // Generate crunch-capable data from CRAC.
 // Complexity: O(N), where N = 24hours / 5 minutes
 function cutSlotsFromCrac(cracSlot, date, startMinutes, endMinutes, scheduleStrategy, scheduleSlotSize) {
-  let bitset = prepareBitset(cracSlot.bitset, SLOT_SIZE);
+  let cracSlotSize = getCracVectorSlotSize(cracSlot.bitset);
+  let bitset = prepareBitset(cracSlot.bitset, cracSlotSize);
   let bitsetTaxonomy = cracSlot.taxonomyBitset ? 
-    prepareBitset(cracSlot.taxonomyBitset, SLOT_SIZE) : newFreeBitset();
+    prepareBitset(cracSlot.taxonomyBitset, cracSlotSize) : newFreeBitset();
   bitset = setAnd(bitset, bitsetTaxonomy);
   
   let dayBounds = getDayBoundsFromCracSlot(date, bitset);
-  const slots = cutSlots(date, bitset, SLOT_SIZE, scheduleSlotSize, scheduleStrategy || defaultStrategy);
+  const slots = cutSlots(date, bitset, cracSlotSize, scheduleSlotSize, scheduleStrategy || defaultStrategy);
   return {
     available: _.find(slots, {available: true}),
     busy: slots,
