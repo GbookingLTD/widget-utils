@@ -122,7 +122,7 @@ function getDayBoundsFromCracSlot(date,slot){
   
   // Definition cracSlotSize by vector length per each worker
   let cracSlotSize = 5;
-  if (bitmask.length > 288) {
+  if (bitmask.length >= 1440) {
     cracSlotSize = 1;
   }
   
@@ -216,7 +216,7 @@ function getCrunchSlotsFromCrac(cracSlot, date, startMinutes, endMinutes, maxSlo
   
   // Definition cracSlotSize by vector length per each worker
   let cracSlotSize = 5;
-  if (bitmask.length > 288) {
+  if (bitmask.length >= 1440) {
     cracSlotSize = 1;
   }
   

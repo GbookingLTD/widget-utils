@@ -2194,7 +2194,7 @@ var Discounts = Object.freeze({
 
     // Definition cracSlotSize by vector length per each worker
     var cracSlotSize = 5;
-    if (bitmask.length > 288) {
+    if (bitmask.length >= 1440) {
       cracSlotSize = 1;
     }
 
@@ -2251,7 +2251,7 @@ var Discounts = Object.freeze({
 
     // Definition cracSlotSize by vector length per each worker
     var cracSlotSize = 5;
-    if (bitmask.length > 288) {
+    if (bitmask.length >= 1440) {
       cracSlotSize = 1;
     }
 
