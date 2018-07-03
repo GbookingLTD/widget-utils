@@ -216,3 +216,30 @@ export function isDateForbidden(widgetConfiguration, date, ignoreStartDate) {
 
   return !!(widgetConfiguration && widgetConfiguration.bookableMonthsCount > 0 && moment().add('M', widgetConfiguration.bookableMonthsCount - 1).endOf('M').isBefore(date));
 }
+
+/**
+ * Alignment busy slot durations and busy slot times
+ *
+ * @param startDate
+ * @param taxonomyDuration
+ * @param slotSize
+ * @param busySlots
+ */
+export function alignmentBusySlotsByTaxonomyDuration(startDate, taxonomyDuration, slotSize, busySlots) {
+  _(busySlots).each(function(busySlot) {
+    busySlot.duration = taxonomyDuration;
+  });
+
+  var duration = slotSize || taxonomyDuration;
+  _(busySlots).each(function(busySlot) {
+    var busyTimeMin = moment.utc(busySlot.time).diff(moment.utc(startDate), 'minute');
+    var alignBusyTimeMin = Math.floor(busyTimeMin / duration) * duration;
+    if (busyTimeMin !== alignBusyTimeMin) {
+      var alignBusySlotTime = moment.utc(startDate).add(alignBusyTimeMin, 'minutes').toISOString();
+      var alignEndBusyTimeMin = Math.ceil((busyTimeMin+busySlot.duration) / duration) * duration;
+
+      busySlot.time = alignBusySlotTime;
+      busySlot.duration = alignEndBusyTimeMin - alignBusyTimeMin;
+    }
+  });
+}

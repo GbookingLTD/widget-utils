@@ -9,8 +9,8 @@ export const Strategies = {
 };
 
 export * from './crunchWrapperSlots';
-export * from './scheduleRoomsSlots';
-export * from './cracSlots';
-
-
-
+export * from './crunchWrapperRoomsSlots';
+export * from './scheduleCracSlotsCutter';
+export * from './scheduleBusySlotsCutter';
+export * from './scheduleBusySlotsCutterV1';
+export * from './scheduleBusySlotsCutterV2';

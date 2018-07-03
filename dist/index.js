@@ -335,13 +335,41 @@ var DateTime = Object.freeze({
     return !!(widgetConfiguration && widgetConfiguration.bookableMonthsCount > 0 && moment().add('M', widgetConfiguration.bookableMonthsCount - 1).endOf('M').isBefore(date));
   }
 
+  /**
+   * Alignment busy slot durations and busy slot times
+   *
+   * @param startDate
+   * @param taxonomyDuration
+   * @param slotSize
+   * @param busySlots
+   */
+  function alignmentBusySlotsByTaxonomyDuration(startDate, taxonomyDuration, slotSize, busySlots) {
+    _$1(busySlots).each(function (busySlot) {
+      busySlot.duration = taxonomyDuration;
+    });
+
+    var duration = slotSize || taxonomyDuration;
+    _$1(busySlots).each(function (busySlot) {
+      var busyTimeMin = moment.utc(busySlot.time).diff(moment.utc(startDate), 'minute');
+      var alignBusyTimeMin = Math.floor(busyTimeMin / duration) * duration;
+      if (busyTimeMin !== alignBusyTimeMin) {
+        var alignBusySlotTime = moment.utc(startDate).add(alignBusyTimeMin, 'minutes').toISOString();
+        var alignEndBusyTimeMin = Math.ceil((busyTimeMin + busySlot.duration) / duration) * duration;
+
+        busySlot.time = alignBusySlotTime;
+        busySlot.duration = alignEndBusyTimeMin - alignBusyTimeMin;
+      }
+    });
+  }
+
 var BusySlots = Object.freeze({
     calculateDaySlotsV1: calculateDaySlotsV1,
     calculateDaySlotsV2: calculateDaySlotsV2,
     checkDate: checkDate,
     checkSlotInterval: checkSlotInterval,
     isBusyDay: isBusyDay,
-    isDateForbidden: isDateForbidden
+    isDateForbidden: isDateForbidden,
+    alignmentBusySlotsByTaxonomyDuration: alignmentBusySlotsByTaxonomyDuration
   });
 
   /**
@@ -618,7 +646,7 @@ var taxonomies = Object.freeze({
       // i  - char index: from numberOfTimeUnits - 1 to 0
       // bi - byte index: from 0 to 8
       bi = numberOfTimeUnits - 1 - i >> 5;
-      bs[bi] = bs[bi] << 1 | str[i] === "1";
+      bs[bi] = (bs[bi] << 1 | str[i] === "1") >>> 0;
     }
     return bs;
   }
@@ -1285,6 +1313,186 @@ var taxonomies = Object.freeze({
     return finalSlots;
   }
 
+  var asyncGenerator = function () {
+    function AwaitValue(value) {
+      this.value = value;
+    }
+
+    function AsyncGenerator(gen) {
+      var front, back;
+
+      function send(key, arg) {
+        return new Promise(function (resolve, reject) {
+          var request = {
+            key: key,
+            arg: arg,
+            resolve: resolve,
+            reject: reject,
+            next: null
+          };
+
+          if (back) {
+            back = back.next = request;
+          } else {
+            front = back = request;
+            resume(key, arg);
+          }
+        });
+      }
+
+      function resume(key, arg) {
+        try {
+          var result = gen[key](arg);
+          var value = result.value;
+
+          if (value instanceof AwaitValue) {
+            Promise.resolve(value.value).then(function (arg) {
+              resume("next", arg);
+            }, function (arg) {
+              resume("throw", arg);
+            });
+          } else {
+            settle(result.done ? "return" : "normal", result.value);
+          }
+        } catch (err) {
+          settle("throw", err);
+        }
+      }
+
+      function settle(type, value) {
+        switch (type) {
+          case "return":
+            front.resolve({
+              value: value,
+              done: true
+            });
+            break;
+
+          case "throw":
+            front.reject(value);
+            break;
+
+          default:
+            front.resolve({
+              value: value,
+              done: false
+            });
+            break;
+        }
+
+        front = front.next;
+
+        if (front) {
+          resume(front.key, front.arg);
+        } else {
+          back = null;
+        }
+      }
+
+      this._invoke = send;
+
+      if (typeof gen.return !== "function") {
+        this.return = undefined;
+      }
+    }
+
+    if (typeof Symbol === "function" && Symbol.asyncIterator) {
+      AsyncGenerator.prototype[Symbol.asyncIterator] = function () {
+        return this;
+      };
+    }
+
+    AsyncGenerator.prototype.next = function (arg) {
+      return this._invoke("next", arg);
+    };
+
+    AsyncGenerator.prototype.throw = function (arg) {
+      return this._invoke("throw", arg);
+    };
+
+    AsyncGenerator.prototype.return = function (arg) {
+      return this._invoke("return", arg);
+    };
+
+    return {
+      wrap: function (fn) {
+        return function () {
+          return new AsyncGenerator(fn.apply(this, arguments));
+        };
+      },
+      await: function (value) {
+        return new AwaitValue(value);
+      }
+    };
+  }();
+
+  var classCallCheck = function (instance, Constructor) {
+    if (!(instance instanceof Constructor)) {
+      throw new TypeError("Cannot call a class as a function");
+    }
+  };
+
+  var createClass = function () {
+    function defineProperties(target, props) {
+      for (var i = 0; i < props.length; i++) {
+        var descriptor = props[i];
+        descriptor.enumerable = descriptor.enumerable || false;
+        descriptor.configurable = true;
+        if ("value" in descriptor) descriptor.writable = true;
+        Object.defineProperty(target, descriptor.key, descriptor);
+      }
+    }
+
+    return function (Constructor, protoProps, staticProps) {
+      if (protoProps) defineProperties(Constructor.prototype, protoProps);
+      if (staticProps) defineProperties(Constructor, staticProps);
+      return Constructor;
+    };
+  }();
+
+  var inherits = function (subClass, superClass) {
+    if (typeof superClass !== "function" && superClass !== null) {
+      throw new TypeError("Super expression must either be null or a function, not " + typeof superClass);
+    }
+
+    subClass.prototype = Object.create(superClass && superClass.prototype, {
+      constructor: {
+        value: subClass,
+        enumerable: false,
+        writable: true,
+        configurable: true
+      }
+    });
+    if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass;
+  };
+
+  var possibleConstructorReturn = function (self, call) {
+    if (!self) {
+      throw new ReferenceError("this hasn't been initialised - super() hasn't been called");
+    }
+
+    return call && (typeof call === "object" || typeof call === "function") ? call : self;
+  };
+
+  /**
+   * "Нарезает" слоты из определённого промежуточного формата (busySlots, crac, любой другой) 
+   * в формат представления их на UI.
+   */
+
+  var ScheduleSlotsCutter = function () {
+    function ScheduleSlotsCutter() {
+      classCallCheck(this, ScheduleSlotsCutter);
+    }
+
+    createClass(ScheduleSlotsCutter, [{
+      key: "cutSlots",
+      value: function cutSlots() {
+        throw new Error('abstract method ScheduleSlotsCutter::cutSlots');
+      }
+    }]);
+    return ScheduleSlotsCutter;
+  }();
+
   var ANY = 'ANY';
 
   /**
@@ -1296,7 +1504,7 @@ var taxonomies = Object.freeze({
    * @param strategy slot strategy
    * @returns {Array} day slots
    */
-  function cutSlots$1(date, bitset, vectorSlotSize, scheduleSlotSize, strategy) {
+  function cutSlotsFromBitset(date, bitset, vectorSlotSize, scheduleSlotSize, strategy) {
     var dayBounds = getFirstLastMinutes(bitset, vectorSlotSize);
 
     var slots = [];
@@ -1322,41 +1530,605 @@ var taxonomies = Object.freeze({
     return strategy.postProcessing(date, slots);
   }
 
-  /**
-   * Create all slots from raw CRAC data.
-   * @param cracData raw CRAC data
-   * @param business business data from 'business.get_profile_by_id' request
-   * @param taxonomyIDs array of required taxonomies
-   * @param resourceID specific resource ID. Could be 'ANY' for any available
-   * @param strategy slot strategy
-   * @returns {Object} slots
-   */
-  function makeSlots$1(cracData, business, taxonomyIDs, resourceID, strategy) {
-    var vectorSlotSize = business.widget_configuration.cracSlotSize || defaultVectorSlotSize;
+  var ScheduleCracSlotsCutter = function (_ScheduleSlotsCutter) {
+    inherits(ScheduleCracSlotsCutter, _ScheduleSlotsCutter);
 
-    return cracData.slots.reduce(function (ret, day) {
-      var dayKey = day.date.substr(0, 10);
-      var bs = void 0;
+    function ScheduleCracSlotsCutter() {
+      classCallCheck(this, ScheduleCracSlotsCutter);
+      return possibleConstructorReturn(this, (ScheduleCracSlotsCutter.__proto__ || Object.getPrototypeOf(ScheduleCracSlotsCutter)).call(this));
+    }
 
-      if (ANY === resourceID) {
-        bs = prepareBitset(day.intersection, vectorSlotSize);
-      } else {
-        var isExcluded = day.excludedResources && day.excludedResources.indexOf(resourceID) !== -1;
-        if (!isExcluded) {
-          var resourceData = day.resources.find(function (r) {
-            return r.resourceId === resourceID;
-          });
-          if (resourceData) {
-            bs = prepareBitset(resourceData.bitset, vectorSlotSize);
+    /**
+     * Create all slots from raw CRAC data.
+     * @param cracData raw CRAC data
+     * @param business business data from 'business.get_profile_by_id' request
+     * @param taxonomyIDs array of required taxonomies
+     * @param resourceID specific resource ID. Could be 'ANY' for any available
+     * @param strategy slot strategy
+     * @returns {Object} slots
+     */
+
+
+    createClass(ScheduleCracSlotsCutter, [{
+      key: "cutSlots",
+      value: function cutSlots(cracData, business, taxonomyIDs, resourceID, strategy) {
+        var vectorSlotSize = business.widget_configuration.cracSlotSize || defaultVectorSlotSize;
+
+        return cracData.slots.reduce(function (ret, day) {
+          var dayKey = day.date.substr(0, 10);
+          var bs = void 0;
+
+          if (ANY === resourceID) {
+            bs = prepareBitset(day.intersection, vectorSlotSize);
+          } else {
+            var isExcluded = day.excludedResources && day.excludedResources.indexOf(resourceID) !== -1;
+            if (!isExcluded) {
+              var resourceData = day.resources.find(function (r) {
+                return r.resourceId === resourceID;
+              });
+              if (resourceData) {
+                bs = prepareBitset(resourceData.bitset, vectorSlotSize);
+              }
+            }
           }
+          if (bs) {
+            ret[dayKey] = cutSlotsFromBitset(dayKey, bs, vectorSlotSize, business, taxonomyIDs, resourceID, strategy || defaultStrategy);
+          }
+          return ret;
+        }, {});
+      }
+    }]);
+    return ScheduleCracSlotsCutter;
+  }(ScheduleSlotsCutter);
+
+  var ScheduleBusySlotsCutter = function (_ScheduleSlotsCutter) {
+    inherits(ScheduleBusySlotsCutter, _ScheduleSlotsCutter);
+
+    function ScheduleBusySlotsCutter() {
+      classCallCheck(this, ScheduleBusySlotsCutter);
+      return possibleConstructorReturn(this, (ScheduleBusySlotsCutter.__proto__ || Object.getPrototypeOf(ScheduleBusySlotsCutter)).apply(this, arguments));
+    }
+
+    createClass(ScheduleBusySlotsCutter, [{
+      key: "initialize",
+      value: function initialize(businessData, busySlots, serviceId, worker, currentService, multiServices, isGT) {
+        this.businessData = businessData;
+        this.alignmentTaxonomySlots = businessData.business.widget_configuration.alignmentTaxonomySlots;
+
+        var taxonomy = void 0;
+        if (serviceId.toLowerCase() === 'multiservicebooking') {
+          taxonomy = multiServices[0];
+        } else {
+          taxonomy = _(businessData.business.taxonomies).find({ id: '' + serviceId });
+        }
+
+        this.taxDuration = getServiceDuration(taxonomy, worker);
+
+        this.totalDuration = 0;
+        if (multiServices && multiServices.length) {
+          taxonomy = multiServices[0];
+          multiServices.forEach(function (service) {
+            this.totalDuration += getServiceDuration(service, worker);
+          });
+          this.taxDuration = this.totalDuration;
+        } else {
+          this.totalDuration = taxonomy.duration;
+        }
+
+        this.taxonomy = taxonomy;
+        this.worker = worker;
+        this.multiServices = multiServices;
+
+        var widgetConfiguration = businessData.business.widget_configuration;
+        this.forceSlotSize = widgetConfiguration && widgetConfiguration.displaySlotSize && widgetConfiguration.displaySlotSize < this.taxDuration;
+        var displaySlotSize = widgetConfiguration.displaySlotSize;
+        this.slotSize = this.forceSlotSize ? widgetConfiguration.displaySlotSize : busySlots.slot_size || this.taxDuration;
+        this.maxSlotCapacity = busySlots.maxSlotCapacity;
+        this.minTimeBooking = businessData.business.general_info.min_booking_time;
+        // https://app.asana.com/0/search/364482197206303/141502515363228
+        // this fix is for decreasing affected clients
+        if (businessData.business.backofficeType === 'MB' && !_.isUndefined(displaySlotSize) && displaySlotSize !== taxDuration) {
+          this.minTimeBooking += 2;
+        }
+
+        this.dontShowPopup = (!currentService || !currentService.capacity) && worker && worker.capacity === 1;
+        if (!worker) {
+          this.dontShowPopup = true; //FIXME: hide capacity popup if all workers selected while crunch bug not fixed
+        }
+        if (isGT) {
+          this.dontShowPopup = false;
         }
       }
-      if (bs) {
-        ret[dayKey] = cutSlots$1(dayKey, bs, vectorSlotSize, business, taxonomyIDs, resourceID, strategy || defaultStrategy);
-      }
-      return ret;
-    }, {});
+    }]);
+    return ScheduleBusySlotsCutter;
+  }(ScheduleSlotsCutter);
+
+  var days = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+  var weekDaysMap = {
+    "sun": 0,
+    "mon": 1,
+    "tue": 2,
+    "wed": 3,
+    "thu": 4,
+    "fri": 5,
+    "sat": 6
+  };
+
+  function getServiceActiveDiscounts(service, startTime) {
+    if (!service.discounts || !service.discounts.length) {
+      return [];
+    }
+    startTime = moment.utc(startTime);
+    return service.discounts.filter(function (d) {
+      return d.active && moment.utc(d.start).isBefore(startTime) && moment.utc(d.start).startOf('w').add('w', d.weeklyRepeat).isAfter(startTime);
+    });
   }
+
+  function getServiceDiscount(service, time) {
+    if (!service.discounts) {
+      return [];
+    }
+    time = moment.utc(time);
+    var activeDiscountsItems = service.discounts.filter(function (d) {
+      return d.active && d.days.indexOf(days[time.day()]) !== -1 && moment.utc(d.start).isBefore(time) && moment.utc(d.start).startOf('w').add('w', d.weeklyRepeat).isAfter(time);
+    });
+    var discounts = activeDiscountsItems.map(function (d) {
+      var slot = _$1.find(d.slots, function (slot) {
+        var slotStart = moment(time).startOf('day').add('m', slot.time.start);
+        var slotEnd = moment(time).startOf('day').add('m', slot.time.end - 1);
+        return moment.range(slotStart, slotEnd).contains(time);
+      });
+      return slot ? slot.amount : undefined;
+    }).filter(function (d) {
+      return d;
+    });
+    return _$1.first(discounts);
+  }
+
+  //recursively checks for parent's (ancestor's) discounts
+  function checkForParentDiscounts(businessData, taxonomyParentID, time) {
+    var parentDiscount = {
+      //discount: 0,
+      //provider: 'LOCAL'
+    };
+    var timeInMinutes = time.hour() * 60 + time.minute();
+
+    var t = businessData.business.taxonomies.filter(function (t) {
+      return t.id === taxonomyParentID;
+    });
+    if (t && t[0]) {
+      if (!parentDiscount.discount && typeof t[0].discounts.regular !== 'undefined') {
+        t[0].discounts.regular.forEach(function (discount) {
+          var end = moment(discount.start).add(discount.weeklyRepeat, 'weeks');
+          if (discount.active && (discount.unlimWeeklyRepeat || time.isAfter(discount.start) && time.isBefore(end))) {
+            for (var day in discount.week) {
+              discount.week[day].forEach(function (slot) {
+                if (time.day() === weekDaysMap[day] && timeInMinutes >= slot.start && timeInMinutes <= slot.end) {
+                  parentDiscount = slot;
+                }
+              });
+            }
+          }
+        });
+      } else {
+        if (!parentDiscount.discount && typeof t[0].taxonomyParentID !== "undefined" && t[0].taxonomyParentID) {
+          parentDiscount = checkForParentDiscounts(businessData, t[0].taxonomyParentID, time);
+        }
+      }
+    }
+
+    return parentDiscount;
+  }
+
+  //recursively checks for parent's (ancestor's) discount exceptions
+  function checkForParentDiscountExceptions(businessData, taxonomyParentID, time) {
+    var parentDiscount = {
+      //discount: 0,
+      provider: 'LOCAL'
+    };
+    var timeInMinutes = time.hour() * 60 + time.minute();
+
+    businessData.business.taxonomies.forEach(function (t) {
+      if (t.id === taxonomyParentID && typeof t.discounts.exceptions !== 'undefined') {
+        t.discounts.exceptions.forEach(function (exception) {
+          var date = moment(exception.date);
+          if (exception.active && time.format("YYYY-MM-DD") === date.format("YYYY-MM-DD")) {
+            exception.slots.forEach(function (slot) {
+              if (timeInMinutes >= slot.start && timeInMinutes <= slot.end) {
+                parentDiscount = slot;
+              }
+            });
+          }
+        });
+
+        //if no discount exception found, check for parent's discount exceptions recursively
+        if ((typeof parentDiscount.discount === 'undefined' || parentDiscount.discount == null) && typeof service.taxonomyParentID !== "undefined" && service.taxonomyParentID) {
+          parentDiscount = checkForParentDiscountExceptions(taxonomyParentID, time);
+        }
+        return;
+      }
+    });
+    return parentDiscount;
+  }
+
+  function getServiceDiscountsAndExceptions(bData, service, time, campaignProvider) {
+    if (!service || !service.discounts) {
+      return 0;
+    }
+
+    var slot = {
+      //discount: 0
+    };
+
+    var timeInMinutes = time.hour() * 60 + time.minute();
+
+    //Checking for Exception Discounts, it has higher priority than Regular Discounts
+    if (typeof service.discounts.exceptions !== 'undefined') {
+      service.discounts.exceptions.forEach(function (exception) {
+        var date = moment(exception.date);
+        if (exception.active && time.format("YYYY-MM-DD") === date.format("YYYY-MM-DD")) {
+          exception.slots.forEach(function (s) {
+            if (timeInMinutes >= s.start && timeInMinutes <= s.end) {
+              slot = s;
+              slot.isException = true;
+            }
+          });
+        }
+      });
+    }
+
+    //Checking for Campaign & Regular Discounts, Regular Discounts has lower priority than Campaign Discounts
+    if (!slot.discount && typeof service.discounts.regular !== 'undefined') {
+      service.discounts.regular.forEach(function (discount) {
+        var end = moment(discount.start).add(discount.weeklyRepeat, 'weeks');
+        if (discount.active && (time.isAfter(discount.start) && time.isBefore(end) || discount.unlimWeeklyRepeat)) {
+          for (var day in discount.week) {
+            discount.week[day].forEach(function (s) {
+              if (time.day() === weekDaysMap[day] && timeInMinutes >= s.start && timeInMinutes <= s.end) {
+                //If Discount from Campagin is found, then overwrite even d. exceptions are set
+                if (campaignProvider && s.provider === campaignProvider.toUpperCase()) {
+                  slot = s;
+                  return;
+                }
+                //set regular Discount, if Discount Exception is not found
+                else if (!slot.discount && s.provider === "LOCAL") {
+                    slot = s;
+                  }
+              }
+            });
+          }
+        }
+      });
+    }
+
+    //If no Discount Exception found, check for Parent's (Ancestor's) Discount Exceptions recursively
+    if ((typeof slot.discount === 'undefined' || slot.discount == null) && typeof service.taxonomyParentID !== "undefined" && service.taxonomyParentID) {
+      slot = checkForParentDiscountExceptions(bData, service.taxonomyParentID, time);
+      slot.isException = true;
+    }
+
+    //If no Regular Discount found, check for Parent's (Ancestor's) Regular Discounts recursively
+    if ((typeof slot.discount === 'undefined' || slot.discount == null) && typeof service.taxonomyParentID !== "undefined" && service.taxonomyParentID) {
+      slot = checkForParentDiscounts(bData, service.taxonomyParentID, time);
+    }
+
+    return slot;
+  }
+
+var Discounts = Object.freeze({
+    getServiceActiveDiscounts: getServiceActiveDiscounts,
+    getServiceDiscount: getServiceDiscount,
+    getServiceDiscountsAndExceptions: getServiceDiscountsAndExceptions
+  });
+
+  /**
+   * Ожидается набор слотов в формате busySlots.
+   * Используется для "нарезания" busySlots слотов в режиме single booking.
+   */
+  var ScheduleBusySlotsCutterV1 = function (_ScheduleBusySlotsCut) {
+    inherits(ScheduleBusySlotsCutterV1, _ScheduleBusySlotsCut);
+
+    function ScheduleBusySlotsCutterV1(businessData, busySlots, serviceId, worker, currentService, multiServices) {
+      classCallCheck(this, ScheduleBusySlotsCutterV1);
+
+      var _this = possibleConstructorReturn(this, (ScheduleBusySlotsCutterV1.__proto__ || Object.getPrototypeOf(ScheduleBusySlotsCutterV1)).call(this));
+
+      _this.initialize(businessData, busySlots, serviceId, worker, currentService, multiServices, false);
+      return _this;
+    }
+
+    createClass(ScheduleBusySlotsCutterV1, [{
+      key: 'cutSlots',
+      value: function cutSlots(busySlotsDay, now) {
+        return this._cutSlots(busySlotsDay, now, this.nextDay, this.multiServices, this.worker, this.taxonomy);
+      }
+    }, {
+      key: '_cutSlots',
+      value: function _cutSlots(busySlotsDay, now, nextDay, multiServices, taxonomy, worker) {
+        var _this2 = this;
+
+        var self = this;
+        var slots = [];
+        if (self.alignmentTaxonomySlots) {
+          alignmentBusySlotsByTaxonomyDuration(busySlotsDay.start_time, self.taxDuration, self.slotSize, busySlotsDay.slots.busy);
+        }
+
+        var finish = moment.utc(busySlotsDay.end_time);
+        var exceptionFound = false;
+        var consequentDays = moment.utc(busySlotsDay.start_time).add(1, 'day').isSame(finish, 'day') && nextDay && nextDay.start_time && nextDay.start_time.indexOf("T00:00:00") > -1;
+        (busySlotsDay.slots.busy || []).forEach(function (slot) {
+          slot.startTS = moment.utc(slot.time).unix();
+        });
+
+        for (var slot_time = moment.utc(busySlotsDay.start_time); slot_time.isBefore(finish);) {
+          var dateCheck = checkSlotInterval(busySlotsDay.slots, slot_time.toDate(), self.taxDuration);
+          var space = dateCheck[0],
+              duration = dateCheck[1],
+              busyStart = dateCheck[2];
+          var spaceLeft = space;
+          var slotTimeFinish = moment(slot_time).add('minutes', self.taxDuration);
+          if (consequentDays && slotTimeFinish.isAfter(finish)) {
+            var slotEndMinute = slotTimeFinish.hour() * 60 + slotTimeFinish.minute();
+            if (nextDay && nextDay.slots && nextDay.slots.busy && nextDay.slots.busy.length > 0) {
+              nextDay.slots.busy.forEach(function (nextDaySlot) {
+                if (nextDaySlot.space_left === 0 && nextDaySlot.start < slotEndMinute) {
+                  spaceLeft = 0;
+                }
+              });
+            }
+          } else {
+            if (slotTimeFinish.isAfter(finish)) {
+              spaceLeft = 0;
+            }
+          }
+
+          var busy = false;
+          if (spaceLeft === 1 && self.maxSlotCapacity > 0) {
+            spaceLeft = -self.maxSlotCapacity;
+          }
+
+          // backward lookup
+          var bs = null;
+          if (spaceLeft === 0) {
+            var currentSlotBackRange;
+
+            (function () {
+              // intersection of current slot with some busy slot
+              var st = slot_time.unix();
+              var slot_end = st + self.slotSize * 60;
+              bs = (busySlotsDay.slots.busy || []).find(function (busySlot) {
+                var busySlotDuration = busySlot.duration || self.slotSize;
+                var busySlotEndTS = busySlot.startTS + busySlotDuration * 60;
+                return st <= busySlot.startTS && slot_end > busySlot.startTS || st >= busySlot.startTS && st < busySlotEndTS;
+              });
+
+              if (bs) {
+                self.totalDuration = self.slotSize;
+                if (_this2.multiServices && _this2.multiServices.length > 0) {
+                  self.totalDuration = 0;
+                  _this2.multiServices.forEach(function (t) {
+                    self.totalDuration += getServiceDuration(t, worker);
+                  });
+                }
+                currentSlotBackRange = moment.range(moment(bs.time).add('m', -self.totalDuration), moment(bs.time));
+                /* jshint loopfunc:true */
+
+                slots.forEach(function (s) {
+                  if (!s.busy) {
+                    s.busy = s.actualSlot.within(currentSlotBackRange) && !currentSlotBackRange.start.isSame(s.actualSlot);
+                  }
+                });
+              }
+            })();
+          }
+
+          if (!consequentDays && moment(slot_time).add('m', self.slotSize).isAfter(finish)) {
+            space = 0;
+          }
+
+          var actualSlot = moment(slot_time);
+
+          var slot = {
+            provider: 'LOCAL'
+          };
+
+          var additionalTaxonomyDiscounts = [];
+
+          var socialSharing = self.businessData.business.widget_configuration.socialSharing;
+          var campaign = self.businessData.business.widget_configuration.campaign;
+          // ignore regular discounts & discount exceptions & campaigns, if social token is enabled
+          if (self.businessData.business.socialTokenEnabled && socialSharing.discountEnabled) {
+            slot.discount = 0;
+          } else if (campaign && campaign.valid && campaign.provider) {
+            if (self.multiServices && self.multiServices.length) {
+              (function () {
+                var tempSlot = void 0;
+                self.multiServices.forEach(function (service) {
+                  var foundService = _(self.businessData.business.taxonomies).find({ id: '' + service.id });
+                  tempSlot = getServiceDiscountsAndExceptions(self.businessData, foundService, actualSlot);
+                  if (!tempSlot || !slot.discount && tempSlot.discount || tempSlot.discount && slot.discount && tempSlot.discount > slot.discount) {
+                    slot = tempSlot;
+                  }
+                });
+              })();
+            } else {
+              slot = getServiceDiscountsAndExceptions(self.businessData, taxonomy, actualSlot, campaign.provider);
+            }
+            if (slot.provider === 'LOCAL' && campaign.externalDiscountsOnly) {
+              slot.discount = 0;
+              busy = true;
+            } else if (slot.provider !== 'LOCAL' && slot.provider !== campaign.provider) {
+              slot.discount = 0;
+            }
+          } else {
+            if (multiServices && multiServices.length) {
+              (function () {
+                var tempSlot = void 0;
+                multiServices.forEach(function (service) {
+                  var foundService = _(self.businessData.business.taxonomies).find({ id: '' + service.id });
+                  tempSlot = getServiceDiscountsAndExceptions(self.businessData, foundService, actualSlot);
+                  if (!tempSlot || !slot.discount && tempSlot.discount || tempSlot.discount && slot.discount && tempSlot.discount > slot.discount) {
+                    slot = tempSlot;
+                  }
+                  if (tempSlot.discount) {
+                    additionalTaxonomyDiscounts.push({
+                      taxonomyID: service.id,
+                      discount: tempSlot.discount,
+                      discountType: tempSlot.type ? tempSlot.type : 'PERCENT'
+                    });
+                  }
+                });
+              })();
+            } else {
+              slot = getServiceDiscountsAndExceptions(self.businessData, taxonomy, actualSlot);
+            }
+            if (slot.isException) {
+              exceptionFound = true;
+            }
+            if (slot.provider && slot.provider !== 'LOCAL') {
+              slot.discount = 0;
+            }
+          }
+
+          var businessNow = moment.utc();
+          setBusinessDateTZ(self.businessData, businessNow);
+          var businessNowLikeUTC = getDateLikeUTC(businessNow);
+          if (!busy) {
+            if (self.minTimeBooking && self.minTimeBooking > 0) {
+              businessNowLikeUTC.add(self.minTimeBooking, 'hour');
+            }
+            busy = businessNowLikeUTC.isAfter(actualSlot) || space === 0 || busySlotsDay.forceAllSlotsBusy;
+          }
+
+          if (!busy && spaceLeft === 0 && bs && moment.utc(slot_time).add(-self.totalDuration, 'minutes').isBefore(moment.utc(bs.time).add(bs.duration, 'minutes'))) {
+            slot_time = moment.utc(bs.time).add(bs.duration, 'minutes');
+          }
+
+          slots.push({
+            actualSlot: actualSlot,
+            slotTime: slot_time.format('LT'),
+            spaceLeft: -spaceLeft,
+            busy: busy,
+            multiService: multiServices && multiServices.length,
+            hasDiscount: !!slot.discount,
+            discount: slot.discount,
+            additionalTaxonomyDiscounts: additionalTaxonomyDiscounts,
+            isException: !!slot.isException,
+            provider: slot.provider,
+            showPopup: !self.dontShowPopup,
+            slotSize: self.slotSize
+          });
+
+          if (busyStart) {
+            if (moment.utc(busyStart).isAfter(slot_time) || moment.utc(busyStart).isBefore(slot_time) && moment.utc(busyStart).diff(slot_time, 'minute') === -1 //fix for crac 1 minute
+            ) {
+                slot_time = moment.utc(busyStart);
+              }
+          }
+
+          slot_time.add('minutes', self.forceSlotSize ? self.slotSize : duration);
+        }
+
+        //disregards regular discounts if discount exception is found for this day
+        if (exceptionFound) {
+          slots.forEach(function (s) {
+            if (!s.isException && (!s.provider || s.provider === 'LOCAL')) {
+              s.hasDiscount = false;
+              s.discount = 0;
+            }
+          });
+        }
+
+        var lastNotBusy = void 0;
+        for (var i = slots.length - 1; i >= 0; i--) {
+          if (!slots[i].busy) {
+            break;
+          } else {
+            lastNotBusy = i;
+          }
+        }
+
+        if (lastNotBusy) {
+          slots.splice(lastNotBusy);
+        }
+
+        return slots;
+      }
+    }]);
+    return ScheduleBusySlotsCutterV1;
+  }(ScheduleBusySlotsCutter);
+
+  var ScheduleBusySlotsCutterV2 = function (_ScheduleBusySlotsCut) {
+    inherits(ScheduleBusySlotsCutterV2, _ScheduleBusySlotsCut);
+
+    function ScheduleBusySlotsCutterV2(businessData, busySlots, serviceId, worker, currentService, multiServices, logedInProfile, appointmentCount) {
+      classCallCheck(this, ScheduleBusySlotsCutterV2);
+
+      var _this = possibleConstructorReturn(this, (ScheduleBusySlotsCutterV2.__proto__ || Object.getPrototypeOf(ScheduleBusySlotsCutterV2)).call(this));
+
+      _this.initialize(businessData, busySlots, serviceId, worker, currentService, multiServices, true);
+      _this.logedInProfile = logedInProfile;
+      _this.appointmentCount = appointmentCount;
+      return _this;
+    }
+
+    createClass(ScheduleBusySlotsCutterV2, [{
+      key: 'cutSlots',
+      value: function cutSlots(busySlotsDay, now) {
+        var slots = [];
+        var self = this;
+        var taxiParkUser = !_$1.isUndefined(self.logedInProfile) && !_$1.isUndefined(self.logedInProfile.yandexTaxiParkType);
+        busySlotsDay.slots.forEach(function (slot) {
+          if (!_$1.isUndefined(slot.busy) && slot.busy && (_$1.isUndefined(slot.space_left) || slot.space_left <= 0)) {
+            return;
+          }
+
+          var slot_time = moment.utc(busySlotsDay.date).add(slot.time, 'm');
+          var overQuota = false;
+          if (taxiParkUser) {
+            var slotAppointmentCount = slot_time.format("DD.MM.YYYY");
+            if (!_$1.isUndefined(self.appointmentCount) && !_$1.isUndefined(self.appointmentCount[slotAppointmentCount]) && self.appointmentCount[slotAppointmentCount] >= self.logedInProfile.yandexTaxiParkDayLimitation) {
+              overQuota = true;
+            }
+          }
+
+          var workTime = moment(now);
+          if (self.minTimeBooking && self.minTimeBooking > 0) {
+            workTime.add(self.minTimeBooking, 'hour');
+          }
+
+          var duration = slot.duration || self.slotSize;
+          var spaceLeft;
+          if (!_$1.isUndefined(slot.space_left)) {
+            spaceLeft = slot.space_left;
+            if (spaceLeft === 1 && self.maxSlotCapacity > 0) {
+              spaceLeft = self.maxSlotCapacity;
+            }
+          } else {
+            spaceLeft = self.maxSlotCapacity;
+          }
+
+          var actualSlot = moment(slot_time);
+          var slotDiscount = getServiceDiscountsAndExceptions(self.businessData, self.taxonomy, actualSlot);
+          slots.push({
+            actualSlot: actualSlot,
+            slotTime: slot_time.format('LT'),
+            spaceLeft: spaceLeft,
+            busy: workTime.isAfter(actualSlot) || spaceLeft === 0,
+            overQuota: overQuota,
+            multiService: self.multiServices && self.multiServices.length,
+            hasDiscount: !!slotDiscount.discount,
+            discount: slotDiscount.discount,
+            showPopup: !self.dontShowPopup
+          });
+          slot_time.add('minutes', self.forceSlotSize ? self.slotSize : duration);
+        });
+
+        return slots;
+      }
+    }]);
+    return ScheduleBusySlotsCutterV2;
+  }(ScheduleBusySlotsCutter);
 
   var Strategies = {
     DefaultStrategy: defaultStrategy
@@ -1369,7 +2141,10 @@ var taxonomies = Object.freeze({
     toBusySlots: toBusySlots,
     setSlotSize: setSlotSize,
     prepareSlots: prepareSlots,
-    makeSlots: makeSlots$1
+    ScheduleCracSlotsCutter: ScheduleCracSlotsCutter,
+    ScheduleBusySlotsCutter: ScheduleBusySlotsCutter,
+    ScheduleBusySlotsCutterV1: ScheduleBusySlotsCutterV1,
+    ScheduleBusySlotsCutterV2: ScheduleBusySlotsCutterV2
   });
 
   function roundNumberUsingRule(input, businessData, noCommas) {
@@ -2000,184 +2775,6 @@ var Resources = Object.freeze({
 var ResourcesMostFree = Object.freeze({
     _sortByWorkload: _sortByWorkload,
     prepareWorkers: prepareWorkers$1
-  });
-
-  var days = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
-  var weekDaysMap = {
-    "sun": 0,
-    "mon": 1,
-    "tue": 2,
-    "wed": 3,
-    "thu": 4,
-    "fri": 5,
-    "sat": 6
-  };
-
-  function getServiceActiveDiscounts(service, startTime) {
-    if (!service.discounts || !service.discounts.length) {
-      return [];
-    }
-    startTime = moment.utc(startTime);
-    return service.discounts.filter(function (d) {
-      return d.active && moment.utc(d.start).isBefore(startTime) && moment.utc(d.start).startOf('w').add('w', d.weeklyRepeat).isAfter(startTime);
-    });
-  }
-
-  function getServiceDiscount(service, time) {
-    if (!service.discounts) {
-      return [];
-    }
-    time = moment.utc(time);
-    var activeDiscountsItems = service.discounts.filter(function (d) {
-      return d.active && d.days.indexOf(days[time.day()]) !== -1 && moment.utc(d.start).isBefore(time) && moment.utc(d.start).startOf('w').add('w', d.weeklyRepeat).isAfter(time);
-    });
-    var discounts = activeDiscountsItems.map(function (d) {
-      var slot = _$1.find(d.slots, function (slot) {
-        var slotStart = moment(time).startOf('day').add('m', slot.time.start);
-        var slotEnd = moment(time).startOf('day').add('m', slot.time.end - 1);
-        return moment.range(slotStart, slotEnd).contains(time);
-      });
-      return slot ? slot.amount : undefined;
-    }).filter(function (d) {
-      return d;
-    });
-    return _$1.first(discounts);
-  }
-
-  //recursively checks for parent's (ancestor's) discounts
-  function checkForParentDiscounts(businessData, taxonomyParentID, time) {
-    var parentDiscount = {
-      //discount: 0,
-      //provider: 'LOCAL'
-    };
-    var timeInMinutes = time.hour() * 60 + time.minute();
-
-    var t = businessData.business.taxonomies.filter(function (t) {
-      return t.id === taxonomyParentID;
-    });
-    if (t && t[0]) {
-      if (!parentDiscount.discount && typeof t[0].discounts.regular !== 'undefined') {
-        t[0].discounts.regular.forEach(function (discount) {
-          var end = moment(discount.start).add(discount.weeklyRepeat, 'weeks');
-          if (discount.active && (discount.unlimWeeklyRepeat || time.isAfter(discount.start) && time.isBefore(end))) {
-            for (var day in discount.week) {
-              discount.week[day].forEach(function (slot) {
-                if (time.day() === weekDaysMap[day] && timeInMinutes >= slot.start && timeInMinutes <= slot.end) {
-                  parentDiscount = slot;
-                }
-              });
-            }
-          }
-        });
-      } else {
-        if (!parentDiscount.discount && typeof t[0].taxonomyParentID !== "undefined" && t[0].taxonomyParentID) {
-          parentDiscount = checkForParentDiscounts(businessData, t[0].taxonomyParentID, time);
-        }
-      }
-    }
-
-    return parentDiscount;
-  }
-
-  //recursively checks for parent's (ancestor's) discount exceptions
-  function checkForParentDiscountExceptions(businessData, taxonomyParentID, time) {
-    var parentDiscount = {
-      //discount: 0,
-      provider: 'LOCAL'
-    };
-    var timeInMinutes = time.hour() * 60 + time.minute();
-
-    businessData.business.taxonomies.forEach(function (t) {
-      if (t.id === taxonomyParentID && typeof t.discounts.exceptions !== 'undefined') {
-        t.discounts.exceptions.forEach(function (exception) {
-          var date = moment(exception.date);
-          if (exception.active && time.format("YYYY-MM-DD") === date.format("YYYY-MM-DD")) {
-            exception.slots.forEach(function (slot) {
-              if (timeInMinutes >= slot.start && timeInMinutes <= slot.end) {
-                parentDiscount = slot;
-              }
-            });
-          }
-        });
-
-        //if no discount exception found, check for parent's discount exceptions recursively
-        if ((typeof parentDiscount.discount === 'undefined' || parentDiscount.discount == null) && typeof service.taxonomyParentID !== "undefined" && service.taxonomyParentID) {
-          parentDiscount = checkForParentDiscountExceptions(taxonomyParentID, time);
-        }
-        return;
-      }
-    });
-    return parentDiscount;
-  }
-
-  function getServiceDiscountsAndExceptions(bData, service, time, campaignProvider) {
-    if (!service || !service.discounts) {
-      return 0;
-    }
-
-    var slot = {
-      //discount: 0
-    };
-
-    var timeInMinutes = time.hour() * 60 + time.minute();
-
-    //Checking for Exception Discounts, it has higher priority than Regular Discounts
-    if (typeof service.discounts.exceptions !== 'undefined') {
-      service.discounts.exceptions.forEach(function (exception) {
-        var date = moment(exception.date);
-        if (exception.active && time.format("YYYY-MM-DD") === date.format("YYYY-MM-DD")) {
-          exception.slots.forEach(function (s) {
-            if (timeInMinutes >= s.start && timeInMinutes <= s.end) {
-              slot = s;
-              slot.isException = true;
-            }
-          });
-        }
-      });
-    }
-
-    //Checking for Campaign & Regular Discounts, Regular Discounts has lower priority than Campaign Discounts
-    if (!slot.discount && typeof service.discounts.regular !== 'undefined') {
-      service.discounts.regular.forEach(function (discount) {
-        var end = moment(discount.start).add(discount.weeklyRepeat, 'weeks');
-        if (discount.active && (time.isAfter(discount.start) && time.isBefore(end) || discount.unlimWeeklyRepeat)) {
-          for (var day in discount.week) {
-            discount.week[day].forEach(function (s) {
-              if (time.day() === weekDaysMap[day] && timeInMinutes >= s.start && timeInMinutes <= s.end) {
-                //If Discount from Campagin is found, then overwrite even d. exceptions are set
-                if (campaignProvider && s.provider === campaignProvider.toUpperCase()) {
-                  slot = s;
-                  return;
-                }
-                //set regular Discount, if Discount Exception is not found
-                else if (!slot.discount && s.provider === "LOCAL") {
-                    slot = s;
-                  }
-              }
-            });
-          }
-        }
-      });
-    }
-
-    //If no Discount Exception found, check for Parent's (Ancestor's) Discount Exceptions recursively
-    if ((typeof slot.discount === 'undefined' || slot.discount == null) && typeof service.taxonomyParentID !== "undefined" && service.taxonomyParentID) {
-      slot = checkForParentDiscountExceptions(bData, service.taxonomyParentID, time);
-      slot.isException = true;
-    }
-
-    //If no Regular Discount found, check for Parent's (Ancestor's) Regular Discounts recursively
-    if ((typeof slot.discount === 'undefined' || slot.discount == null) && typeof service.taxonomyParentID !== "undefined" && service.taxonomyParentID) {
-      slot = checkForParentDiscounts(bData, service.taxonomyParentID, time);
-    }
-
-    return slot;
-  }
-
-var Discounts = Object.freeze({
-    getServiceActiveDiscounts: getServiceActiveDiscounts,
-    getServiceDiscount: getServiceDiscount,
-    getServiceDiscountsAndExceptions: getServiceDiscountsAndExceptions
   });
 
   var SLOT_SIZE$1 = 5;
