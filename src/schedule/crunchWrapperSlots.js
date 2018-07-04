@@ -3,7 +3,6 @@
 import _ from 'lodash';
 import moment from 'moment';
 import {newFreeBitset, prepareBitset, getCracVectorSlotSize, getFirstLastMinutes, setAnd} from '../../bower_components/crac-utils/src';
-import defaultStrategy from "./defaultStrategy";
 
 function getDayBoundsFromCracSlot(date, bitset) {
   let cracSlotSize = getCracVectorSlotSize(bitset);
@@ -25,7 +24,7 @@ function cutSlotsFromCrac(cracSlot, date, startMinutes, endMinutes, scheduleStra
   bitset = setAnd(bitset, bitsetTaxonomy);
   
   let dayBounds = getDayBoundsFromCracSlot(date, bitset);
-  const slots = cutSlots(date, bitset, cracSlotSize, scheduleSlotSize, scheduleStrategy || defaultStrategy);
+  const slots = cutSlots(date, bitset, cracSlotSize, scheduleSlotSize, scheduleStrategy);
   return {
     available: _.find(slots, {available: true}),
     busy: slots,

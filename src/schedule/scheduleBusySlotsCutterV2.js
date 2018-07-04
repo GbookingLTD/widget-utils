@@ -2,8 +2,6 @@
 
 import _ from 'lodash';
 import moment from 'moment';
-import {ScheduleSlotsCutter} from "./scheduleSlotsCutter";
-import {alignmentBusySlotsByTaxonomyDuration} from "../busySlots";
 import {getServiceDiscountsAndExceptions} from "../discounts";
 import {ScheduleBusySlotsCutter} from "./scheduleBusySlotsCutter";
 

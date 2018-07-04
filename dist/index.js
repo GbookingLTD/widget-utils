@@ -440,168 +440,6 @@ var Booking = Object.freeze({
     calendarBookingTime: calendarBookingTime
   });
 
-  var TAXONOMY_CHILDREN = 'CHILDREN';
-  var TAXONOMY_ADULT = 'PARENT';
-  var TAXONOMY_COMMON = 'COMMON';
-
-  function getServiceDuration(taxonomy, resource) {
-    if (resource) {
-      var taxLevel = (_.find(resource.taxonomyLevels, { id: taxonomy.id }) || {}).level;
-      if (typeof taxLevel !== 'undefined') {
-        var level = _.find(taxonomy.additionalDurations, { level: taxLevel });
-        if (level) {
-          return level.duration ? level.duration : taxonomy.duration;
-        }
-      }
-    }
-    return taxonomy.duration;
-  }
-
-  /**
-   * Возвращает минимальную длительность из всех услуг.
-   * 
-   * Необходимо, например, для получения ближайшего доступного для записи по услуге(-ам) дня.
-   * 
-   * @param taxonomies
-   * @param resources
-   */
-  function findMinResourceServiceDuration(taxonomies, resources) {
-    var minDuration = Number.MAX_SAFE_INTEGER;
-    taxonomies.forEach(function (tax) {
-      resources.forEach(function (res) {
-        var duration = getServiceDuration(tax, res);
-        if (duration < minDuration) {
-          minDuration = duration;
-        }
-      });
-    });
-
-    return minDuration;
-  }
-
-  function setupChildishnes(taxonomies, resources) {
-    var C = {}; // child taxonomies
-    var P = {}; // adult taxonomies
-    var N = {}; // common taxonomies
-
-
-    if (!Array.isArray(taxonomies) || !Array.isArray(resources)) {
-      console.log('empty data');
-      return taxonomies;
-    }
-
-    resources.forEach(function (r) {
-      if (r.taxonomyChildren && r.taxonomyChildren.length > 0) {
-        var rChildID = {}; // all tax id where children=true
-        var rParentID = {}; // all tax id where children=false
-
-        r.taxonomyChildren.forEach(function (c) {
-          if (c !== null && typeof c.children !== 'undefined' && typeof c.taxonomyID !== 'undefined') {
-            c.children === true ? rChildID[c.taxonomyID] = true : rParentID[c.taxonomyID] = true;
-          }
-        });
-
-        r.taxonomyChildren.forEach(function (c) {
-          if (c !== null && typeof c.children !== 'undefined' && typeof c.taxonomyID !== 'undefined') {
-            // если услуга встречается 2-ды - как взрослая и как детская
-            if (rChildID[c.taxonomyID] && rParentID[c.taxonomyID]) N[c.taxonomyID] = true;else if (rChildID[c.taxonomyID]) C[c.taxonomyID] = true;else if (rParentID[c.taxonomyID]) P[c.taxonomyID] = true;
-          }
-        });
-      }
-    });
-
-    var getTaxonomyTypes = function getTaxonomyTypes(C, P, N, taxonomyID) {
-      var types = [];
-      if (C[taxonomyID]) {
-        types.push(TAXONOMY_CHILDREN);
-      }
-      if (P[taxonomyID]) {
-        types.push(TAXONOMY_ADULT);
-      }
-      if (!C[taxonomyID] && !P[taxonomyID] || N[taxonomyID]) {
-        types.push(TAXONOMY_COMMON);
-      }
-      return types;
-    };
-
-    taxonomies.forEach(function (t) {
-      t.childrenTypes = getTaxonomyTypes(C, P, N, parseInt(t.id));
-    });
-    return taxonomies;
-  }
-
-var taxonomies = Object.freeze({
-    getServiceDuration: getServiceDuration,
-    findMinResourceServiceDuration: findMinResourceServiceDuration,
-    setupChildishnes: setupChildishnes
-  });
-
-  var defaultStrategy = {
-    getSlotSize: getSlotSize,
-    getNextSlotMinute: getNextSlotMinute,
-    enhanceSlot: enhanceSlot,
-    postProcessing: postProcessing
-  };
-
-  /**
-   * Calculate slot size
-   *
-   * @param business business data
-   * @param taxonomyIDs array of required taxonomies
-   * @param resourceID specific resource ID. Could be 'ANY' for any available
-   * @returns {*}
-   */
-  function getSlotSize(business, taxonomyIDs, resourceID) {
-    var widgetConfiguration = business.widget_configuration;
-    if (widgetConfiguration && widgetConfiguration.displaySlotSize) {
-      return widgetConfiguration.displaySlotSize;
-    }
-
-    var resourceObj = _$1.find(business.resources, { id: String(resourceID) });
-    return business.taxonomies.filter(function (tax) {
-      return taxonomyIDs.indexOf(String(tax.id)) >= 0;
-    }).map(function (tax) {
-      return getServiceDuration(tax, resourceObj);
-    }).reduce(function (ret, duration) {
-      return ret + duration;
-    }, 0);
-  }
-
-  /**
-   * Calculate next slot start minute
-   *
-   * @param bitset CRAC bitset
-   * @param prevSlotStart prev slot start
-   * @param prevSlotEnd prev slot end
-   * @param vectorSlotSize CRAC bitset slot size
-   * @returns {*}
-   */
-  function getNextSlotMinute(bitset, prevSlotStart, prevSlotEnd, vectorSlotSize) {
-    return prevSlotEnd;
-  }
-
-  /**
-   * Enhance slot with some data not from CRAC
-   *
-   * @param date date in YYYY-MM-DD format
-   * @param slot
-   * @returns {*}
-   */
-  function enhanceSlot(date, slot) {
-    return slot;
-  }
-
-  /**
-   * Do some final slots postprocessing
-   *
-   * @param date date in YYYY-MM-DD format
-   * @param slots
-   * @returns {Array.<T>|*}
-   */
-  function postProcessing(date, slots) {
-    return slots;
-  }
-
   var minutesInDay = 1440;
   var defaultVectorSlotSize = 5;
 
@@ -620,6 +458,7 @@ var taxonomies = Object.freeze({
   };
 
   function getCracVectorSlotSize(bitset) {
+    if (typeof bitset === 'string') return bitset.length > 1000 ? 1 : 5;
     return bitset.length > 9 ? 1 : 5;
   }
 
@@ -912,6 +751,13 @@ var taxonomies = Object.freeze({
     return r;
   }
 
+  function calcCRACSlotIntermediate(slot) {
+    return slot.resources.reduce(function (ret, res) {
+      var bitset = res.taxonomyBitSet ? setAnd(res.bitset, res.taxonomyBitSet) : res.bitset;
+      return setUnion(ret, bitset);
+    }, newBusyBitset());
+  }
+
   function getDayBoundsFromCracSlot(date, bitset) {
     var cracSlotSize = getCracVectorSlotSize(bitset);
     bitset = prepareBitset(bitset, cracSlotSize);
@@ -930,7 +776,7 @@ var taxonomies = Object.freeze({
     bitset = setAnd(bitset, bitsetTaxonomy);
 
     var dayBounds = getDayBoundsFromCracSlot(date, bitset);
-    var slots = cutSlots(date, bitset, cracSlotSize, scheduleSlotSize, scheduleStrategy || defaultStrategy);
+    var slots = cutSlots(date, bitset, cracSlotSize, scheduleSlotSize, scheduleStrategy);
     return {
       available: _$1.find(slots, { available: true }),
       busy: slots,
@@ -1142,6 +988,102 @@ var taxonomies = Object.freeze({
     });
     return capacity;
   }
+
+  var TAXONOMY_CHILDREN = 'CHILDREN';
+  var TAXONOMY_ADULT = 'PARENT';
+  var TAXONOMY_COMMON = 'COMMON';
+
+  function getServiceDuration(taxonomy, resource) {
+    if (resource) {
+      var taxLevel = (_.find(resource.taxonomyLevels, { id: taxonomy.id }) || {}).level;
+      if (typeof taxLevel !== 'undefined') {
+        var level = _.find(taxonomy.additionalDurations, { level: taxLevel });
+        if (level) {
+          return level.duration ? level.duration : taxonomy.duration;
+        }
+      }
+    }
+    return taxonomy.duration;
+  }
+
+  /**
+   * Возвращает минимальную длительность из всех услуг.
+   * 
+   * Необходимо, например, для получения ближайшего доступного для записи по услуге(-ам) дня.
+   * 
+   * @param taxonomies
+   * @param resources
+   */
+  function findMinResourceServiceDuration(taxonomies, resources) {
+    var minDuration = Number.MAX_SAFE_INTEGER;
+    taxonomies.forEach(function (tax) {
+      resources.forEach(function (res) {
+        var duration = getServiceDuration(tax, res);
+        if (duration < minDuration) {
+          minDuration = duration;
+        }
+      });
+    });
+
+    return minDuration;
+  }
+
+  function setupChildishnes(taxonomies, resources) {
+    var C = {}; // child taxonomies
+    var P = {}; // adult taxonomies
+    var N = {}; // common taxonomies
+
+
+    if (!Array.isArray(taxonomies) || !Array.isArray(resources)) {
+      console.log('empty data');
+      return taxonomies;
+    }
+
+    resources.forEach(function (r) {
+      if (r.taxonomyChildren && r.taxonomyChildren.length > 0) {
+        var rChildID = {}; // all tax id where children=true
+        var rParentID = {}; // all tax id where children=false
+
+        r.taxonomyChildren.forEach(function (c) {
+          if (c !== null && typeof c.children !== 'undefined' && typeof c.taxonomyID !== 'undefined') {
+            c.children === true ? rChildID[c.taxonomyID] = true : rParentID[c.taxonomyID] = true;
+          }
+        });
+
+        r.taxonomyChildren.forEach(function (c) {
+          if (c !== null && typeof c.children !== 'undefined' && typeof c.taxonomyID !== 'undefined') {
+            // если услуга встречается 2-ды - как взрослая и как детская
+            if (rChildID[c.taxonomyID] && rParentID[c.taxonomyID]) N[c.taxonomyID] = true;else if (rChildID[c.taxonomyID]) C[c.taxonomyID] = true;else if (rParentID[c.taxonomyID]) P[c.taxonomyID] = true;
+          }
+        });
+      }
+    });
+
+    var getTaxonomyTypes = function getTaxonomyTypes(C, P, N, taxonomyID) {
+      var types = [];
+      if (C[taxonomyID]) {
+        types.push(TAXONOMY_CHILDREN);
+      }
+      if (P[taxonomyID]) {
+        types.push(TAXONOMY_ADULT);
+      }
+      if (!C[taxonomyID] && !P[taxonomyID] || N[taxonomyID]) {
+        types.push(TAXONOMY_COMMON);
+      }
+      return types;
+    };
+
+    taxonomies.forEach(function (t) {
+      t.childrenTypes = getTaxonomyTypes(C, P, N, parseInt(t.id));
+    });
+    return taxonomies;
+  }
+
+var taxonomies = Object.freeze({
+    getServiceDuration: getServiceDuration,
+    findMinResourceServiceDuration: findMinResourceServiceDuration,
+    setupChildishnes: setupChildishnes
+  });
 
   var SLOT_SIZE = 5;
   var VECTOR_SIZE = 24 * 60 / SLOT_SIZE;
@@ -1492,94 +1434,6 @@ var taxonomies = Object.freeze({
     }]);
     return ScheduleSlotsCutter;
   }();
-
-  var ANY = 'ANY';
-
-  /**
-   * Create day slots from raw CRAC data.
-   * @param date date in YYYY-MM-DD format
-   * @param bitset resource CRAC bitset
-   * @param vectorSlotSize CRAC bitset slot size
-   * @param scheduleSlotSize business data
-   * @param strategy slot strategy
-   * @returns {Array} day slots
-   */
-  function cutSlotsFromBitset(date, bitset, vectorSlotSize, scheduleSlotSize, strategy) {
-    var dayBounds = getFirstLastMinutes(bitset, vectorSlotSize);
-
-    var slots = [];
-    for (var slotMinute = dayBounds.start; slotMinute <= dayBounds.end;) {
-      var available = isSlotAvailable(bitset, slotMinute, slotMinute + scheduleSlotSize, vectorSlotSize);
-
-      var slot = {
-        start: slotMinute,
-        end: slotMinute + scheduleSlotSize,
-        available: available
-      };
-      if (strategy.enhanceSlot) {
-        slot = strategy.enhanceSlot(date, slot);
-      }
-
-      var newSlot = strategy.getNextSlotMinute(bitset, slot.start, slot.end, vectorSlotSize);
-      if (newSlot < slotMinute + scheduleSlotSize) {
-        throw new Error("New slot start: " + newSlot + " is less then previous end: " + (slotMinute + scheduleSlotSize));
-      }
-      slotMinute = newSlot;
-      slots.push(slot);
-    }
-    return strategy.postProcessing(date, slots);
-  }
-
-  var ScheduleCracSlotsCutter = function (_ScheduleSlotsCutter) {
-    inherits(ScheduleCracSlotsCutter, _ScheduleSlotsCutter);
-
-    function ScheduleCracSlotsCutter() {
-      classCallCheck(this, ScheduleCracSlotsCutter);
-      return possibleConstructorReturn(this, (ScheduleCracSlotsCutter.__proto__ || Object.getPrototypeOf(ScheduleCracSlotsCutter)).call(this));
-    }
-
-    /**
-     * Create all slots from raw CRAC data.
-     * @param cracData raw CRAC data
-     * @param business business data from 'business.get_profile_by_id' request
-     * @param taxonomyIDs array of required taxonomies
-     * @param resourceID specific resource ID. Could be 'ANY' for any available
-     * @param strategy slot strategy
-     * @returns {Object} slots
-     */
-
-
-    createClass(ScheduleCracSlotsCutter, [{
-      key: "cutSlots",
-      value: function cutSlots(cracData, business, taxonomyIDs, resourceID, strategy) {
-        var vectorSlotSize = business.widget_configuration.cracSlotSize || defaultVectorSlotSize;
-
-        return cracData.slots.reduce(function (ret, day) {
-          var dayKey = day.date.substr(0, 10);
-          var bs = void 0;
-
-          if (ANY === resourceID) {
-            bs = prepareBitset(day.intersection, vectorSlotSize);
-          } else {
-            var isExcluded = day.excludedResources && day.excludedResources.indexOf(resourceID) !== -1;
-            if (!isExcluded) {
-              var resourceData = day.resources.find(function (r) {
-                return r.resourceId === resourceID;
-              });
-              if (resourceData) {
-                bs = prepareBitset(resourceData.bitset, vectorSlotSize);
-              }
-            }
-          }
-          if (bs) {
-            ret[dayKey] = cutSlotsFromBitset(dayKey, bs, vectorSlotSize, business, taxonomyIDs, resourceID, strategy || defaultStrategy);
-          }
-          return ret;
-        }, {});
-      }
-    }]);
-    return ScheduleCracSlotsCutter;
-  }(ScheduleSlotsCutter);
 
   var ScheduleBusySlotsCutter = function (_ScheduleSlotsCutter) {
     inherits(ScheduleBusySlotsCutter, _ScheduleSlotsCutter);
@@ -2130,21 +1984,303 @@ var Discounts = Object.freeze({
     return ScheduleBusySlotsCutterV2;
   }(ScheduleBusySlotsCutter);
 
-  var Strategies = {
-    DefaultStrategy: defaultStrategy
-  };
+  var ScheduleSlotsIterator = function () {
+    function ScheduleSlotsIterator() {
+      classCallCheck(this, ScheduleSlotsIterator);
+    }
+
+    createClass(ScheduleSlotsIterator, [{
+      key: "isSlotAvailable",
+
+      /**
+       * @return {boolean}
+       */
+      value: function isSlotAvailable() {}
+
+      /**
+       * @return {{start: {number}, end: {number}, available: {boolean}}}
+       */
+
+    }, {
+      key: "nextSlot",
+      value: function nextSlot() {}
+    }]);
+    return ScheduleSlotsIterator;
+  }();
+
+  /**
+   * Create day slots from abstract slots iterator.
+   * @param {ScheduleSlotsIterator} iterator
+   * @returns {Array} day slots
+   */
+  function cutSlots$1(iterator) {
+    var slot = void 0,
+        slots = [];
+    while (slot = iterator.nextSlot()) {
+      slots.push(slot);
+    }
+
+    return slots;
+  }
+
+  /**
+   * Create day slots from abstract slots iterator without busy bound slots.
+   * @param {ScheduleSlotsIterator} iterator
+   * @returns {Array} day slots
+   */
+  function cutSlotsWithoutBusyBounds(iterator) {
+    var slot = void 0,
+        isHead = true,
+        slots = [],
+        availSlots = 0;
+    while (slot = iterator.nextSlot()) {
+      // skip head busy slots
+      if (!slot.available && isHead) continue;
+      if (slot.available && isHead) isHead = false;
+      slots.push(slot);
+      if (!slot.available) availSlots = slots.length - 1;
+    }
+
+    // clean tailing busy slots
+    return availSlots ? slots.slice(0, availSlots) : [];
+  }
+
+
+
+  var ScheduleSlots = Object.freeze({
+    ScheduleSlotsIterator: ScheduleSlotsIterator,
+    cutSlots: cutSlots$1,
+    cutSlotsWithoutBusyBounds: cutSlotsWithoutBusyBounds
+  });
+
+  var ANY = 'ANY';
+
+  var assert = console.assert ? console.assert.bind(console) : function () {};
+
+  var ScheduleCracSlotsIterator = function (_ScheduleSlotsIterato) {
+    inherits(ScheduleCracSlotsIterator, _ScheduleSlotsIterato);
+    createClass(ScheduleCracSlotsIterator, null, [{
+      key: "createSlot",
+
+      /**
+       * 
+       * @param {number} start
+       * @param {number} duration
+       * @param {boolean} available
+       * @return {{start: number, end: number, duration: number, available: boolean}}
+       * @private
+       */
+      value: function createSlot(start, duration, available) {
+        assert(start >= 0 && start < 1440, 'Start should be more or equal than 0 and less than 1440');
+        assert(duration > 0, 'Duration should be more than 0');
+        return {
+          start: start,
+          end: start + duration,
+          duration: duration,
+          available: available
+        };
+      }
+
+      /**
+       * 
+       * @param {Array<number>} bitset
+       * @param {number} vectorSlotSize
+       * @param {number} duration
+       * @param {number} scheduleSlotSize
+       * @param {function|null} enhanceSlotFn функция для изменения формата слота/добавления дополнительных данных для него
+       */
+
+    }]);
+
+    function ScheduleCracSlotsIterator(bitset, vectorSlotSize, duration, scheduleSlotSize) {
+      var enhanceSlotFn = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : null;
+      classCallCheck(this, ScheduleCracSlotsIterator);
+
+      var _this = possibleConstructorReturn(this, (ScheduleCracSlotsIterator.__proto__ || Object.getPrototypeOf(ScheduleCracSlotsIterator)).call(this));
+
+      _this.bitset = bitset;
+      _this.vectorSlotSize = vectorSlotSize;
+      _this.duration = duration;
+      _this.slotSize = scheduleSlotSize;
+      _this.enhanceSlotFn = enhanceSlotFn;
+      _this.curSlot = null;
+      _this._initializeDayBounds();
+      return _this;
+    }
+
+    createClass(ScheduleCracSlotsIterator, [{
+      key: "_initializeDayBounds",
+      value: function _initializeDayBounds() {
+        this.dayBounds = getFirstLastMinutes(this.bitset, this.vectorSlotSize);
+      }
+
+      /**
+       * Если начальная или конечная даты слота выходят за рамки дня - возвращает -1.
+       * 
+       * Если текущий слот начинается на занятое, а заканчивается на свободное время - сдвинуть его вперёд на позицию 
+       * первого свободного бита (возможно сделать наоборот - если предыдущий занятый слот заканчивается на свободное время, 
+       * то сдвинуть текущий слот назад).
+       * 
+       * @param {number} prevStart
+       * @private
+       */
+
+    }, {
+      key: "_lookupNextSlot",
+      value: function _lookupNextSlot(prevStart) {
+        var start = prevStart + this.slotSize;
+        if (start > this.dayBounds.end - this.duration) {
+          return -1;
+        }
+
+        var available = isSlotAvailable(this.bitset, start, start + this.duration, this.vectorSlotSize);
+
+        if (!available) {
+          // Необходимо проверить последний бит - если это 1, то пройтись по вектору, найдя первый 0 бит.
+          // Следующая за ним позиция и будет искомой.
+          /*const pos = _findRight0(this.bitset, this.vectorSlotSize, start + this.slotSize, this.slotSize);
+          if (pos >= 0) {
+            start = pos + this.vectorSlotSize;
+          }*/
+        }
+
+        return { start: start, available: available };
+      }
+    }, {
+      key: "createSlot",
+      value: function createSlot(start, available) {
+        if (start === -1) return null;
+
+        var slot = ScheduleCracSlotsIterator.createSlot(start, this.duration, available);
+
+        return this.enhanceSlotFn ? this.enhanceSlotFn(slot) : slot;
+      }
+    }, {
+      key: "nextSlot",
+      value: function nextSlot() {
+        // first call or next one
+        var _ref = this.curSlot === null ? this._lookupNextSlot(this.dayBounds.start) : this._lookupNextSlot(this.curSlot.start),
+            start = _ref.start,
+            available = _ref.available;
+
+        return this.curSlot = this.createSlot(start, available);
+      }
+    }, {
+      key: "isSlotAvailable",
+      value: function isSlotAvailable() {
+        if (this.curSlot === null) return false;
+        return this.curSlot.available;
+      }
+    }]);
+    return ScheduleCracSlotsIterator;
+  }(ScheduleSlotsIterator);
+
+  /**
+   * Данный класс инкапсулирует данные CRAC и, в случае необходимости, на их основе "нарезает слоты".
+   * Данный класс ничего не должен знать про структуру данных бизнеса. Его сфера ответственности - данные CRAC.
+   * Если необходимо использовать данные бизнеса - передавайте их через параметры функций или свойства объекта.
+   */
+
+
+  var ScheduleCRACSlots = function () {
+
+    /**
+     * 
+     * @param {*} cracData raw CRAC data
+     * @param {function(ScheduleSlotsIterator)} cutSlotsFn
+     */
+    function ScheduleCRACSlots(cracData) {
+      var cutSlotsFn = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : cutSlotsWithoutBusyBounds;
+      classCallCheck(this, ScheduleCRACSlots);
+
+      this._cracData = cracData;
+      this._cutSlotsFn = cutSlotsFn;
+    }
+
+    /**
+     * Create all slots from raw CRAC data.
+     * 
+     * @param {string} resourceID specific resource. Could be 'ANY' for any available
+     * @param {number} duration
+     * @param {number} slotSize
+     * @param {function|null} enhanceSlotFn
+     * @returns {Object} slots
+     */
+
+
+    createClass(ScheduleCRACSlots, [{
+      key: "cutSlots",
+      value: function cutSlots(resourceID, duration, slotSize) {
+        var enhanceSlotFn = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : null;
+
+        var cutSlots = this._cutSlotsFn;
+
+        return this._cracData.slots.reduce(function (ret, cracDay) {
+          var bitset = void 0,
+              vectorSlotSize = void 0;
+
+          if (ANY === resourceID) {
+            var intersection = calcCRACSlotIntermediate(cracDay);
+            vectorSlotSize = getCracVectorSlotSize(intersection);
+            bitset = prepareBitset(intersection, vectorSlotSize);
+          } else {
+            var isExcluded = cracDay.excludedResources && cracDay.excludedResources.indexOf(resourceID) !== -1;
+            if (!isExcluded) {
+              var resourceData = cracDay.resources.find(function (r) {
+                return r.resourceId === resourceID;
+              });
+              if (resourceData) {
+                vectorSlotSize = getCracVectorSlotSize(resourceData.bitset);
+                bitset = prepareBitset(resourceData.bitset, vectorSlotSize);
+              }
+            }
+          }
+
+          if (bitset) {
+            var dayKey = cracDay.date.substr(0, 10);
+            var iterator = new ScheduleCracSlotsIterator(bitset, vectorSlotSize, duration, slotSize, enhanceSlotFn);
+            ret[dayKey] = cutSlots(iterator);
+          }
+
+          return ret;
+        }, {});
+      }
+    }]);
+    return ScheduleCRACSlots;
+  }();
+
+  /**
+   * Принимает на вход объект-хранилище слотов ScheduleCRACSlots, биизнес данные, работника, услугу
+   * и возвращает готовый набор слотов.
+   * 
+   * @param cracSlots
+   * @param business
+   * @param taxonomy
+   * @param worker
+   * @param enhanceSlotFn
+   * @return {Object|Array|*|void}
+   */
+  function cutCRACBusinessSlots(cracSlots, business, taxonomy, worker, enhanceSlotFn) {
+    assert(cracSlots instanceof ScheduleCRACSlots, 'cracSlots should be instance of ScheduleCRACSlots');
+    var taxDuration = getServiceDuration(taxonomy, worker);
+    var widgetConfiguration = business.widget_configuration;
+    var forceSlotSize = widgetConfiguration && widgetConfiguration.displaySlotSize && widgetConfiguration.displaySlotSize < taxDuration;
+    var slotSize = forceSlotSize ? widgetConfiguration.displaySlotSize : taxDuration;
+    return cracSlots.cutSlots(worker.id, taxDuration, slotSize, enhanceSlotFn);
+  }
 
 
 
   var Schedule = Object.freeze({
-    Strategies: Strategies,
-    toBusySlots: toBusySlots,
-    setSlotSize: setSlotSize,
-    prepareSlots: prepareSlots,
-    ScheduleCracSlotsCutter: ScheduleCracSlotsCutter,
-    ScheduleBusySlotsCutter: ScheduleBusySlotsCutter,
-    ScheduleBusySlotsCutterV1: ScheduleBusySlotsCutterV1,
-    ScheduleBusySlotsCutterV2: ScheduleBusySlotsCutterV2
+  	ScheduleSlots: ScheduleSlots,
+  	toBusySlots: toBusySlots,
+  	setSlotSize: setSlotSize,
+  	prepareSlots: prepareSlots,
+  	ScheduleBusySlotsCutter: ScheduleBusySlotsCutter,
+  	ScheduleBusySlotsCutterV1: ScheduleBusySlotsCutterV1,
+  	ScheduleBusySlotsCutterV2: ScheduleBusySlotsCutterV2,
+  	ScheduleCRACSlots: ScheduleCRACSlots,
+  	cutCRACBusinessSlots: cutCRACBusinessSlots
   });
 
   function roundNumberUsingRule(input, businessData, noCommas) {
