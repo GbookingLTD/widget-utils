@@ -617,6 +617,38 @@ var Booking = Object.freeze({
   }
 
   /**
+   * Производит поиск 0 бита в обратном направлении. 
+   * Возвращает количество бит, на которое нужно было сместиться назад.
+   * 
+   * @param vector crac-vector
+   * @param p      позиция на векторе, с которой начинается поиск
+   * @param count  количество бит, в которых производится поиск
+   * @return {number}
+   * @private
+   */
+  function _findBack0(vector, p, count) {
+    var offset = 0;
+    while (p.i >= 0) {
+      // найден 0 бит - возвращаем результат
+      var bit = vector[p.i] >>> INT32_SIZE - p.b - 1 & 1;
+      if (bit === 0) {
+        return offset;
+      }
+
+      ++offset;
+      if (count-- < 0) return -1;
+
+      --p.b;
+      if (p.b < 0) {
+        p.b = 31;
+        --p.i;
+      }
+    }
+
+    return -1;
+  }
+
+  /**
    * Маски левых (старших) единиц от 0 до 32-х (33 элемента в массиве).
    * 
    * 0-й элемент соответствует нулю единиц слева, начиная от 32-й позиции.
@@ -2045,14 +2077,6 @@ var Discounts = Object.freeze({
     return availSlots ? slots.slice(0, availSlots) : [];
   }
 
-
-
-  var ScheduleSlots = Object.freeze({
-    ScheduleSlotsIterator: ScheduleSlotsIterator,
-    cutSlots: cutSlots$1,
-    cutSlotsWithoutBusyBounds: cutSlotsWithoutBusyBounds
-  });
-
   var ANY = 'ANY';
 
   var assert = console.assert ? console.assert.bind(console) : function () {};
@@ -2108,40 +2132,60 @@ var Discounts = Object.freeze({
       return _this;
     }
 
+    /**
+     * Инициализация границ набора слотов за день. 
+     * Если набор слотов пустой, то устанавливает {start:0, end:0}.
+     * 
+     * @private
+     */
+
+
     createClass(ScheduleCracSlotsIterator, [{
       key: "_initializeDayBounds",
       value: function _initializeDayBounds() {
-        this.dayBounds = getFirstLastMinutes(this.bitset, this.vectorSlotSize);
+        var bounds = getFirstLastMinutes(this.bitset, this.vectorSlotSize);
+        this.dayBounds = { start: bounds.start || 0, end: bounds.end || 0 };
       }
 
       /**
-       * Если начальная или конечная даты слота выходят за рамки дня - возвращает -1.
+       * Если начальная или конечная даты слота выходят за рамки дня - возвращает число, меньше нуля.
        * 
-       * Если текущий слот начинается на занятое, а заканчивается на свободное время - сдвинуть его вперёд на позицию 
-       * первого свободного бита (возможно сделать наоборот - если предыдущий занятый слот заканчивается на свободное время, 
-       * то сдвинуть текущий слот назад).
+       * Если текущий слот неактивный и "заканчивается" на свободное время - сдвинуть его вперёд на позицию 
+       * первого свободного бита. Если слот при этом стал свободным, то сохранить позицию, в противном случае, 
+       * вернуть позицию. Возможно сделать наоборот - если предыдущий занятый слот заканчивается на свободное время, 
+       * то сдвинуть текущий слот назад (под "заканчивается" понимаю крайний правый бит в слоте, который уже
+       * не будет участвовать в следующем, с учётом шага сетки).
        * 
-       * @param {number} prevStart
+       * @param {number} prevStart начало предыдущего слота в минутах от начала дня (если -1, то возвращает начало дня)
        * @private
        */
 
     }, {
       key: "_lookupNextSlot",
       value: function _lookupNextSlot(prevStart) {
-        var start = prevStart + this.slotSize;
-        if (start > this.dayBounds.end - this.duration) {
-          return -1;
+        var start = void 0,
+            end = void 0;
+        start = prevStart === -1 ? this.dayBounds.start : prevStart + this.slotSize;
+        end = start + this.duration;
+        if (end > this.dayBounds.end) {
+          return { start: -1, duration: false };
         }
 
         var available = isSlotAvailable(this.bitset, start, start + this.duration, this.vectorSlotSize);
 
         if (!available) {
-          // Необходимо проверить последний бит - если это 1, то пройтись по вектору, найдя первый 0 бит.
+          // Необходимо проверить конечный бит - если это 1, то пройтись по вектору, найдя первый 0 бит.
           // Следующая за ним позиция и будет искомой.
-          /*const pos = _findRight0(this.bitset, this.vectorSlotSize, start + this.slotSize, this.slotSize);
-          if (pos >= 0) {
-            start = pos + this.vectorSlotSize;
-          }*/
+          // Затем проверим, будет ли в новой позиции слот доступным для записи.
+
+          var lastBitPosition = Math.floor((start + this.slotSize - 1) / this.vectorSlotSize);
+          var p = { i: lastBitPosition >> 5, b: lastBitPosition % 32 };
+          var offset = _findBack0(this.bitset, p, this.slotSize);
+          if (offset > 0) {
+            var checkStart = start + (this.slotSize - offset * this.vectorSlotSize);
+            available = isSlotAvailable(this.bitset, checkStart, checkStart + this.duration, this.vectorSlotSize);
+            if (available) start = checkStart;
+          }
         }
 
         return { start: start, available: available };
@@ -2149,7 +2193,7 @@ var Discounts = Object.freeze({
     }, {
       key: "createSlot",
       value: function createSlot(start, available) {
-        if (start === -1) return null;
+        if (start < 0) return null;
 
         var slot = ScheduleCracSlotsIterator.createSlot(start, this.duration, available);
 
@@ -2159,7 +2203,7 @@ var Discounts = Object.freeze({
       key: "nextSlot",
       value: function nextSlot() {
         // first call or next one
-        var _ref = this.curSlot === null ? this._lookupNextSlot(this.dayBounds.start) : this._lookupNextSlot(this.curSlot.start),
+        var _ref = this.curSlot === null ? this._lookupNextSlot(-1) : this._lookupNextSlot(this.curSlot.start),
             start = _ref.start,
             available = _ref.available;
 
@@ -2180,8 +2224,6 @@ var Discounts = Object.freeze({
    * Данный класс ничего не должен знать про структуру данных бизнеса. Его сфера ответственности - данные CRAC.
    * Если необходимо использовать данные бизнеса - передавайте их через параметры функций или свойства объекта.
    */
-
-
   var ScheduleCRACSlots = function () {
 
     /**
@@ -2272,13 +2314,16 @@ var Discounts = Object.freeze({
 
 
   var Schedule = Object.freeze({
-  	ScheduleSlots: ScheduleSlots,
   	toBusySlots: toBusySlots,
   	setSlotSize: setSlotSize,
   	prepareSlots: prepareSlots,
   	ScheduleBusySlotsCutter: ScheduleBusySlotsCutter,
   	ScheduleBusySlotsCutterV1: ScheduleBusySlotsCutterV1,
   	ScheduleBusySlotsCutterV2: ScheduleBusySlotsCutterV2,
+  	ScheduleSlotsIterator: ScheduleSlotsIterator,
+  	cutSlots: cutSlots$1,
+  	cutSlotsWithoutBusyBounds: cutSlotsWithoutBusyBounds,
+  	ScheduleCracSlotsIterator: ScheduleCracSlotsIterator,
   	ScheduleCRACSlots: ScheduleCRACSlots,
   	cutCRACBusinessSlots: cutCRACBusinessSlots
   });

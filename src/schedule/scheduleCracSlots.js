@@ -1,14 +1,15 @@
 "use strict";
 
 import {getServiceDuration} from "../taxonomies";
-import {ScheduleSlotsIterator, ScheduleSlotsCutter, cutSlotsWithoutBusyBounds} from "./scheduleSlots";
-import {getCracVectorSlotSize, prepareBitset, getFirstLastMinutes, isSlotAvailable, calcCRACSlotIntermediate} from '../bower_components/crac-utils/src';
+import {ScheduleSlotsIterator, cutSlotsWithoutBusyBounds} from "./scheduleSlots";
+import {getCracVectorSlotSize, prepareBitset, _findBack0, getFirstLastMinutes, isSlotAvailable, 
+  calcCRACSlotIntermediate} from '../../bower_components/crac-utils/src';
 
 const ANY = 'ANY';
 
 let assert = console.assert ? console.assert.bind(console) : function() {};
 
-class ScheduleCracSlotsIterator extends ScheduleSlotsIterator {
+export class ScheduleCracSlotsIterator extends ScheduleSlotsIterator {
   /**
    * 
    * @param {number} start
@@ -47,24 +48,35 @@ class ScheduleCracSlotsIterator extends ScheduleSlotsIterator {
     this._initializeDayBounds();
   }
 
+  /**
+   * Инициализация границ набора слотов за день. 
+   * Если набор слотов пустой, то устанавливает {start:0, end:0}.
+   * 
+   * @private
+   */
   _initializeDayBounds() {
-    this.dayBounds = getFirstLastMinutes(this.bitset, this.vectorSlotSize);
+    let bounds = getFirstLastMinutes(this.bitset, this.vectorSlotSize);
+    this.dayBounds = {start: bounds.start || 0, end: bounds.end || 0};
   }
 
   /**
-   * Если начальная или конечная даты слота выходят за рамки дня - возвращает -1.
+   * Если начальная или конечная даты слота выходят за рамки дня - возвращает число, меньше нуля.
    * 
-   * Если текущий слот начинается на занятое, а заканчивается на свободное время - сдвинуть его вперёд на позицию 
-   * первого свободного бита (возможно сделать наоборот - если предыдущий занятый слот заканчивается на свободное время, 
-   * то сдвинуть текущий слот назад).
+   * Если текущий слот неактивный и "заканчивается" на свободное время - сдвинуть его вперёд на позицию 
+   * первого свободного бита. Если слот при этом стал свободным, то сохранить позицию, в противном случае, 
+   * вернуть позицию. Возможно сделать наоборот - если предыдущий занятый слот заканчивается на свободное время, 
+   * то сдвинуть текущий слот назад (под "заканчивается" понимаю крайний правый бит в слоте, который уже
+   * не будет участвовать в следующем, с учётом шага сетки).
    * 
-   * @param {number} prevStart
+   * @param {number} prevStart начало предыдущего слота в минутах от начала дня (если -1, то возвращает начало дня)
    * @private
    */
   _lookupNextSlot(prevStart) {
-    let start = prevStart + this.slotSize;
-    if (start > this.dayBounds.end - this.duration) {
-      return -1;
+    let start, end;
+    start = prevStart === -1 ? this.dayBounds.start : prevStart + this.slotSize;
+    end = start + this.duration;
+    if (end > this.dayBounds.end) {
+      return {start: -1, duration: false};
     }
     
     let available = isSlotAvailable(this.bitset,
@@ -73,19 +85,25 @@ class ScheduleCracSlotsIterator extends ScheduleSlotsIterator {
         this.vectorSlotSize);
     
     if (!available) {
-      // Необходимо проверить последний бит - если это 1, то пройтись по вектору, найдя первый 0 бит.
+      // Необходимо проверить конечный бит - если это 1, то пройтись по вектору, найдя первый 0 бит.
       // Следующая за ним позиция и будет искомой.
-      /*const pos = _findRight0(this.bitset, this.vectorSlotSize, start + this.slotSize, this.slotSize);
-      if (pos >= 0) {
-        start = pos + this.vectorSlotSize;
-      }*/
+      // Затем проверим, будет ли в новой позиции слот доступным для записи.
+      
+      const lastBitPosition = Math.floor((start + this.slotSize - 1) / this.vectorSlotSize);
+      const p = {i:lastBitPosition >> 5, b:lastBitPosition % 32};
+      const offset = _findBack0(this.bitset, p, this.slotSize);
+      if (offset > 0) {
+        let checkStart = start + (this.slotSize - offset * this.vectorSlotSize);
+        available = isSlotAvailable(this.bitset, checkStart, checkStart + this.duration, this.vectorSlotSize);
+        if (available) start = checkStart;
+      }
     }
 
     return {start, available};
   }
   
   createSlot(start, available) {
-    if (start === -1) return null;
+    if (start < 0) return null;
     
     let slot = ScheduleCracSlotsIterator.createSlot(
       start,
@@ -97,7 +115,7 @@ class ScheduleCracSlotsIterator extends ScheduleSlotsIterator {
 
   nextSlot() {
     // first call or next one
-    let {start, available} = this.curSlot === null ? this._lookupNextSlot(this.dayBounds.start) : 
+    let {start, available} = this.curSlot === null ? this._lookupNextSlot(-1) : 
       this._lookupNextSlot(this.curSlot.start);
     return this.curSlot = this.createSlot(start, available);
   }
