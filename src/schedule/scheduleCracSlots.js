@@ -1,9 +1,16 @@
 "use strict";
 
+import {getBusinessDateLikeUTC} from "../dateTime";
 import {getServiceDuration} from "../taxonomies";
-import {ScheduleSlotsIterator, ScheduleDay, cutSlots} from "./scheduleSlots";
+import {
+  ScheduleSlotsIterator,
+  cutSlots,
+  cutSlotsWithoutBusy,
+  cutSlotsWithoutStartBusy,
+} from "./scheduleSlots";
 import {getCracVectorSlotSize, _findBack0, getFirstLastMinutes, 
   isSlotAvailable} from '../../bower_components/crac-utils/src';
+import {CRACResourcesAndRoomsSlot} from "./CRACResponse";
 
 const ANY = 'ANY';
 
@@ -44,6 +51,7 @@ export class ScheduleCracSlotsIterator extends ScheduleSlotsIterator {
     this.duration = duration;
     this.slotSize = scheduleSlotSize;
     this.enhanceSlotFn = enhanceSlotFn;
+    this.nowMinutes = -1;
     this.curSlot = null;
     this._initializeDayBounds();
   }
@@ -99,6 +107,10 @@ export class ScheduleCracSlotsIterator extends ScheduleSlotsIterator {
       }
     }
 
+    if (this.nowMinutes >= 0) {
+      if (start < this.nowMinutes) available = false;
+    }
+    
     return {start, available};
   }
   
@@ -137,13 +149,21 @@ export class ScheduleCRACDaySlots {
   /**
    * 
    * @param {CRACResourcesAndRoomsSlot} cracDay raw CRAC data
+   * @param {Date} businessNow now time in business timezone (in tz_like_utc representation)
    * @param {function(ScheduleSlotsIterator)} cutSlotsFn
+   * @param {function(ScheduleSlotsIterator)} cutSlotsThisDayFn
    */
-  constructor(cracDay, cutSlotsFn = cutSlots) {
-    this._cracDay = cracDay;
-    this._cutSlotsFn = cutSlotsFn;
+  constructor(cracDay, businessNow, cutSlotsFn = cutSlots, cutSlotsThisDayFn = cutSlotsWithoutStartBusy) {
+    this.cracDay = cracDay;
+    this.businessNow = businessNow;
+    this.cutSlotsFn = cutSlotsFn;
+    this.cutSlotsThisDayFn = cutSlotsThisDayFn;
   }
 
+  isThisDay() {
+    return this.cracDay.date.substr(0, 10) === this.businessNow.toISOString().substr(0, 10);
+  }
+  
   /**
    * Create all slots from raw CRAC data.
    * 
@@ -151,70 +171,57 @@ export class ScheduleCRACDaySlots {
    * @param {number} duration
    * @param {number} slotSize
    * @param {function|null} enhanceSlotFn
-   * @returns {Object} slots
+   * @returns {Array<{start: {number}, end: {number}, available: {boolean}}>} slots
    */
   cutSlots(resourceID, duration, slotSize, enhanceSlotFn = null) {
     const iterator = this.getSlotsIterator(resourceID, duration, slotSize, enhanceSlotFn);
-    return iterator ? this._cutSlotsFn(iterator) : null;
+    const _cutSlots = this.isThisDay() ? this.cutSlotsThisDayFn : this.cutSlotsFn;
+    return iterator ? _cutSlots(iterator) : null;
   }
 
   getSlotsIterator(resourceID, duration, slotSize, enhanceSlotFn = null) {
-    const cracDay = this._cracDay;
+    const cracDay = this.cracDay;
     const bitset = ANY === resourceID ? cracDay.getResourceIntersection() :
       cracDay.getResource(resourceID);
     if (bitset) {
       const vectorSlotSize = getCracVectorSlotSize(bitset);
-      return new ScheduleCracSlotsIterator(bitset, vectorSlotSize, duration, slotSize, enhanceSlotFn.bind(cracDay));
+      const iterator = new ScheduleCracSlotsIterator(bitset, vectorSlotSize, duration, slotSize, enhanceSlotFn.bind(cracDay));
+      // Если текущий день, то необходимо не учитывать слоты времени, которое уже истекло
+      if (this.isThisDay()) {
+        iterator.nowMinutes = getMinutesFromStartOfDay(this.businessNow);
+      }
+
+      return iterator;
     }
 
     return null;
   }
 }
 
-/**
- * Контейнер для данных расписания одного дня для данных, полученных из CRAC. 
- */
-export class ScheduleCRACDay extends ScheduleDay {
-  /**
-   * Принимает на вход объект-хранилище слотов ScheduleCRACDaySlots, биизнес данные, работника, услугу
-   * и возвращает готовый набор слотов.
-   * 
-   * @param {ScheduleCRACDaySlots} cracDay
-   * @param business
-   * @param taxonomy
-   * @param worker
-   * @param enhanceSlotFn
-   * @return {Object|Array|*|void}
-   */
-  static cutBusinessSlots(cracDay, business, taxonomy, worker, enhanceSlotFn) {
-    assert(cracDay instanceof ScheduleCRACDaySlots, 'cracDay should be instance of ScheduleCRACDaySlots');
-    let taxDuration = getServiceDuration(taxonomy, worker);
-    const widgetConfiguration = business.widget_configuration;
-    let forceSlotSize = widgetConfiguration && widgetConfiguration.displaySlotSize && 
-        widgetConfiguration.displaySlotSize < taxDuration;
-    let slotSize = forceSlotSize ? widgetConfiguration.displaySlotSize : taxDuration;
-    return cracDay.cutSlots(worker.id, taxDuration, slotSize, enhanceSlotFn);
-  }
+function getMinutesFromStartOfDay(d) { 
+  return d.getUTCHours() * 60 + d.getUTCMinutes(); 
+}
 
-  /**
-   * 
-   * @param {ScheduleCRACDaySlots} cracDay
-   * @param business
-   * @param taxonomy
-   * @param worker
-   * @param enhanceSlotFn
-   * @return {Object|Array|*|void}
-   */
-  constructor(cracDay, business, taxonomy, worker, enhanceSlotFn) {
-    super();
-    this.slots = ScheduleCRACDay.cutBusinessSlots(cracDay, business, taxonomy, worker, enhanceSlotFn);
-  }
-  
-  isDayAvailable() {
-    return this.slots.length > 0;
-  }
-  
-  getSlots() {
-    return this.slots;
-  }
+/**
+ * Принимает на вход объект-хранилище слотов CRACResourcesAndRoomsSlot, биизнес данные, работника, услугу
+ * и возвращает готовый набор слотов.
+ * 
+ * @param {CRACResourcesAndRoomsSlot} cracDay
+ * @param business
+ * @param taxonomy
+ * @param worker
+ * @param enhanceSlotFn
+ * @return {Object|Array|*|void}
+ */
+export function getSlotsFromBusinessAndCRAC(cracDay, business, taxonomy, worker, enhanceSlotFn) {
+  assert(cracDay instanceof CRACResourcesAndRoomsSlot, 'cracDay should be instance of CRACResourcesAndRoomsSlot');
+  let taxDuration = getServiceDuration(taxonomy, worker);
+  const widgetConfiguration = business.widget_configuration;
+  let forceSlotSize = widgetConfiguration && widgetConfiguration.displaySlotSize && 
+      widgetConfiguration.displaySlotSize < taxDuration;
+  let slotSize = forceSlotSize ? widgetConfiguration.displaySlotSize : taxDuration;
+  let cutSlots = widgetConfiguration.hideGraySlots ? cutSlotsWithoutBusy : cutSlots;
+  let businessNow = getBusinessDateLikeUTC(moment.utc(), {business}).toDate();
+  const scheduleCRACSlots = new ScheduleCRACDaySlots(cracDay, businessNow, cutSlots);
+  return scheduleCRACSlots.cutSlots(worker.id, taxDuration, slotSize, enhanceSlotFn);
 }

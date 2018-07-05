@@ -69,10 +69,10 @@ var busySlotsDate = function(date) {
  * @param date
  * @param businessData
  */
-var getBusinessDateLikeUTC = function(date, businessData) {
+export function getBusinessDateLikeUTC(date, businessData) {
   setBusinessDateTZ(businessData, date);
   return getDateLikeUTC(date);
-};
+}
 
 export function busySlotsInterval(date, businessData, daysToFetch) {
   if (!date) {

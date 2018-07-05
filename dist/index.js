@@ -2,13 +2,13 @@
   typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory(require('lodash'), require('moment')) :
   typeof define === 'function' && define.amd ? define(['lodash', 'moment'], factory) :
   (global.WidgetUtils = factory(global._,global.moment));
-}(this, function (_$1,moment) { 'use strict';
+}(this, function (_$1,moment$1) { 'use strict';
 
   _$1 = 'default' in _$1 ? _$1['default'] : _$1;
-  moment = 'default' in moment ? moment['default'] : moment;
+  moment$1 = 'default' in moment$1 ? moment$1['default'] : moment$1;
 
   function setBusinessDateTZ(businessData, date) {
-    var timeOffset = businessData.business.general_info.timezone ? parseInt(businessData.business.general_info.timezone, 10) : utcOffset(moment());
+    var timeOffset = businessData.business.general_info.timezone ? parseInt(businessData.business.general_info.timezone, 10) : utcOffset(moment$1());
 
     if (isNaN(timeOffset)) {
       date.tz(businessData.business.general_info.timezone);
@@ -24,7 +24,7 @@
   };
 
   function businessTimezoneUtcOffset(businessData) {
-    var curDate = setBusinessDateTZ(businessData, moment.utc());
+    var curDate = setBusinessDateTZ(businessData, moment$1.utc());
     return utcOffset(curDate);
   }
 
@@ -61,7 +61,7 @@
   }
 
   function getDateLikeUTC(date) {
-    return moment.utc(date).add(utcOffset(date), 'minute');
+    return moment$1.utc(date).add(utcOffset(date), 'minute');
   }
 
   var busySlotsDate = function busySlotsDate(date) {
@@ -74,25 +74,25 @@
    * @param date
    * @param businessData
    */
-  var getBusinessDateLikeUTC = function getBusinessDateLikeUTC(date, businessData) {
+  function getBusinessDateLikeUTC(date, businessData) {
     setBusinessDateTZ(businessData, date);
     return getDateLikeUTC(date);
-  };
+  }
 
   function busySlotsInterval(date, businessData, daysToFetch) {
     if (!date) {
-      date = moment.utc();
+      date = moment$1.utc();
     }
 
     date = getBusinessDateLikeUTC(date, businessData);
-    var minBookingTime = getBusinessDateLikeUTC(moment.utc(), businessData);
+    var minBookingTime = getBusinessDateLikeUTC(moment$1.utc(), businessData);
     businessData.business.general_info.min_booking_time && minBookingTime.add('hours', businessData.business.general_info.min_booking_time);
 
     if (date < minBookingTime) {
       date = minBookingTime;
     }
 
-    var then = moment(date).add('days', daysToFetch);
+    var then = moment$1(date).add('days', daysToFetch);
     return {
       startDate: busySlotsDate(date),
       endDate: busySlotsDate(then)
@@ -117,6 +117,7 @@ var DateTime = Object.freeze({
     businessTimezoneUtcOffset: businessTimezoneUtcOffset,
     startBusinessTZDay: startBusinessTZDay,
     getDateLikeUTC: getDateLikeUTC,
+    getBusinessDateLikeUTC: getBusinessDateLikeUTC,
     busySlotsInterval: busySlotsInterval,
     alignTimeByQuantum: alignTimeByQuantum,
     alignSlotTime: alignSlotTime
@@ -139,9 +140,9 @@ var DateTime = Object.freeze({
    */
   function calculateDaySlotsV1(day, taxonomy, slotSize, busySlots, businessData) {
     var slots = [];
-    var finish = moment.utc(day.end_time);
+    var finish = moment$1.utc(day.end_time);
 
-    var businessNow = moment.utc();
+    var businessNow = moment$1.utc();
     setBusinessDateTZ(businessData, businessNow);
     var businessNowLikeUTC = getDateLikeUTC(businessNow);
 
@@ -151,7 +152,7 @@ var DateTime = Object.freeze({
       }
     }
 
-    for (var slot_time = moment.utc(day.start_time); slot_time.isBefore(finish);) {
+    for (var slot_time = moment$1.utc(day.start_time); slot_time.isBefore(finish);) {
       var dateCheck = checkDate(day.slots, slot_time.toDate(), slotSize);
       var space = dateCheck[0],
           duration = dateCheck[1];
@@ -162,7 +163,7 @@ var DateTime = Object.freeze({
       }
 
       if (spaceLeft === 0) {
-        var currentSlotBackRange = moment.range(moment(slot_time).add('m', -taxonomy.duration), slot_time);
+        var currentSlotBackRange = moment$1.range(moment$1(slot_time).add('m', -taxonomy.duration), slot_time);
         /* jshint loopfunc:true */
         slots.forEach(function (s) {
           if (!s.busy) {
@@ -170,11 +171,11 @@ var DateTime = Object.freeze({
           }
         });
       }
-      if (moment(slot_time).add('m', taxonomy.duration).isAfter(finish)) {
+      if (moment$1(slot_time).add('m', taxonomy.duration).isAfter(finish)) {
         space = 0;
       }
 
-      var actualSlot = moment(slot_time);
+      var actualSlot = moment$1(slot_time);
 
       busy = businessNowLikeUTC.isAfter(actualSlot) || space === 0 || day.forceAllSlotsBusy;
 
@@ -204,10 +205,10 @@ var DateTime = Object.freeze({
       if (!_$1.isUndefined(slot.busy) && slot.busy && _$1.isUndefined(slot.space_left)) {
         return;
       }
-      var businessNow = moment.utc();
+      var businessNow = moment$1.utc();
       var businessNowLikeUTC = getDateLikeUTC(businessNow);
 
-      var slot_time = moment.utc(day.date).add(slot.time, 'm');
+      var slot_time = moment$1.utc(day.date).add(slot.time, 'm');
       var duration = slot.duration || slotSize;
       var spaceLeft;
       if (!_$1.isUndefined(slot.space_left)) {
@@ -219,7 +220,7 @@ var DateTime = Object.freeze({
         spaceLeft = busySlots.maxSlotCapacity;
       }
 
-      var actualSlot = moment(slot_time);
+      var actualSlot = moment$1(slot_time);
       slots.push({
         actualSlot: actualSlot,
         slotTime: slot_time.format('LT'),
@@ -244,8 +245,8 @@ var DateTime = Object.freeze({
     if (slots.busy && slots.busy.length) {
       slots.busy.forEach(function (obj) {
         var slotDuration = obj.duration || defaultStep;
-        var busySlotRange = moment.range(moment(obj.time), moment(obj.time).add('m', slotDuration));
-        if (moment(date).within(busySlotRange) && !moment(date).isSame(busySlotRange.end)) {
+        var busySlotRange = moment$1.range(moment$1(obj.time), moment$1(obj.time).add('m', slotDuration));
+        if (moment$1(date).within(busySlotRange) && !moment$1(date).isSame(busySlotRange.end)) {
           result = [-obj.space_left, slotDuration];
           return false;
         }
@@ -266,12 +267,12 @@ var DateTime = Object.freeze({
   function checkSlotInterval(dayBusySlots, date, defaultStep) {
     var result = [1, defaultStep];
     if (dayBusySlots.busy && dayBusySlots.busy.length) {
-      var targetSlotRange = moment.range(moment(date), moment(date).add(defaultStep, 'minutes'));
+      var targetSlotRange = moment$1.range(moment$1(date), moment$1(date).add(defaultStep, 'minutes'));
       for (var i = 0; i < dayBusySlots.busy.length; i++) {
         var busySlot = dayBusySlots.busy[i];
         var busySlotDuration = busySlot.duration || defaultStep;
-        var busySlotRange = moment.range(moment(busySlot.time), moment(busySlot.time).add(busySlotDuration, 'minutes'));
-        if (targetSlotRange.intersect(busySlotRange) && !moment(date).isSame(busySlotRange.end)) {
+        var busySlotRange = moment$1.range(moment$1(busySlot.time), moment$1(busySlot.time).add(busySlotDuration, 'minutes'));
+        if (targetSlotRange.intersect(busySlotRange) && !moment$1(date).isSame(busySlotRange.end)) {
           result = [-busySlot.space_left, busySlotDuration, busySlot.time];
           break;
         }
@@ -312,16 +313,16 @@ var DateTime = Object.freeze({
     }
 
     if (widgetConfiguration && widgetConfiguration.bookableDateRanges && widgetConfiguration.bookableDateRanges.enabled) {
-      var dateMoment = moment(date),
+      var dateMoment = moment$1(date),
           dateAvailable = true,
           start = widgetConfiguration.bookableDateRanges.start,
           end = widgetConfiguration.bookableDateRanges.end;
       if (start && end && !ignoreStartDate) {
-        dateAvailable = dateMoment.isAfter(moment(start).startOf('day')) && dateMoment.isBefore(moment(end).endOf('day'));
+        dateAvailable = dateMoment.isAfter(moment$1(start).startOf('day')) && dateMoment.isBefore(moment$1(end).endOf('day'));
       } else if (start && !ignoreStartDate) {
-        dateAvailable = dateMoment.isAfter(moment(start).startOf('day'));
+        dateAvailable = dateMoment.isAfter(moment$1(start).startOf('day'));
       } else if (end) {
-        dateAvailable = dateMoment.isBefore(moment(end).endOf('day'));
+        dateAvailable = dateMoment.isBefore(moment$1(end).endOf('day'));
       }
 
       return !dateAvailable;
@@ -329,10 +330,10 @@ var DateTime = Object.freeze({
     //bookable weeks calculation
     if (widgetConfiguration.bookableMonthsCount > 0 && widgetConfiguration.bookableMonthsCount < 1) {
       var weeks = Math.round(widgetConfiguration.bookableMonthsCount / 0.23);
-      return moment().add(weeks, 'weeks').isBefore(date);
+      return moment$1().add(weeks, 'weeks').isBefore(date);
     }
 
-    return !!(widgetConfiguration && widgetConfiguration.bookableMonthsCount > 0 && moment().add('M', widgetConfiguration.bookableMonthsCount - 1).endOf('M').isBefore(date));
+    return !!(widgetConfiguration && widgetConfiguration.bookableMonthsCount > 0 && moment$1().add('M', widgetConfiguration.bookableMonthsCount - 1).endOf('M').isBefore(date));
   }
 
   /**
@@ -350,10 +351,10 @@ var DateTime = Object.freeze({
 
     var duration = slotSize || taxonomyDuration;
     _$1(busySlots).each(function (busySlot) {
-      var busyTimeMin = moment.utc(busySlot.time).diff(moment.utc(startDate), 'minute');
+      var busyTimeMin = moment$1.utc(busySlot.time).diff(moment$1.utc(startDate), 'minute');
       var alignBusyTimeMin = Math.floor(busyTimeMin / duration) * duration;
       if (busyTimeMin !== alignBusyTimeMin) {
-        var alignBusySlotTime = moment.utc(startDate).add(alignBusyTimeMin, 'minutes').toISOString();
+        var alignBusySlotTime = moment$1.utc(startDate).add(alignBusyTimeMin, 'minutes').toISOString();
         var alignEndBusyTimeMin = Math.ceil((busyTimeMin + busySlot.duration) / duration) * duration;
 
         busySlot.time = alignBusySlotTime;
@@ -391,15 +392,15 @@ var BusySlots = Object.freeze({
       return calendarBookingTimeGT(businessData, busySlots, slotSize, day);
     }
     var slotDay = _$1(busySlots.days).find(function (d) {
-      return moment(d.date).isSame(day.date, 'day');
+      return moment$1(d.date).isSame(day.date, 'day');
     });
     if (slotDay) {
-      var startTime = moment.utc(slotDay.start_time);
-      var endTime = moment.utc(slotDay.end_time);
+      var startTime = moment$1.utc(slotDay.start_time);
+      var endTime = moment$1.utc(slotDay.end_time);
 
-      var now = moment.utc();
-      var businessOffset = moment.tz(now, businessData.business.general_info.timezone);
-      var businessNow = moment.utc().add(businessOffset._offset, 'm');
+      var now = moment$1.utc();
+      var businessOffset = moment$1.tz(now, businessData.business.general_info.timezone);
+      var businessNow = moment$1.utc().add(businessOffset._offset, 'm');
 
       if (businessNow.isSame(startTime, 'day') && businessNow > startTime) {
         startTime = alignSlotTime(startTime, slotSize, businessNow, true);
@@ -419,14 +420,14 @@ var BusySlots = Object.freeze({
   function calendarBookingTimeGT(businessData, slots, slotSize, day) {
 
     var slotDay = _$1(slots.days).find(function (d) {
-      return moment(d.date).isSame(day.date, 'day');
+      return moment$1(d.date).isSame(day.date, 'day');
     });
     var selectedSlot = undefined;
     if (slotDay && slotDay.slots && slotDay.slots.length > 0) {
       for (var i = 0; i < slotDay.slots.length; i++) {
         if (slotDay.slots[i].space_left > 0) {
-          var checkSlot = moment.utc(slotDay.date).add(slotDay.slots[i].time, 'm');
-          if (checkSlot > moment.utc()) {
+          var checkSlot = moment$1.utc(slotDay.date).add(slotDay.slots[i].time, 'm');
+          if (checkSlot > moment$1.utc()) {
             selectedSlot = checkSlot;
             break;
           }
@@ -794,8 +795,8 @@ var Booking = Object.freeze({
     var cracSlotSize = getCracVectorSlotSize(bitset);
     bitset = prepareBitset(bitset, cracSlotSize);
     var dayBounds = getFirstLastMinutes(bitset, cracSlotSize);
-    dayBounds.start_time = moment(date).add(dayBounds.start, 'minutes').toISOString();
-    dayBounds.end_time = moment(date).add(dayBounds.end, 'minutes').toISOString();
+    dayBounds.start_time = moment$1(date).add(dayBounds.start, 'minutes').toISOString();
+    dayBounds.end_time = moment$1(date).add(dayBounds.end, 'minutes').toISOString();
     return dayBounds;
   }
 
@@ -819,7 +820,7 @@ var Booking = Object.freeze({
 
   // Special fix for `$scope.getEmptyDayLabel()` in `desktopwidget` app.
   function isoDateForDayOff(date) {
-    return moment(date).toISOString().replace('.000Z', 'Z');
+    return moment$1(date).toISOString().replace('.000Z', 'Z');
   }
 
   /**
@@ -1250,7 +1251,7 @@ var taxonomies = Object.freeze({
     cracResult.forEach(function (cracSlot) {
       var bitSets = getBitSetsFromCracSlots(cracSlot, roomCapacityByService, taxonomyIDs, resourceIDs, taxonomiesRooms);
       var daySlots = {};
-      daySlots.date = moment(cracSlot.date).utc().startOf('day').toISOString();
+      daySlots.date = moment$1(cracSlot.date).utc().startOf('day').toISOString();
       daySlots.resources = [];
       daySlots.slots = [];
       var serviceRoomVectors = {};
@@ -1544,9 +1545,9 @@ var taxonomies = Object.freeze({
     if (!service.discounts || !service.discounts.length) {
       return [];
     }
-    startTime = moment.utc(startTime);
+    startTime = moment$1.utc(startTime);
     return service.discounts.filter(function (d) {
-      return d.active && moment.utc(d.start).isBefore(startTime) && moment.utc(d.start).startOf('w').add('w', d.weeklyRepeat).isAfter(startTime);
+      return d.active && moment$1.utc(d.start).isBefore(startTime) && moment$1.utc(d.start).startOf('w').add('w', d.weeklyRepeat).isAfter(startTime);
     });
   }
 
@@ -1554,15 +1555,15 @@ var taxonomies = Object.freeze({
     if (!service.discounts) {
       return [];
     }
-    time = moment.utc(time);
+    time = moment$1.utc(time);
     var activeDiscountsItems = service.discounts.filter(function (d) {
-      return d.active && d.days.indexOf(days[time.day()]) !== -1 && moment.utc(d.start).isBefore(time) && moment.utc(d.start).startOf('w').add('w', d.weeklyRepeat).isAfter(time);
+      return d.active && d.days.indexOf(days[time.day()]) !== -1 && moment$1.utc(d.start).isBefore(time) && moment$1.utc(d.start).startOf('w').add('w', d.weeklyRepeat).isAfter(time);
     });
     var discounts = activeDiscountsItems.map(function (d) {
       var slot = _$1.find(d.slots, function (slot) {
-        var slotStart = moment(time).startOf('day').add('m', slot.time.start);
-        var slotEnd = moment(time).startOf('day').add('m', slot.time.end - 1);
-        return moment.range(slotStart, slotEnd).contains(time);
+        var slotStart = moment$1(time).startOf('day').add('m', slot.time.start);
+        var slotEnd = moment$1(time).startOf('day').add('m', slot.time.end - 1);
+        return moment$1.range(slotStart, slotEnd).contains(time);
       });
       return slot ? slot.amount : undefined;
     }).filter(function (d) {
@@ -1585,7 +1586,7 @@ var taxonomies = Object.freeze({
     if (t && t[0]) {
       if (!parentDiscount.discount && typeof t[0].discounts.regular !== 'undefined') {
         t[0].discounts.regular.forEach(function (discount) {
-          var end = moment(discount.start).add(discount.weeklyRepeat, 'weeks');
+          var end = moment$1(discount.start).add(discount.weeklyRepeat, 'weeks');
           if (discount.active && (discount.unlimWeeklyRepeat || time.isAfter(discount.start) && time.isBefore(end))) {
             for (var day in discount.week) {
               discount.week[day].forEach(function (slot) {
@@ -1617,7 +1618,7 @@ var taxonomies = Object.freeze({
     businessData.business.taxonomies.forEach(function (t) {
       if (t.id === taxonomyParentID && typeof t.discounts.exceptions !== 'undefined') {
         t.discounts.exceptions.forEach(function (exception) {
-          var date = moment(exception.date);
+          var date = moment$1(exception.date);
           if (exception.active && time.format("YYYY-MM-DD") === date.format("YYYY-MM-DD")) {
             exception.slots.forEach(function (slot) {
               if (timeInMinutes >= slot.start && timeInMinutes <= slot.end) {
@@ -1651,7 +1652,7 @@ var taxonomies = Object.freeze({
     //Checking for Exception Discounts, it has higher priority than Regular Discounts
     if (typeof service.discounts.exceptions !== 'undefined') {
       service.discounts.exceptions.forEach(function (exception) {
-        var date = moment(exception.date);
+        var date = moment$1(exception.date);
         if (exception.active && time.format("YYYY-MM-DD") === date.format("YYYY-MM-DD")) {
           exception.slots.forEach(function (s) {
             if (timeInMinutes >= s.start && timeInMinutes <= s.end) {
@@ -1666,7 +1667,7 @@ var taxonomies = Object.freeze({
     //Checking for Campaign & Regular Discounts, Regular Discounts has lower priority than Campaign Discounts
     if (!slot.discount && typeof service.discounts.regular !== 'undefined') {
       service.discounts.regular.forEach(function (discount) {
-        var end = moment(discount.start).add(discount.weeklyRepeat, 'weeks');
+        var end = moment$1(discount.start).add(discount.weeklyRepeat, 'weeks');
         if (discount.active && (time.isAfter(discount.start) && time.isBefore(end) || discount.unlimWeeklyRepeat)) {
           for (var day in discount.week) {
             discount.week[day].forEach(function (s) {
@@ -1739,20 +1740,20 @@ var Discounts = Object.freeze({
           alignmentBusySlotsByTaxonomyDuration(busySlotsDay.start_time, self.taxDuration, self.slotSize, busySlotsDay.slots.busy);
         }
 
-        var finish = moment.utc(busySlotsDay.end_time);
+        var finish = moment$1.utc(busySlotsDay.end_time);
         var exceptionFound = false;
-        var consequentDays = moment.utc(busySlotsDay.start_time).add(1, 'day').isSame(finish, 'day') && nextDay && nextDay.start_time && nextDay.start_time.indexOf("T00:00:00") > -1;
+        var consequentDays = moment$1.utc(busySlotsDay.start_time).add(1, 'day').isSame(finish, 'day') && nextDay && nextDay.start_time && nextDay.start_time.indexOf("T00:00:00") > -1;
         (busySlotsDay.slots.busy || []).forEach(function (slot) {
-          slot.startTS = moment.utc(slot.time).unix();
+          slot.startTS = moment$1.utc(slot.time).unix();
         });
 
-        for (var slot_time = moment.utc(busySlotsDay.start_time); slot_time.isBefore(finish);) {
+        for (var slot_time = moment$1.utc(busySlotsDay.start_time); slot_time.isBefore(finish);) {
           var dateCheck = checkSlotInterval(busySlotsDay.slots, slot_time.toDate(), self.taxDuration);
           var space = dateCheck[0],
               duration = dateCheck[1],
               busyStart = dateCheck[2];
           var spaceLeft = space;
-          var slotTimeFinish = moment(slot_time).add('minutes', self.taxDuration);
+          var slotTimeFinish = moment$1(slot_time).add('minutes', self.taxDuration);
           if (consequentDays && slotTimeFinish.isAfter(finish)) {
             var slotEndMinute = slotTimeFinish.hour() * 60 + slotTimeFinish.minute();
             if (nextDay && nextDay.slots && nextDay.slots.busy && nextDay.slots.busy.length > 0) {
@@ -1796,7 +1797,7 @@ var Discounts = Object.freeze({
                     self.totalDuration += getServiceDuration(t, worker);
                   });
                 }
-                currentSlotBackRange = moment.range(moment(bs.time).add('m', -self.totalDuration), moment(bs.time));
+                currentSlotBackRange = moment$1.range(moment$1(bs.time).add('m', -self.totalDuration), moment$1(bs.time));
                 /* jshint loopfunc:true */
 
                 slots.forEach(function (s) {
@@ -1808,11 +1809,11 @@ var Discounts = Object.freeze({
             })();
           }
 
-          if (!consequentDays && moment(slot_time).add('m', self.slotSize).isAfter(finish)) {
+          if (!consequentDays && moment$1(slot_time).add('m', self.slotSize).isAfter(finish)) {
             space = 0;
           }
 
-          var actualSlot = moment(slot_time);
+          var actualSlot = moment$1(slot_time);
 
           var slot = {
             provider: 'LOCAL'
@@ -1876,7 +1877,7 @@ var Discounts = Object.freeze({
             }
           }
 
-          var businessNow = moment.utc();
+          var businessNow = moment$1.utc();
           setBusinessDateTZ(self.businessData, businessNow);
           var businessNowLikeUTC = getDateLikeUTC(businessNow);
           if (!busy) {
@@ -1886,8 +1887,8 @@ var Discounts = Object.freeze({
             busy = businessNowLikeUTC.isAfter(actualSlot) || space === 0 || busySlotsDay.forceAllSlotsBusy;
           }
 
-          if (!busy && spaceLeft === 0 && bs && moment.utc(slot_time).add(-self.totalDuration, 'minutes').isBefore(moment.utc(bs.time).add(bs.duration, 'minutes'))) {
-            slot_time = moment.utc(bs.time).add(bs.duration, 'minutes');
+          if (!busy && spaceLeft === 0 && bs && moment$1.utc(slot_time).add(-self.totalDuration, 'minutes').isBefore(moment$1.utc(bs.time).add(bs.duration, 'minutes'))) {
+            slot_time = moment$1.utc(bs.time).add(bs.duration, 'minutes');
           }
 
           slots.push({
@@ -1906,9 +1907,9 @@ var Discounts = Object.freeze({
           });
 
           if (busyStart) {
-            if (moment.utc(busyStart).isAfter(slot_time) || moment.utc(busyStart).isBefore(slot_time) && moment.utc(busyStart).diff(slot_time, 'minute') === -1 //fix for crac 1 minute
+            if (moment$1.utc(busyStart).isAfter(slot_time) || moment$1.utc(busyStart).isBefore(slot_time) && moment$1.utc(busyStart).diff(slot_time, 'minute') === -1 //fix for crac 1 minute
             ) {
-                slot_time = moment.utc(busyStart);
+                slot_time = moment$1.utc(busyStart);
               }
           }
 
@@ -1969,7 +1970,7 @@ var Discounts = Object.freeze({
             return;
           }
 
-          var slot_time = moment.utc(busySlotsDay.date).add(slot.time, 'm');
+          var slot_time = moment$1.utc(busySlotsDay.date).add(slot.time, 'm');
           var overQuota = false;
           if (taxiParkUser) {
             var slotAppointmentCount = slot_time.format("DD.MM.YYYY");
@@ -1978,7 +1979,7 @@ var Discounts = Object.freeze({
             }
           }
 
-          var workTime = moment(now);
+          var workTime = moment$1(now);
           if (self.minTimeBooking && self.minTimeBooking > 0) {
             workTime.add(self.minTimeBooking, 'hour');
           }
@@ -1994,7 +1995,7 @@ var Discounts = Object.freeze({
             spaceLeft = self.maxSlotCapacity;
           }
 
-          var actualSlot = moment(slot_time);
+          var actualSlot = moment$1(slot_time);
           var slotDiscount = getServiceDiscountsAndExceptions(self.businessData, self.taxonomy, actualSlot);
           slots.push({
             actualSlot: actualSlot,
@@ -2174,6 +2175,7 @@ var Discounts = Object.freeze({
   /**
    * Контейнер для данных расписания одного дня. 
    * Предоставляет интерфейс к данным такого расписания.
+   * Данный класс служит моделью для визуального представления (или ответа на запрос).
    */
   var ScheduleDay = function () {
     function ScheduleDay() {
@@ -2201,6 +2203,41 @@ var Discounts = Object.freeze({
   }();
 
   /**
+   * Контейнер для данных расписания одного дня для данных.
+   * Принимает на вход массив слотов и, таким образом, работает тривиальным образом.
+   */
+  var ScheduleSlotsDay = function (_ScheduleDay) {
+    inherits(ScheduleSlotsDay, _ScheduleDay);
+
+    /**
+     * 
+     * @param {Array<{start: {number}, end: {number}, available: {boolean}}>} slots
+     * @return {Object|Array|*|void}
+     */
+    function ScheduleSlotsDay(slots) {
+      classCallCheck(this, ScheduleSlotsDay);
+
+      var _this = possibleConstructorReturn(this, (ScheduleSlotsDay.__proto__ || Object.getPrototypeOf(ScheduleSlotsDay)).call(this));
+
+      _this.slots = slots;
+      return _this;
+    }
+
+    createClass(ScheduleSlotsDay, [{
+      key: "isDayAvailable",
+      value: function isDayAvailable() {
+        return this.slots.length > 0;
+      }
+    }, {
+      key: "getSlots",
+      value: function getSlots() {
+        return this.slots;
+      }
+    }]);
+    return ScheduleSlotsDay;
+  }(ScheduleDay);
+
+  /**
    * Create day slots from abstract slots iterator.
    * @param {ScheduleSlotsIterator} iterator
    * @returns {Array} day slots
@@ -2223,6 +2260,22 @@ var Discounts = Object.freeze({
   function cutSlotsWithoutBusy(iterator) {
     var slot = void 0,
         slots = [];
+    while (slot = iterator.nextSlot()) {
+      if (slot.available) slots.push(slot);
+    }
+
+    return slots;
+  }
+
+  /**
+   * Create day slots from abstract slots iterator without start busy slots.
+   * @param {ScheduleSlotsIterator} iterator
+   * @returns {Array} day slots
+   */
+  function cutSlotsWithoutStartBusy(iterator) {
+    var slot = void 0,
+        slots = [];
+    while ((slot = iterator.nextSlot()) && slot.available) {}
     while (slot = iterator.nextSlot()) {
       if (slot.available) slots.push(slot);
     }
@@ -2280,6 +2333,7 @@ var Discounts = Object.freeze({
       _this.duration = duration;
       _this.slotSize = scheduleSlotSize;
       _this.enhanceSlotFn = enhanceSlotFn;
+      _this.nowMinutes = -1;
       _this.curSlot = null;
       _this._initializeDayBounds();
       return _this;
@@ -2341,6 +2395,10 @@ var Discounts = Object.freeze({
           }
         }
 
+        if (this.nowMinutes >= 0) {
+          if (start < this.nowMinutes) available = false;
+        }
+
         return { start: start, available: available };
       }
     }, {
@@ -2383,45 +2441,62 @@ var Discounts = Object.freeze({
     /**
      * 
      * @param {CRACResourcesAndRoomsSlot} cracDay raw CRAC data
+     * @param {Date} businessNow now time in business timezone (in tz_like_utc representation)
      * @param {function(ScheduleSlotsIterator)} cutSlotsFn
+     * @param {function(ScheduleSlotsIterator)} cutSlotsThisDayFn
      */
-    function ScheduleCRACDaySlots(cracDay) {
-      var cutSlotsFn = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : cutSlots$1;
+    function ScheduleCRACDaySlots(cracDay, businessNow) {
+      var cutSlotsFn = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : cutSlots$1;
+      var cutSlotsThisDayFn = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : cutSlotsWithoutStartBusy;
       classCallCheck(this, ScheduleCRACDaySlots);
 
-      this._cracDay = cracDay;
-      this._cutSlotsFn = cutSlotsFn;
+      this.cracDay = cracDay;
+      this.businessNow = businessNow;
+      this.cutSlotsFn = cutSlotsFn;
+      this.cutSlotsThisDayFn = cutSlotsThisDayFn;
     }
 
-    /**
-     * Create all slots from raw CRAC data.
-     * 
-     * @param {string} resourceID specific resource. Could be 'ANY' for any available
-     * @param {number} duration
-     * @param {number} slotSize
-     * @param {function|null} enhanceSlotFn
-     * @returns {Object} slots
-     */
-
-
     createClass(ScheduleCRACDaySlots, [{
+      key: "isThisDay",
+      value: function isThisDay() {
+        return this.cracDay.date.substr(0, 10) === this.businessNow.toISOString().substr(0, 10);
+      }
+
+      /**
+       * Create all slots from raw CRAC data.
+       * 
+       * @param {string} resourceID specific resource. Could be 'ANY' for any available
+       * @param {number} duration
+       * @param {number} slotSize
+       * @param {function|null} enhanceSlotFn
+       * @returns {Array<{start: {number}, end: {number}, available: {boolean}}>} slots
+       */
+
+    }, {
       key: "cutSlots",
       value: function cutSlots(resourceID, duration, slotSize) {
         var enhanceSlotFn = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : null;
 
         var iterator = this.getSlotsIterator(resourceID, duration, slotSize, enhanceSlotFn);
-        return iterator ? this._cutSlotsFn(iterator) : null;
+        var _cutSlots = this.isThisDay() ? this.cutSlotsThisDayFn : this.cutSlotsFn;
+        return iterator ? _cutSlots(iterator) : null;
       }
     }, {
       key: "getSlotsIterator",
       value: function getSlotsIterator(resourceID, duration, slotSize) {
         var enhanceSlotFn = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : null;
 
-        var cracDay = this._cracDay;
+        var cracDay = this.cracDay;
         var bitset = ANY === resourceID ? cracDay.getResourceIntersection() : cracDay.getResource(resourceID);
         if (bitset) {
           var vectorSlotSize = getCracVectorSlotSize(bitset);
-          return new ScheduleCracSlotsIterator(bitset, vectorSlotSize, duration, slotSize, enhanceSlotFn.bind(cracDay));
+          var iterator = new ScheduleCracSlotsIterator(bitset, vectorSlotSize, duration, slotSize, enhanceSlotFn.bind(cracDay));
+          // Если текущий день, то необходимо не учитывать слоты времени, которое уже истекло
+          if (this.isThisDay()) {
+            iterator.nowMinutes = getMinutesFromStartOfDay(this.businessNow);
+          }
+
+          return iterator;
         }
 
         return null;
@@ -2430,68 +2505,32 @@ var Discounts = Object.freeze({
     return ScheduleCRACDaySlots;
   }();
 
+  function getMinutesFromStartOfDay(d) {
+    return d.getUTCHours() * 60 + d.getUTCMinutes();
+  }
+
   /**
-   * Контейнер для данных расписания одного дня для данных, полученных из CRAC. 
+   * Принимает на вход объект-хранилище слотов CRACResourcesAndRoomsSlot, биизнес данные, работника, услугу
+   * и возвращает готовый набор слотов.
+   * 
+   * @param {CRACResourcesAndRoomsSlot} cracDay
+   * @param business
+   * @param taxonomy
+   * @param worker
+   * @param enhanceSlotFn
+   * @return {Object|Array|*|void}
    */
-  var ScheduleCRACDay = function (_ScheduleDay) {
-    inherits(ScheduleCRACDay, _ScheduleDay);
-    createClass(ScheduleCRACDay, null, [{
-      key: "cutBusinessSlots",
-
-      /**
-       * Принимает на вход объект-хранилище слотов ScheduleCRACDaySlots, биизнес данные, работника, услугу
-       * и возвращает готовый набор слотов.
-       * 
-       * @param {ScheduleCRACDaySlots} cracDay
-       * @param business
-       * @param taxonomy
-       * @param worker
-       * @param enhanceSlotFn
-       * @return {Object|Array|*|void}
-       */
-      value: function cutBusinessSlots(cracDay, business, taxonomy, worker, enhanceSlotFn) {
-        assert$1(cracDay instanceof ScheduleCRACDaySlots, 'cracDay should be instance of ScheduleCRACDaySlots');
-        var taxDuration = getServiceDuration(taxonomy, worker);
-        var widgetConfiguration = business.widget_configuration;
-        var forceSlotSize = widgetConfiguration && widgetConfiguration.displaySlotSize && widgetConfiguration.displaySlotSize < taxDuration;
-        var slotSize = forceSlotSize ? widgetConfiguration.displaySlotSize : taxDuration;
-        return cracDay.cutSlots(worker.id, taxDuration, slotSize, enhanceSlotFn);
-      }
-
-      /**
-       * 
-       * @param {ScheduleCRACDaySlots} cracDay
-       * @param business
-       * @param taxonomy
-       * @param worker
-       * @param enhanceSlotFn
-       * @return {Object|Array|*|void}
-       */
-
-    }]);
-
-    function ScheduleCRACDay(cracDay, business, taxonomy, worker, enhanceSlotFn) {
-      classCallCheck(this, ScheduleCRACDay);
-
-      var _this2 = possibleConstructorReturn(this, (ScheduleCRACDay.__proto__ || Object.getPrototypeOf(ScheduleCRACDay)).call(this));
-
-      _this2.slots = ScheduleCRACDay.cutBusinessSlots(cracDay, business, taxonomy, worker, enhanceSlotFn);
-      return _this2;
-    }
-
-    createClass(ScheduleCRACDay, [{
-      key: "isDayAvailable",
-      value: function isDayAvailable() {
-        return this.slots.length > 0;
-      }
-    }, {
-      key: "getSlots",
-      value: function getSlots() {
-        return this.slots;
-      }
-    }]);
-    return ScheduleCRACDay;
-  }(ScheduleDay);
+  function getSlotsFromBusinessAndCRAC(cracDay, business, taxonomy, worker, enhanceSlotFn) {
+    assert$1(cracDay instanceof CRACResourcesAndRoomsSlot, 'cracDay should be instance of CRACResourcesAndRoomsSlot');
+    var taxDuration = getServiceDuration(taxonomy, worker);
+    var widgetConfiguration = business.widget_configuration;
+    var forceSlotSize = widgetConfiguration && widgetConfiguration.displaySlotSize && widgetConfiguration.displaySlotSize < taxDuration;
+    var slotSize = forceSlotSize ? widgetConfiguration.displaySlotSize : taxDuration;
+    var cutSlots = widgetConfiguration.hideGraySlots ? cutSlotsWithoutBusy : cutSlots;
+    var businessNow = getBusinessDateLikeUTC(moment.utc(), { business: business }).toDate();
+    var scheduleCRACSlots = new ScheduleCRACDaySlots(cracDay, businessNow, cutSlots);
+    return scheduleCRACSlots.cutSlots(worker.id, taxDuration, slotSize, enhanceSlotFn);
+  }
 
 
 
@@ -2506,11 +2545,13 @@ var Discounts = Object.freeze({
   	CRACResourcesAndRoomsResponse: CRACResourcesAndRoomsResponse,
   	ScheduleSlotsIterator: ScheduleSlotsIterator,
   	ScheduleDay: ScheduleDay,
+  	ScheduleSlotsDay: ScheduleSlotsDay,
   	cutSlots: cutSlots$1,
   	cutSlotsWithoutBusy: cutSlotsWithoutBusy,
+  	cutSlotsWithoutStartBusy: cutSlotsWithoutStartBusy,
   	ScheduleCracSlotsIterator: ScheduleCracSlotsIterator,
   	ScheduleCRACDaySlots: ScheduleCRACDaySlots,
-  	ScheduleCRACDay: ScheduleCRACDay
+  	getSlotsFromBusinessAndCRAC: getSlotsFromBusinessAndCRAC
   });
 
   function roundNumberUsingRule(input, businessData, noCommas) {
@@ -3175,13 +3216,13 @@ var ResourcesMostFree = Object.freeze({
     if (firstActiveBit != bitmask.length - 1 || firstActiveBit == bitmask.length - 1 && lastActiveBit > 1) {
       allDayBounds = {};
       allDayBounds.start = (bitmask.length - 1 - firstActiveBit) * cracSlotSize;
-      allDayBounds.start_time = moment(date).add(allDayBounds.start, 'minutes').toISOString();
+      allDayBounds.start_time = moment$1(date).add(allDayBounds.start, 'minutes').toISOString();
       if (lastActiveBit == 1) {
         allDayBounds.end = bitmask.length * cracSlotSize;
       } else {
         allDayBounds.end = (bitmask.length - lastActiveBit) * cracSlotSize;
       }
-      allDayBounds.end_time = moment(date).add(allDayBounds.end, 'minutes').toISOString();
+      allDayBounds.end_time = moment$1(date).add(allDayBounds.end, 'minutes').toISOString();
     }
     return allDayBounds;
   }
@@ -3221,7 +3262,7 @@ var ResourcesMostFree = Object.freeze({
     var reverseOffset = bitmask.length - 1;
     var startBitIndex = typeof startMinutes === 'undefined' ? 0 : Math.floor(startMinutes / cracSlotSize);
     var endBitIndex = typeof endMinutes === 'undefined' ? reverseOffset : Math.floor(endMinutes / cracSlotSize);
-    var resultDate = moment.utc(date);
+    var resultDate = moment$1.utc(date);
 
     var currentSlot = void 0;
     function commitSlot() {
@@ -3302,7 +3343,7 @@ var ResourcesMostFree = Object.freeze({
       }
 
       if (startSlot) {
-        start_time = moment.utc(date).startOf('day').add(startSlot.end, 'minutes').toISOString();
+        start_time = moment$1.utc(date).startOf('day').add(startSlot.end, 'minutes').toISOString();
       }
     }
 
@@ -3333,7 +3374,7 @@ var ResourcesMostFree = Object.freeze({
 
   // Special fix for `$scope.getEmptyDayLabel()` in `desktopwidget` app.
   function isoDateForDayOff$1(date) {
-    return moment(date).toISOString().replace('.000Z', 'Z');
+    return moment$1(date).toISOString().replace('.000Z', 'Z');
   }
 
   /**
@@ -3686,7 +3727,7 @@ var ResourcesMostFree = Object.freeze({
     cracResult.forEach(function (cracSlot) {
       var bitSets = getBitSetsFromCracSlots$1(cracSlot, roomCapacityByService, taxonomies, resources, taxonomiesRooms);
       var daySlots = {};
-      daySlots.date = moment(cracSlot.date).utc().startOf('day').toISOString();
+      daySlots.date = moment$1(cracSlot.date).utc().startOf('day').toISOString();
       daySlots.resources = [];
       daySlots.slots = [];
       var serviceRoomVectors = {};
