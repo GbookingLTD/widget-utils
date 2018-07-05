@@ -1,6 +1,6 @@
 {
   "name": "widget-utils",
-  "version": "0.7.15",
+  "version": "0.7.16",
   "authors": [
     "swvitaliy <sw.vitaliy@gmail.com>",
     "vasiliy0s <talk@vasiliy0s.com>",
@@ -20,6 +20,6 @@
     "tests"
   ],
   "dependencies": {
-    "crac-utils": "http://git.dev.gbooking.ru/gbooking/crac-utils/repository/archive.tar.gz?ref=v1.3.8"
+    "crac-utils": "http://git.dev.gbooking.ru/gbooking/crac-utils/repository/archive.tar.gz?ref=v1.3.9"
   }
 }
