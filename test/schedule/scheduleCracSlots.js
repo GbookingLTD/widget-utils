@@ -89,7 +89,30 @@ describe('ScheduleCracSlotsIterator (with cutSlotsWithoutBusyBounds)', function(
     });
     should(iterator.nextSlot()).be.equal(null);
   });
-  it.only('(optimisation) find available slot start from tail of current', function() {
+  it('2 active slots 1 busy 5 active starts with 10:00 (1 min cracSlotSize)', function() {
+    let str = stringCracVector('0'.repeat(600) + '1'.repeat(60) + '0'.repeat(25) + '1'.repeat(150), 1440);
+    let bitset = prepareBitset(str, 1);
+    const iterator = new Schedule.ScheduleCracSlotsIterator(bitset, 1, 30, 30);
+    iterator.nextSlot().should.have.properties({
+      start: 600,
+      end: 630,
+      available: true
+    });
+    iterator.nextSlot().should.have.properties({
+      start: 630,
+      end: 660,
+      available: true
+    });
+    for (let i = 0; i < 5; ++i) {
+      iterator.nextSlot().should.have.properties({
+        start: 685 + i * 30,
+        end: 685 + (i + 1) * 30,
+        available: true
+      });
+    }
+    should(iterator.nextSlot()).be.equal(null);
+  });
+  it('(optimisation) find available slot start from tail of current', function() {
     let str = stringCracVector('100' + '1'.repeat(6));
     let bitset = prepareBitset(str, 5);
     const iterator = new Schedule.ScheduleCracSlotsIterator(bitset, 5, 30, 10);

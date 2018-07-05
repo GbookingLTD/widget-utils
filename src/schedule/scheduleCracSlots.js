@@ -1,9 +1,9 @@
 "use strict";
 
 import {getServiceDuration} from "../taxonomies";
-import {ScheduleSlotsIterator, cutSlotsWithoutBusyBounds} from "./scheduleSlots";
-import {getCracVectorSlotSize, prepareBitset, _findBack0, getFirstLastMinutes, isSlotAvailable, 
-  calcCRACSlotIntermediate} from '../../bower_components/crac-utils/src';
+import {ScheduleSlotsIterator, ScheduleDay, cutSlots} from "./scheduleSlots";
+import {getCracVectorSlotSize, _findBack0, getFirstLastMinutes, 
+  isSlotAvailable} from '../../bower_components/crac-utils/src';
 
 const ANY = 'ANY';
 
@@ -127,19 +127,20 @@ export class ScheduleCracSlotsIterator extends ScheduleSlotsIterator {
 }
 
 /**
- * Данный класс инкапсулирует данные CRAC и, в случае необходимости, на их основе "нарезает слоты".
+ * Данный класс инкапсулирует данные CRAC по одному дню и, в случае необходимости, 
+ * на их основе "нарезает слоты" за этот день.
  * Данный класс ничего не должен знать про структуру данных бизнеса. Его сфера ответственности - данные CRAC.
  * Если необходимо использовать данные бизнеса - передавайте их через параметры функций или свойства объекта.
  */
-export class ScheduleCRACSlots {
+export class ScheduleCRACDaySlots {
 
   /**
    * 
-   * @param {*} cracData raw CRAC data
+   * @param {CRACResourcesAndRoomsSlot} cracDay raw CRAC data
    * @param {function(ScheduleSlotsIterator)} cutSlotsFn
    */
-  constructor(cracData, cutSlotsFn = cutSlotsWithoutBusyBounds) {
-    this._cracData = cracData;
+  constructor(cracDay, cutSlotsFn = cutSlots) {
+    this._cracDay = cracDay;
     this._cutSlotsFn = cutSlotsFn;
   }
 
@@ -153,55 +154,67 @@ export class ScheduleCRACSlots {
    * @returns {Object} slots
    */
   cutSlots(resourceID, duration, slotSize, enhanceSlotFn = null) {
-    const cutSlots = this._cutSlotsFn;
+    const iterator = this.getSlotsIterator(resourceID, duration, slotSize, enhanceSlotFn);
+    return iterator ? this._cutSlotsFn(iterator) : null;
+  }
 
-    return this._cracData.slots.reduce(function (ret, cracDay) {
-      let bitset
-        , vectorSlotSize;
-      
-      if (ANY === resourceID) {
-        const intersection = calcCRACSlotIntermediate(cracDay);
-        vectorSlotSize = getCracVectorSlotSize(intersection);
-        bitset = prepareBitset(intersection, vectorSlotSize);
-      } else {
-        const isExcluded = cracDay.excludedResources && cracDay.excludedResources.indexOf(resourceID) !== -1;
-        if (!isExcluded) {
-          const resourceData = cracDay.resources.find(r => r.resourceId === resourceID);
-          if (resourceData) {
-            vectorSlotSize = getCracVectorSlotSize(resourceData.bitset);
-            bitset = prepareBitset(resourceData.bitset, vectorSlotSize);
-          }
-        }
-      }
+  getSlotsIterator(resourceID, duration, slotSize, enhanceSlotFn = null) {
+    const cracDay = this._cracDay;
+    const bitset = ANY === resourceID ? cracDay.getResourceIntersection() :
+      cracDay.getResource(resourceID);
+    if (bitset) {
+      const vectorSlotSize = getCracVectorSlotSize(bitset);
+      return new ScheduleCracSlotsIterator(bitset, vectorSlotSize, duration, slotSize, enhanceSlotFn.bind(cracDay));
+    }
 
-      if (bitset) {
-        const dayKey = cracDay.date.substr(0, 10);
-        let iterator = new ScheduleCracSlotsIterator(bitset, vectorSlotSize, duration, slotSize, enhanceSlotFn);
-        ret[dayKey] = cutSlots(iterator);
-      }
-
-      return ret;
-    }, {});
+    return null;
   }
 }
 
 /**
- * Принимает на вход объект-хранилище слотов ScheduleCRACSlots, биизнес данные, работника, услугу
- * и возвращает готовый набор слотов.
- * 
- * @param cracSlots
- * @param business
- * @param taxonomy
- * @param worker
- * @param enhanceSlotFn
- * @return {Object|Array|*|void}
+ * Контейнер для данных расписания одного дня для данных, полученных из CRAC. 
  */
-export function cutCRACBusinessSlots(cracSlots, business, taxonomy, worker, enhanceSlotFn) {
-  assert(cracSlots instanceof ScheduleCRACSlots, 'cracSlots should be instance of ScheduleCRACSlots');
-  let taxDuration = getServiceDuration(taxonomy, worker);
-  const widgetConfiguration = business.widget_configuration;
-  let forceSlotSize = widgetConfiguration && widgetConfiguration.displaySlotSize && 
-      widgetConfiguration.displaySlotSize < taxDuration;
-  let slotSize = forceSlotSize ? widgetConfiguration.displaySlotSize : taxDuration;
-  return cracSlots.cutSlots(worker.id, taxDuration, slotSize, enhanceSlotFn);
+export class ScheduleCRACDay extends ScheduleDay {
+  /**
+   * Принимает на вход объект-хранилище слотов ScheduleCRACDaySlots, биизнес данные, работника, услугу
+   * и возвращает готовый набор слотов.
+   * 
+   * @param {ScheduleCRACDaySlots} cracDay
+   * @param business
+   * @param taxonomy
+   * @param worker
+   * @param enhanceSlotFn
+   * @return {Object|Array|*|void}
+   */
+  static cutBusinessSlots(cracDay, business, taxonomy, worker, enhanceSlotFn) {
+    assert(cracDay instanceof ScheduleCRACDaySlots, 'cracDay should be instance of ScheduleCRACDaySlots');
+    let taxDuration = getServiceDuration(taxonomy, worker);
+    const widgetConfiguration = business.widget_configuration;
+    let forceSlotSize = widgetConfiguration && widgetConfiguration.displaySlotSize && 
+        widgetConfiguration.displaySlotSize < taxDuration;
+    let slotSize = forceSlotSize ? widgetConfiguration.displaySlotSize : taxDuration;
+    return cracDay.cutSlots(worker.id, taxDuration, slotSize, enhanceSlotFn);
+  }
+
+  /**
+   * 
+   * @param {ScheduleCRACDaySlots} cracDay
+   * @param business
+   * @param taxonomy
+   * @param worker
+   * @param enhanceSlotFn
+   * @return {Object|Array|*|void}
+   */
+  constructor(cracDay, business, taxonomy, worker, enhanceSlotFn) {
+    super();
+    this.slots = ScheduleCRACDay.cutBusinessSlots(cracDay, business, taxonomy, worker, enhanceSlotFn);
+  }
+  
+  isDayAvailable() {
+    return this.slots.length > 0;
+  }
+  
+  getSlots() {
+    return this.slots;
+  }
 }

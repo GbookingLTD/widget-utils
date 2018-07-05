@@ -13,6 +13,23 @@ export class ScheduleSlotsIterator {
 }
 
 /**
+ * Контейнер для данных расписания одного дня. 
+ * Предоставляет интерфейс к данным такого расписания.
+ */
+export class ScheduleDay {
+  /**
+   * @return {boolean}
+   */
+  isDayAvailable() {}
+
+  /**
+   * 
+   * @return {Array<{start: {number}, end: {number}, available: {boolean}}>}
+   */
+  getSlots() {}
+}
+
+/**
  * Create day slots from abstract slots iterator.
  * @param {ScheduleSlotsIterator} iterator
  * @returns {Array} day slots
@@ -31,16 +48,11 @@ export function cutSlots(iterator) {
  * @param {ScheduleSlotsIterator} iterator
  * @returns {Array} day slots
  */
-export function cutSlotsWithoutBusyBounds(iterator) {
-  let slot, isHead = true, slots = [], availSlots = 0;
+export function cutSlotsWithoutBusy(iterator) {
+  let slot, slots = [];
   while (slot = iterator.nextSlot()) {
-    // skip head busy slots
-    if (!slot.available && isHead) continue;
-    if (slot.available && isHead) isHead = false;
-    slots.push(slot);
-    if (!slot.available) availSlots = slots.length - 1;
+    if (slot.available) slots.push(slot);
   }
 
-  // clean tailing busy slots
-  return availSlots ? slots.slice(0, availSlots) : [];
+  return slots;
 }
