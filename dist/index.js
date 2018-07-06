@@ -2278,7 +2278,7 @@ var Discounts = Object.freeze({
   function cutSlotsWithoutStartBusy(iterator) {
     var slot = void 0,
         slots = [];
-    while ((slot = iterator.nextSlot()) && slot.available) {}
+    while ((slot = iterator.nextSlot()) && !slot.available) {}
     while (slot = iterator.nextSlot()) {
       slots.push(slot);
     }
@@ -2536,7 +2536,7 @@ var Discounts = Object.freeze({
     });
     if (res && res.durations.length) {
       // supported only one taxonomy
-      slotSize = slotSize || res.durations[0];
+      slotSize = res.durations[0] || slotSize;
     }
     var scheduleCRACSlots = new ScheduleCRACDaySlots(cracDay, businessNow, cutSlots);
     return scheduleCRACSlots.cutSlots(worker.id, taxDuration, slotSize, enhanceSlotFn);

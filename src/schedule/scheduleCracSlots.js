@@ -225,7 +225,7 @@ export function getSlotsFromBusinessAndCRAC(cracDay, business, taxonomy, worker,
   let res = cracDay.resources.find((res) => res.id === worker.id);
   if (res && res.durations.length) {
     // supported only one taxonomy
-    slotSize = slotSize || res.durations[0];
+    slotSize = res.durations[0] || slotSize;
   }
   const scheduleCRACSlots = new ScheduleCRACDaySlots(cracDay, businessNow, cutSlots);
   return scheduleCRACSlots.cutSlots(worker.id, taxDuration, slotSize, enhanceSlotFn);
