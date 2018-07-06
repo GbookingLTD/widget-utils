@@ -2278,7 +2278,11 @@ var Discounts = Object.freeze({
   function cutSlotsWithoutStartBusy(iterator) {
     var slot = void 0,
         slots = [];
+    // skip unavailable slots from start of day
     while ((slot = iterator.nextSlot()) && !slot.available) {}
+    if (!slot) return slots;
+
+    slots.push(slot);
     while (slot = iterator.nextSlot()) {
       slots.push(slot);
     }

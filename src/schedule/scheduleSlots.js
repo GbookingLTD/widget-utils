@@ -89,7 +89,11 @@ export function cutSlotsWithoutBusy(iterator) {
  */
 export function cutSlotsWithoutStartBusy(iterator) {
   let slot, slots = [];
+  // skip unavailable slots from start of day
   while ((slot = iterator.nextSlot()) && !slot.available) {}
+  if (!slot) return slots;
+  
+  slots.push(slot);
   while (slot = iterator.nextSlot()) {
     slots.push(slot);
   }
