@@ -1,6 +1,6 @@
 {
   "name": "widget-utils",
-  "version": "0.7.19",
+  "version": "0.7.20",
   "scripts": {
     "test": "npm run build && node_modules/.bin/mocha test/**/*",
     "dev": "./node_modules/.bin/gulp dev",

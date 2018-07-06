@@ -2024,7 +2024,8 @@ var Discounts = Object.freeze({
     /* date;
     dateUnix;
     dateDate;
-    resources;*/
+    resources;
+    durations;*/
 
     function CRACResourcesAndRoomsSlot(cracSlot) {
       classCallCheck(this, CRACResourcesAndRoomsSlot);
@@ -2059,6 +2060,7 @@ var Discounts = Object.freeze({
             bitsetAssert(res.taxonomyBitSet);
             this.resources.push({
               id: res.resourceId,
+              durations: res.durations || [],
               bitset: prepareBitset(res.bitset, getCracVectorSlotSize(res.bitset))
               //taxonomyBitSet: prepareBitset(res.taxonomyBitSet, getCracVectorSlotSize(res.taxonomyBitSet))
             });
@@ -2278,7 +2280,7 @@ var Discounts = Object.freeze({
         slots = [];
     while ((slot = iterator.nextSlot()) && slot.available) {}
     while (slot = iterator.nextSlot()) {
-      if (slot.available) slots.push(slot);
+      slots.push(slot);
     }
 
     return slots;
@@ -2529,6 +2531,13 @@ var Discounts = Object.freeze({
     var slotSize = forceSlotSize ? widgetConfiguration.displaySlotSize : taxDuration;
     var cutSlots = widgetConfiguration.hideGraySlots ? cutSlotsWithoutBusy : cutSlots;
     var businessNow = getBusinessDateLikeUTC(moment.utc(), { business: business }).toDate();
+    var res = cracDay.resources.find(function (res) {
+      return res.id === worker.id;
+    });
+    if (res && res.durations.length) {
+      // supported only one taxonomy
+      slotSize = slotSize || res.durations[0];
+    }
     var scheduleCRACSlots = new ScheduleCRACDaySlots(cracDay, businessNow, cutSlots);
     return scheduleCRACSlots.cutSlots(worker.id, taxDuration, slotSize, enhanceSlotFn);
   }
