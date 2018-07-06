@@ -21,8 +21,9 @@ export class ScheduleBusySlotsCutter extends ScheduleSlotsCutter {
     this.totalDuration = 0;
     if (multiServices && multiServices.length) {
       taxonomy = multiServices[0];
+      const self = this;
       multiServices.forEach(function(service) {
-        this.totalDuration += getServiceDuration(service, worker);
+        self.totalDuration += getServiceDuration(service, worker);
       });
       this.taxDuration = this.totalDuration;
     }

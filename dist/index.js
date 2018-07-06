@@ -1494,8 +1494,9 @@ var taxonomies = Object.freeze({
         this.totalDuration = 0;
         if (multiServices && multiServices.length) {
           taxonomy = multiServices[0];
+          var self = this;
           multiServices.forEach(function (service) {
-            this.totalDuration += getServiceDuration(service, worker);
+            self.totalDuration += getServiceDuration(service, worker);
           });
           this.taxDuration = this.totalDuration;
         } else {
