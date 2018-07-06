@@ -8,7 +8,8 @@ export class CRACResourcesAndRoomsSlot {
   /* date;
   dateUnix;
   dateDate;
-  resources;*/
+  resources;
+  durations;*/
 
   constructor(cracSlot) {
     this.prepare(cracSlot);
@@ -33,6 +34,7 @@ export class CRACResourcesAndRoomsSlot {
       bitsetAssert(res.taxonomyBitSet);
       this.resources.push({
         id: res.resourceId,
+        durations: res.durations || [],
         bitset: prepareBitset(res.bitset, getCracVectorSlotSize(res.bitset)),
         //taxonomyBitSet: prepareBitset(res.taxonomyBitSet, getCracVectorSlotSize(res.taxonomyBitSet))
       });

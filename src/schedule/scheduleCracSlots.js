@@ -222,6 +222,11 @@ export function getSlotsFromBusinessAndCRAC(cracDay, business, taxonomy, worker,
   let slotSize = forceSlotSize ? widgetConfiguration.displaySlotSize : taxDuration;
   let cutSlots = widgetConfiguration.hideGraySlots ? cutSlotsWithoutBusy : cutSlots;
   let businessNow = getBusinessDateLikeUTC(moment.utc(), {business}).toDate();
+  let res = cracDay.resources.find((res) => res.id === worker.id);
+  if (res && res.durations.length) {
+    // supported only one taxonomy
+    slotSize = slotSize || res.durations[0];
+  }
   const scheduleCRACSlots = new ScheduleCRACDaySlots(cracDay, businessNow, cutSlots);
   return scheduleCRACSlots.cutSlots(worker.id, taxDuration, slotSize, enhanceSlotFn);
 }

@@ -91,7 +91,7 @@ export function cutSlotsWithoutStartBusy(iterator) {
   let slot, slots = [];
   while ((slot = iterator.nextSlot()) && slot.available) {}
   while (slot = iterator.nextSlot()) {
-    if (slot.available) slots.push(slot);
+    slots.push(slot);
   }
 
   return slots;
