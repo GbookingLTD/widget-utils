@@ -1,7 +1,7 @@
 (function (global, factory) {
   typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory(require('lodash'), require('moment'), require('moment-timezone')) :
   typeof define === 'function' && define.amd ? define(['lodash', 'moment', 'moment-timezone'], factory) :
-  (global.WidgetUtils = factory(global._,global.moment,global.moment-timezone));
+  (global.WidgetUtils = factory(global._,global.moment,global.momentTimezone));
 }(this, function (_$1,moment,momentTimezone) { 'use strict';
 
   _$1 = 'default' in _$1 ? _$1['default'] : _$1;
