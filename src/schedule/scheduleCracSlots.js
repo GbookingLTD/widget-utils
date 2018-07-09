@@ -1,5 +1,6 @@
 "use strict";
 
+import moment from 'moment';
 import {getBusinessDateLikeUTC} from "../dateTime";
 import {getServiceDuration} from "../taxonomies";
 import {
@@ -185,7 +186,7 @@ export class ScheduleCRACDaySlots {
       cracDay.getResource(resourceID);
     if (bitset) {
       const vectorSlotSize = getCracVectorSlotSize(bitset);
-      const iterator = new ScheduleCracSlotsIterator(bitset, vectorSlotSize, duration, slotSize, enhanceSlotFn.bind(cracDay));
+      const iterator = new ScheduleCracSlotsIterator(bitset, vectorSlotSize, duration, slotSize, enhanceSlotFn && enhanceSlotFn.bind(cracDay));
       // Если текущий день, то необходимо не учитывать слоты времени, которое уже истекло
       if (this.isThisDay()) {
         iterator.nowMinutes = getMinutesFromStartOfDay(this.businessNow);
@@ -214,19 +215,23 @@ function getMinutesFromStartOfDay(d) {
  * @return {Object|Array|*|void}
  */
 export function getSlotsFromBusinessAndCRAC(cracDay, business, taxonomy, worker, enhanceSlotFn) {
-  assert(cracDay instanceof CRACResourcesAndRoomsSlot, 'cracDay should be instance of CRACResourcesAndRoomsSlot');
   let taxDuration = getServiceDuration(taxonomy, worker);
+  return getSlotsFromBusinessAndCRACWithDuration(cracDay, business, worker.id, taxDuration, enhanceSlotFn)
+}
+
+export function getSlotsFromBusinessAndCRACWithDuration(cracDay, business, workerID, taxDuration, enhanceSlotFn) {
+  assert(cracDay instanceof CRACResourcesAndRoomsSlot, 'cracDay should be instance of CRACResourcesAndRoomsSlot');
   const widgetConfiguration = business.widget_configuration;
   let forceSlotSize = widgetConfiguration && widgetConfiguration.displaySlotSize && 
       widgetConfiguration.displaySlotSize < taxDuration;
   let slotSize = forceSlotSize ? widgetConfiguration.displaySlotSize : taxDuration;
   let cutSlots = widgetConfiguration.hideGraySlots ? cutSlotsWithoutBusy : cutSlots;
   let businessNow = getBusinessDateLikeUTC(moment.utc(), {business}).toDate();
-  let res = cracDay.resources.find((res) => res.id === worker.id);
+  let res = cracDay.resources.find((res) => res.id === workerID);
   if (res && res.durations.length) {
     // supported only one taxonomy
     slotSize = res.durations[0] || slotSize;
   }
   const scheduleCRACSlots = new ScheduleCRACDaySlots(cracDay, businessNow, cutSlots);
-  return scheduleCRACSlots.cutSlots(worker.id, taxDuration, slotSize, enhanceSlotFn);
+  return scheduleCRACSlots.cutSlots(workerID, taxDuration, slotSize, enhanceSlotFn);
 }

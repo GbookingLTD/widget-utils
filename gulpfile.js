@@ -18,7 +18,8 @@ gulp.task('compile', function() {
     .pipe($.rollup({
       globals: {
         'lodash': '_',
-        'moment': 'moment'
+        'moment': 'moment',
+        'moment-timezone': 'moment-timezone'
       },
       sourceMap: false,
       format: 'umd',
