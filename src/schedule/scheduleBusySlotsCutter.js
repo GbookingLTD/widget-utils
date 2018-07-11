@@ -44,7 +44,7 @@ export class ScheduleBusySlotsCutter extends ScheduleSlotsCutter {
     this.minTimeBooking = businessData.business.general_info.min_booking_time;
     // https://app.asana.com/0/search/364482197206303/141502515363228
     // this fix is for decreasing affected clients
-    if (businessData.business.backofficeType === 'MB' && !_.isUndefined(displaySlotSize) && displaySlotSize !== taxDuration){
+    if (businessData.business.backofficeType === 'MB' && !_.isUndefined(displaySlotSize) && displaySlotSize !== this.taxDuration){
       this.minTimeBooking += 2;
     }
     
