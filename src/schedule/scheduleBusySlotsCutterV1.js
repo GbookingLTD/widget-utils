@@ -16,11 +16,11 @@ export class ScheduleBusySlotsCutterV1 extends ScheduleBusySlotsCutter {
     super();
     this.initialize(businessData, busySlots, serviceId, worker, currentService, multiServices, false);
   }
-  
+
   cutSlots(busySlotsDay, now) {
     return this._cutSlots(busySlotsDay, now, this.nextDay, this.multiServices, this.worker, this.taxonomy);
   }
-  
+
   _cutSlots(busySlotsDay, now, nextDay, multiServices, taxonomy, worker) {
     const self = this;
     let slots = [];
@@ -42,6 +42,15 @@ export class ScheduleBusySlotsCutterV1 extends ScheduleBusySlotsCutter {
         , duration = dateCheck[1]
         , busyStart = dateCheck[2];
       var spaceLeft = space;
+      var forceDurationByBusyStart = 0;
+      var slotSize = self.slotSize;
+      if (busyStart) {
+        var endBusySlot = moment.utc(busyStart).add('m', duration);
+        forceDurationByBusyStart = endBusySlot.diff(slot_time, 'minute');
+        if(forceDurationByBusyStart > 0 && forceDurationByBusyStart < slotSize){
+          slotSize = forceDurationByBusyStart;
+        }
+      }
       var slotTimeFinish = moment(slot_time).add('minutes', self.taxDuration);
       if (consequentDays && slotTimeFinish.isAfter(finish)) {
         var slotEndMinute = slotTimeFinish.hour() * 60 + slotTimeFinish.minute();
@@ -188,7 +197,7 @@ export class ScheduleBusySlotsCutterV1 extends ScheduleBusySlotsCutter {
         isException: !!slot.isException,
         provider: slot.provider,
         showPopup: !self.dontShowPopup,
-        slotSize: self.slotSize
+        slotSize: slotSize
       });
 
       if (busyStart) {
@@ -199,8 +208,8 @@ export class ScheduleBusySlotsCutterV1 extends ScheduleBusySlotsCutter {
           slot_time = moment.utc(busyStart);
         }
       }
-
-      slot_time.add('minutes', self.forceSlotSize ? self.slotSize : duration);
+      // if we catch busy slot we should start from his end
+      slot_time.add('minutes', self.forceSlotSize ? slotSize : duration);
     }
 
     //disregards regular discounts if discount exception is found for this day
@@ -225,7 +234,7 @@ export class ScheduleBusySlotsCutterV1 extends ScheduleBusySlotsCutter {
     if (lastNotBusy) {
       slots.splice(lastNotBusy);
     }
-    
+
     return slots;
   }
 }
