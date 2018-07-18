@@ -1754,6 +1754,15 @@ var Discounts = Object.freeze({
               duration = dateCheck[1],
               busyStart = dateCheck[2];
           var spaceLeft = space;
+          var forceDurationByBusyStart = 0;
+          var slotSize = self.slotSize;
+          if (busyStart) {
+            var endBusySlot = moment.utc(busyStart).add('m', duration);
+            forceDurationByBusyStart = endBusySlot.diff(slot_time, 'minute');
+            if (forceDurationByBusyStart > 0 && forceDurationByBusyStart < slotSize) {
+              slotSize = forceDurationByBusyStart;
+            }
+          }
           var slotTimeFinish = moment(slot_time).add('minutes', self.taxDuration);
           if (consequentDays && slotTimeFinish.isAfter(finish)) {
             var slotEndMinute = slotTimeFinish.hour() * 60 + slotTimeFinish.minute();
@@ -1904,7 +1913,7 @@ var Discounts = Object.freeze({
             isException: !!slot.isException,
             provider: slot.provider,
             showPopup: !self.dontShowPopup,
-            slotSize: self.slotSize
+            slotSize: slotSize
           });
 
           if (busyStart) {
@@ -1913,8 +1922,8 @@ var Discounts = Object.freeze({
                 slot_time = moment.utc(busyStart);
               }
           }
-
-          slot_time.add('minutes', self.forceSlotSize ? self.slotSize : duration);
+          // if we catch busy slot we should start from his end
+          slot_time.add('minutes', self.forceSlotSize ? slotSize : duration);
         }
 
         //disregards regular discounts if discount exception is found for this day
