@@ -43,12 +43,10 @@ export class ScheduleBusySlotsCutterV1 extends ScheduleBusySlotsCutter {
         , busyStart = dateCheck[2];
       var spaceLeft = space;
       var forceDurationByBusyStart = 0;
+      var startTimeChanged = false;
       if (busyStart) {
         var endBusySlot = moment.utc(busyStart).add('m', duration);
         forceDurationByBusyStart = endBusySlot.diff(slot_time, 'minute');
-        if(forceDurationByBusyStart > 0 && forceDurationByBusyStart < duration){
-          duration = forceDurationByBusyStart;
-        }
       }
       var slotTimeFinish = moment(slot_time).add('minutes', self.taxDuration);
       if (consequentDays && slotTimeFinish.isAfter(finish)) {
@@ -205,9 +203,13 @@ export class ScheduleBusySlotsCutterV1 extends ScheduleBusySlotsCutter {
           (moment.utc(busyStart).isBefore(slot_time) && moment.utc(busyStart).diff(slot_time, 'minute') === -1) //fix for crac 1 minute
         ) {
           slot_time = moment.utc(busyStart);
+          startTimeChanged = true;
         }
       }
       // if we catch busy slot we should start from his end
+      if (!startTimeChanged && forceDurationByBusyStart > 1 && forceDurationByBusyStart < duration) {
+        duration = forceDurationByBusyStart;
+      }
       slot_time.add('minutes', self.forceSlotSize ? this.slotSize : duration);
     }
 
