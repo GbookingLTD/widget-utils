@@ -43,12 +43,11 @@ export class ScheduleBusySlotsCutterV1 extends ScheduleBusySlotsCutter {
         , busyStart = dateCheck[2];
       var spaceLeft = space;
       var forceDurationByBusyStart = 0;
-      var slotSize = self.slotSize;
       if (busyStart) {
         var endBusySlot = moment.utc(busyStart).add('m', duration);
         forceDurationByBusyStart = endBusySlot.diff(slot_time, 'minute');
-        if(forceDurationByBusyStart > 0 && forceDurationByBusyStart < slotSize){
-          slotSize = forceDurationByBusyStart;
+        if(forceDurationByBusyStart > 0 && forceDurationByBusyStart < duration){
+          duration = forceDurationByBusyStart;
         }
       }
       var slotTimeFinish = moment(slot_time).add('minutes', self.taxDuration);
@@ -197,7 +196,7 @@ export class ScheduleBusySlotsCutterV1 extends ScheduleBusySlotsCutter {
         isException: !!slot.isException,
         provider: slot.provider,
         showPopup: !self.dontShowPopup,
-        slotSize: slotSize
+        slotSize: this.slotSize
       });
 
       if (busyStart) {
@@ -209,7 +208,7 @@ export class ScheduleBusySlotsCutterV1 extends ScheduleBusySlotsCutter {
         }
       }
       // if we catch busy slot we should start from his end
-      slot_time.add('minutes', self.forceSlotSize ? slotSize : duration);
+      slot_time.add('minutes', self.forceSlotSize ? this.slotSize : duration);
     }
 
     //disregards regular discounts if discount exception is found for this day
