@@ -21,7 +21,7 @@ export class ScheduleBusySlotsCutterV1 extends ScheduleBusySlotsCutter {
     return this._cutSlots(busySlotsDay, now, this.nextDay, this.multiServices, this.worker, this.taxonomy);
   }
 
-  _cutSlots(busySlotsDay, now, nextDay, multiServices, taxonomy, worker) {
+  _cutSlots(busySlotsDay, now, nextDay, multiServices, worker, taxonomy) {
     const self = this;
     let slots = [];
     if (self.alignmentTaxonomySlots) {

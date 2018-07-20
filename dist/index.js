@@ -1732,7 +1732,7 @@ var Discounts = Object.freeze({
       }
     }, {
       key: '_cutSlots',
-      value: function _cutSlots(busySlotsDay, now, nextDay, multiServices, taxonomy, worker) {
+      value: function _cutSlots(busySlotsDay, now, nextDay, multiServices, worker, taxonomy) {
         var _this2 = this;
 
         var self = this;
