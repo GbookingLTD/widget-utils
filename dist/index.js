@@ -3242,7 +3242,7 @@ var ResourcesMostFree = Object.freeze({
         lastActiveBit = ii;
       }
     }
-    if (firstActiveBit && firstActiveBit != lastActiveBit) {
+    if (firstActiveBit !== null && firstActiveBit != lastActiveBit) {
       allDayBounds = {};
       allDayBounds.start = (bitmask.length - 1 - firstActiveBit) * cracSlotSize;
       allDayBounds.start_time = moment(date).add(allDayBounds.start, 'minutes').toISOString();

@@ -137,7 +137,7 @@ function getDayBoundsFromCracSlot(date,slot){
       lastActiveBit = ii;
     }
   }
-  if ( firstActiveBit && firstActiveBit!=lastActiveBit ){
+  if ( firstActiveBit !== null && firstActiveBit!=lastActiveBit ){
     allDayBounds = {};
     allDayBounds.start = (bitmask.length -1 - firstActiveBit) * cracSlotSize;
     allDayBounds.start_time = moment(date).add(allDayBounds.start,'minutes').toISOString();
@@ -213,13 +213,13 @@ function getCrunchSlotsFromCrac(cracSlot, date, startMinutes, endMinutes, maxSlo
       bitmask[i] =bitmask[i] ? bitmask[i] && bitmaskTaxonomy[i] :bitmaskTaxonomy[i];
     }
   }
-  
+
   // Definition cracSlotSize by vector length per each worker
   let cracSlotSize = 5;
   if (bitmask.length >= 1440) {
     cracSlotSize = 1;
   }
-  
+
   const reverseOffset = bitmask.length - 1;
   let startBitIndex = typeof startMinutes === 'undefined' ? 0 : Math.floor(startMinutes / cracSlotSize);
   let endBitIndex = typeof endMinutes === 'undefined' ? reverseOffset : Math.floor(endMinutes / cracSlotSize);
@@ -261,10 +261,10 @@ function getCrunchSlotsFromCrac(cracSlot, date, startMinutes, endMinutes, maxSlo
     const bitIndex = reverseOffset - ii;
     var bit = bitmask[bitIndex];
     const minutes = ii * cracSlotSize;
-  
 
-  
-    if (bit === 1) {  
+
+
+    if (bit === 1) {
       available = true;
       if (currentSlot) {
         commitSlot();
@@ -347,8 +347,8 @@ function isoDateForDayOff(date) {
 
 /**
    * return excution time of taxonomy by specific worker
-   * @param {Object} businessWorker 
-   * @param {Object} businessTaxonomy 
+   * @param {Object} businessWorker
+   * @param {Object} businessTaxonomy
    */
   function resourceTaxonomyDuration(businessWorker, businessTaxonomy) {
     var duration = businessTaxonomy.duration;
@@ -366,8 +366,8 @@ function isoDateForDayOff(date) {
 
   /**
    * return map of taxonomies, and foreach taxonomy map of resources and durations
-   * @param {Array} businessResources 
-   * @param {Array} businessTaxonomies 
+   * @param {Array} businessResources
+   * @param {Array} businessTaxonomies
    */
   function getServiceDurationByWorker(businessResources, businessTaxonomies) {
     var taxonomyDuration = {};
@@ -382,9 +382,9 @@ function isoDateForDayOff(date) {
 
   /**
    * return map of resources each resource the total duaration to execute all taxonomies
-   * @param {*} ServiceDurationByWorker 
-   * @param {*} taxonomies 
-   * @param {*} resources 
+   * @param {*} ServiceDurationByWorker
+   * @param {*} taxonomies
+   * @param {*} resources
    */
   function getSlotDurationByWorker(ServiceDurationByWorker, taxonomies, resources) {
     var duration = {};
@@ -399,8 +399,8 @@ function isoDateForDayOff(date) {
 
   /**
    * excute the capacity of each taxonomy from request Crac.GetRoomsFromTaxonomies
-   * @param {Object} taxonomyTreeCapacity 
-   * @param {Object} taxonomiesRooms 
+   * @param {Object} taxonomyTreeCapacity
+   * @param {Object} taxonomiesRooms
    */
   function getRoomCapacityByService(taxonomyTreeCapacity, taxonomiesRooms) {
     var capacity = {};
@@ -414,11 +414,11 @@ function isoDateForDayOff(date) {
 
   /**
    * convert crac bitset response into bitset vectors
-   * @param {Object} cracSlot 
-   * @param {Object} roomCapacityByService 
-   * @param {Array} taxonomies 
-   * @param {Array} resources 
-   * @param {Array} taxonomiesRooms 
+   * @param {Object} cracSlot
+   * @param {Object} roomCapacityByService
+   * @param {Array} taxonomies
+   * @param {Array} resources
+   * @param {Array} taxonomiesRooms
    */
   function getBitSetsFromCracSlots(cracSlot, roomCapacityByService, taxonomies, resources, taxonomiesRooms) {
     var bitSets = {};
@@ -454,13 +454,13 @@ function isoDateForDayOff(date) {
 
   /**
    * return vector:true mean the resource is free for total duration of all taxonomies and rooms are available for these taxonomies
-   * @param {Array} workerBitSets 
-   * @param {string} workerId 
-   * @param {Array} roomsBitSets 
-   * @param {Int} totalDuration 
-   * @param {Int} serviceDuration 
-   * @param {String} resources 
-   * @param {Array} taxonomies 
+   * @param {Array} workerBitSets
+   * @param {string} workerId
+   * @param {Array} roomsBitSets
+   * @param {Int} totalDuration
+   * @param {Int} serviceDuration
+   * @param {String} resources
+   * @param {Array} taxonomies
    */
   function getServiceRoomVector(workerBitSets, workerId, roomsBitSets, totalDuration, serviceDuration, resources, taxonomies) {
     var workerFree, roomFree;
@@ -470,28 +470,28 @@ function isoDateForDayOff(date) {
       if (workerFree == 1){
         roomFree = true;
         if (roomsBitSets.length > 0){
-          roomFree = false;  
+          roomFree = false;
         }
         for (var j = 0; j < roomsBitSets.length; j++) {
           roomFree = roomFree || checkFree(roomsBitSets[j], i, serviceDuration[workerId]);
         }
         finalVector[i] = roomFree;
-      } 
+      }
     }
     return finalVector;
   }
-  
+
   /**
-   * return all combination of setting elements in array 
+   * return all combination of setting elements in array
    * example: taxonomyCombo(["a","b","c"]) return
    * [["a", "b", "c"],["a", "c", "b"],["b", "a", "c"],
    * ["b", "c", "a"],["c", "a", "b"],["c", "b", "a"]]
-   * @param {Array} input 
+   * @param {Array} input
    */
   function taxonomyCombo(input){
     var permArr = [],
       usedChars = [];
-  
+
     function permute(input) {
       var i, ch;
       for (i = 0; i < input.length; i++) {
@@ -510,20 +510,20 @@ function isoDateForDayOff(date) {
   }
 
   /**
-   * 
+   *
    * Check if serious of taxonomies can be executed by specific worker at specfic bit
-   * 
-   * @param {int} index 
-   * @param {Object} serviceRoomVectors 
-   * @param {Array} taxonomyCombo 
-   * @param {String} resourceId 
-   * @param {Object} serviceDurationByWorker 
+   *
+   * @param {int} index
+   * @param {Object} serviceRoomVectors
+   * @param {Array} taxonomyCombo
+   * @param {String} resourceId
+   * @param {Object} serviceDurationByWorker
    */
   function checkSlotTaxonomyCombo(index,serviceRoomVectors,taxonomyCombo,resourceId,serviceDurationByWorker){
     var duration, vector;
     var bit = true;
     var calculatedIndex = index;
-    
+
     duration = serviceDurationByWorker[taxonomyCombo[0]][resourceId];
     bit =  bit&& serviceRoomVectors[taxonomyCombo[0]][resourceId][calculatedIndex];
 
@@ -536,16 +536,16 @@ function isoDateForDayOff(date) {
   }
 
   /**
-   * 
+   *
    * return resource vector; bit true when atleast 1 combination of taxonomy can be done
    * for example: in case of padicure and manicure service in request, true grante that worker can execute the
    * services by doing padicure first or manicure first
-   * 
-   * @param {Object} serviceRoomVectors 
-   * @param {String} resourceId 
-   * @param {Object} serviceDurationByWorker 
-   * @param {Array} taxonomies 
-   * @param {Array} taxonomiesRooms 
+   *
+   * @param {Object} serviceRoomVectors
+   * @param {String} resourceId
+   * @param {Object} serviceDurationByWorker
+   * @param {Array} taxonomies
+   * @param {Array} taxonomiesRooms
    */
   function getWorkerVector(serviceRoomVectors, resourceId, serviceDurationByWorker, taxonomies, taxonomiesRooms) {
     var rooms = [];
@@ -570,7 +570,7 @@ function isoDateForDayOff(date) {
 
   /**
    * create widget solts from bitset
-   * @param {bitset} resourceVector 
+   * @param {bitset} resourceVector
    */
   function calcResourceSlots(resourceVector) {
     var resourceSlots = [];
@@ -582,10 +582,10 @@ function isoDateForDayOff(date) {
     return resourceSlots;
   }
   /**
-   * return array of excluded resources 
+   * return array of excluded resources
    * retource excluded in case he dont have any free slot in request dates
-   * @param {Array} resources 
-   * @param {Object} slots 
+   * @param {Array} resources
+   * @param {Object} slots
    */
   function calExcludedResource(resources,excludedHash) {
     var excludedResources = [];
@@ -596,7 +596,7 @@ function isoDateForDayOff(date) {
     })
     return excludedResources;
   }
-  
+
 
   /**
    * intialize bitset with 1 in all bits
@@ -621,10 +621,10 @@ function isoDateForDayOff(date) {
   }
 
   /**
-   * check of bitset has serious of true from index to fit duration 
-   * @param {bitset} bistSet 
-   * @param {int} index 
-   * @param {int} duration 
+   * check of bitset has serious of true from index to fit duration
+   * @param {bitset} bistSet
+   * @param {int} index
+   * @param {int} duration
    */
   function checkFree(bistSet, index, duration) {
     var bits = parseInt(duration / SLOT_SIZE);
@@ -635,46 +635,46 @@ function isoDateForDayOff(date) {
     }
     return 1;
   }
-  
+
   /**
    * And operation by bit between 2 sets
-   * 
-   * @param {*bitset} setA 
-   * @param {*bitset} setB 
+   *
+   * @param {*bitset} setA
+   * @param {*bitset} setB
    */
   export function setAnd (setA,setB){
     var unifiedSet = [];
     for (var i=0; i< setA.length; i++){
-        unifiedSet[i] = setA[i] && setB[i] 
+        unifiedSet[i] = setA[i] && setB[i]
     }
     return unifiedSet;
   }
-  
+
   /**
    * OR operation by bit between 2 sets
-   * 
-   * @param {*bitset} setA 
-   * @param {*bitset} setB 
+   *
+   * @param {*bitset} setA
+   * @param {*bitset} setB
    */
   export function setUnion (setA,setB){
     var unifiedSet = [];
     for (var i=0; i< setA.length; i++){
-        unifiedSet[i] = setA[i] || setB[i] 
+        unifiedSet[i] = setA[i] || setB[i]
     }
     return unifiedSet;
   }
-  
+
   /**
    *  Return slots of each resource and the union slot for any available view
-   * 
-   * @param {Object} cracResult 
-   * @param {Object} business 
-   * @param {Array} taxonomies 
-   * @param {Array} resources 
-   * @param {Array} taxonomiesRooms 
+   *
+   * @param {Object} cracResult
+   * @param {Object} business
+   * @param {Array} taxonomies
+   * @param {Array} resources
+   * @param {Array} taxonomiesRooms
    */
   export function prepareSlots(cracResult, business, taxonomies, resources, taxonomiesRooms) {
-  
+
     var excludedResource = [];
     var finalSlots = {};
     var businessData = business;
@@ -793,7 +793,7 @@ export function toBusySlots(cracSlots, business, taxonomyIDs, resourceIds = []) 
       var dayBounds;
       //dayBounds = getDayBoundsFromAllTimetables(date, resourceTimetables,resourceEvenOddTimeTable,timetableType);
       dayBounds = getDayBoundsFromCracSlot(date,cracSlot);
-      
+
 
       if (!dayBounds) {
         const dayOffDate = isoDateForDayOff(date);
