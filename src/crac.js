@@ -119,25 +119,25 @@ function getDayBoundsFromCracSlot(date,slot){
       bitmask[i] = bitmask[i] ? bitmask[i] && bitmaskTaxonomy[i] :bitmaskTaxonomy[i];
     }
   }
-  
+
   // Definition cracSlotSize by vector length per each worker
   let cracSlotSize = 5;
   if (bitmask.length >= 1440) {
     cracSlotSize = 1;
   }
-  
-  var firstActiveBit = bitmask.length;
+
   var daySize = 24 * 60 / cracSlotSize;
-  var lastActiveBit = bitmask.length - daySize;
+  var firstActiveBit = null;
+  var lastActiveBit = null;
   for (var ii=bitmask.length - 1; ii >= bitmask.length - 24 * 60 /cracSlotSize; ii--){
-    if ( bitmask[ii] == 1 &&  firstActiveBit ==  bitmask.length){
+    if ( bitmask[ii] == 1 &&  !firstActiveBit){
       firstActiveBit = ii;
     }
     if ( bitmask[ii] == 1){
       lastActiveBit = ii;
     }
   }
-  if ( (firstActiveBit != bitmask.length-1) || (firstActiveBit == bitmask.length-1 && lastActiveBit > 1)){
+  if ( firstActiveBit && firstActiveBit!=lastActiveBit ){
     allDayBounds = {};
     allDayBounds.start = (bitmask.length -1 - firstActiveBit) * cracSlotSize;
     allDayBounds.start_time = moment(date).add(allDayBounds.start,'minutes').toISOString();

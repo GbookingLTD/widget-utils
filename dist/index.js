@@ -3231,18 +3231,18 @@ var ResourcesMostFree = Object.freeze({
       cracSlotSize = 1;
     }
 
-    var firstActiveBit = bitmask.length;
     var daySize = 24 * 60 / cracSlotSize;
-    var lastActiveBit = bitmask.length - daySize;
+    var firstActiveBit = null;
+    var lastActiveBit = null;
     for (var ii = bitmask.length - 1; ii >= bitmask.length - 24 * 60 / cracSlotSize; ii--) {
-      if (bitmask[ii] == 1 && firstActiveBit == bitmask.length) {
+      if (bitmask[ii] == 1 && !firstActiveBit) {
         firstActiveBit = ii;
       }
       if (bitmask[ii] == 1) {
         lastActiveBit = ii;
       }
     }
-    if (firstActiveBit != bitmask.length - 1 || firstActiveBit == bitmask.length - 1 && lastActiveBit > 1) {
+    if (firstActiveBit && firstActiveBit != lastActiveBit) {
       allDayBounds = {};
       allDayBounds.start = (bitmask.length - 1 - firstActiveBit) * cracSlotSize;
       allDayBounds.start_time = moment(date).add(allDayBounds.start, 'minutes').toISOString();
@@ -3408,8 +3408,8 @@ var ResourcesMostFree = Object.freeze({
 
   /**
      * return excution time of taxonomy by specific worker
-     * @param {Object} businessWorker 
-     * @param {Object} businessTaxonomy 
+     * @param {Object} businessWorker
+     * @param {Object} businessTaxonomy
      */
   function resourceTaxonomyDuration(businessWorker, businessTaxonomy) {
     var duration = businessTaxonomy.duration;
@@ -3427,8 +3427,8 @@ var ResourcesMostFree = Object.freeze({
 
   /**
    * return map of taxonomies, and foreach taxonomy map of resources and durations
-   * @param {Array} businessResources 
-   * @param {Array} businessTaxonomies 
+   * @param {Array} businessResources
+   * @param {Array} businessTaxonomies
    */
   function getServiceDurationByWorker$1(businessResources, businessTaxonomies) {
     var taxonomyDuration = {};
@@ -3443,9 +3443,9 @@ var ResourcesMostFree = Object.freeze({
 
   /**
    * return map of resources each resource the total duaration to execute all taxonomies
-   * @param {*} ServiceDurationByWorker 
-   * @param {*} taxonomies 
-   * @param {*} resources 
+   * @param {*} ServiceDurationByWorker
+   * @param {*} taxonomies
+   * @param {*} resources
    */
   function getSlotDurationByWorker(ServiceDurationByWorker, taxonomies, resources) {
     var duration = {};
@@ -3460,8 +3460,8 @@ var ResourcesMostFree = Object.freeze({
 
   /**
    * excute the capacity of each taxonomy from request Crac.GetRoomsFromTaxonomies
-   * @param {Object} taxonomyTreeCapacity 
-   * @param {Object} taxonomiesRooms 
+   * @param {Object} taxonomyTreeCapacity
+   * @param {Object} taxonomiesRooms
    */
   function getRoomCapacityByService$1(taxonomyTreeCapacity, taxonomiesRooms) {
     var capacity = {};
@@ -3475,11 +3475,11 @@ var ResourcesMostFree = Object.freeze({
 
   /**
    * convert crac bitset response into bitset vectors
-   * @param {Object} cracSlot 
-   * @param {Object} roomCapacityByService 
-   * @param {Array} taxonomies 
-   * @param {Array} resources 
-   * @param {Array} taxonomiesRooms 
+   * @param {Object} cracSlot
+   * @param {Object} roomCapacityByService
+   * @param {Array} taxonomies
+   * @param {Array} resources
+   * @param {Array} taxonomiesRooms
    */
   function getBitSetsFromCracSlots$1(cracSlot, roomCapacityByService, taxonomies, resources, taxonomiesRooms) {
     var bitSets = {};
@@ -3515,13 +3515,13 @@ var ResourcesMostFree = Object.freeze({
 
   /**
    * return vector:true mean the resource is free for total duration of all taxonomies and rooms are available for these taxonomies
-   * @param {Array} workerBitSets 
-   * @param {string} workerId 
-   * @param {Array} roomsBitSets 
-   * @param {Int} totalDuration 
-   * @param {Int} serviceDuration 
-   * @param {String} resources 
-   * @param {Array} taxonomies 
+   * @param {Array} workerBitSets
+   * @param {string} workerId
+   * @param {Array} roomsBitSets
+   * @param {Int} totalDuration
+   * @param {Int} serviceDuration
+   * @param {String} resources
+   * @param {Array} taxonomies
    */
   function getServiceRoomVector$1(workerBitSets, workerId, roomsBitSets, totalDuration, serviceDuration, resources, taxonomies) {
     var workerFree, roomFree;
@@ -3543,11 +3543,11 @@ var ResourcesMostFree = Object.freeze({
   }
 
   /**
-   * return all combination of setting elements in array 
+   * return all combination of setting elements in array
    * example: taxonomyCombo(["a","b","c"]) return
    * [["a", "b", "c"],["a", "c", "b"],["b", "a", "c"],
    * ["b", "c", "a"],["c", "a", "b"],["c", "b", "a"]]
-   * @param {Array} input 
+   * @param {Array} input
    */
   function taxonomyCombo$1(input) {
     var permArr = [],
@@ -3571,14 +3571,14 @@ var ResourcesMostFree = Object.freeze({
   }
 
   /**
-   * 
+   *
    * Check if serious of taxonomies can be executed by specific worker at specfic bit
-   * 
-   * @param {int} index 
-   * @param {Object} serviceRoomVectors 
-   * @param {Array} taxonomyCombo 
-   * @param {String} resourceId 
-   * @param {Object} serviceDurationByWorker 
+   *
+   * @param {int} index
+   * @param {Object} serviceRoomVectors
+   * @param {Array} taxonomyCombo
+   * @param {String} resourceId
+   * @param {Object} serviceDurationByWorker
    */
   function checkSlotTaxonomyCombo(index, serviceRoomVectors, taxonomyCombo, resourceId, serviceDurationByWorker) {
     var duration, vector;
@@ -3597,16 +3597,16 @@ var ResourcesMostFree = Object.freeze({
   }
 
   /**
-   * 
+   *
    * return resource vector; bit true when atleast 1 combination of taxonomy can be done
    * for example: in case of padicure and manicure service in request, true grante that worker can execute the
    * services by doing padicure first or manicure first
-   * 
-   * @param {Object} serviceRoomVectors 
-   * @param {String} resourceId 
-   * @param {Object} serviceDurationByWorker 
-   * @param {Array} taxonomies 
-   * @param {Array} taxonomiesRooms 
+   *
+   * @param {Object} serviceRoomVectors
+   * @param {String} resourceId
+   * @param {Object} serviceDurationByWorker
+   * @param {Array} taxonomies
+   * @param {Array} taxonomiesRooms
    */
   function getWorkerVector(serviceRoomVectors, resourceId, serviceDurationByWorker, taxonomies, taxonomiesRooms) {
     var rooms = [];
@@ -3631,7 +3631,7 @@ var ResourcesMostFree = Object.freeze({
 
   /**
    * create widget solts from bitset
-   * @param {bitset} resourceVector 
+   * @param {bitset} resourceVector
    */
   function calcResourceSlots(resourceVector) {
     var resourceSlots = [];
@@ -3643,10 +3643,10 @@ var ResourcesMostFree = Object.freeze({
     return resourceSlots;
   }
   /**
-   * return array of excluded resources 
+   * return array of excluded resources
    * retource excluded in case he dont have any free slot in request dates
-   * @param {Array} resources 
-   * @param {Object} slots 
+   * @param {Array} resources
+   * @param {Object} slots
    */
   function calExcludedResource(resources, excludedHash) {
     var excludedResources = [];
@@ -3681,10 +3681,10 @@ var ResourcesMostFree = Object.freeze({
   }
 
   /**
-   * check of bitset has serious of true from index to fit duration 
-   * @param {bitset} bistSet 
-   * @param {int} index 
-   * @param {int} duration 
+   * check of bitset has serious of true from index to fit duration
+   * @param {bitset} bistSet
+   * @param {int} index
+   * @param {int} duration
    */
   function checkFree(bistSet, index, duration) {
     var bits = parseInt(duration / SLOT_SIZE$1);
@@ -3698,9 +3698,9 @@ var ResourcesMostFree = Object.freeze({
 
   /**
    * And operation by bit between 2 sets
-   * 
-   * @param {*bitset} setA 
-   * @param {*bitset} setB 
+   *
+   * @param {*bitset} setA
+   * @param {*bitset} setB
    */
   function setAnd$1(setA, setB) {
     var unifiedSet = [];
@@ -3712,9 +3712,9 @@ var ResourcesMostFree = Object.freeze({
 
   /**
    * OR operation by bit between 2 sets
-   * 
-   * @param {*bitset} setA 
-   * @param {*bitset} setB 
+   *
+   * @param {*bitset} setA
+   * @param {*bitset} setB
    */
   function setUnion$1(setA, setB) {
     var unifiedSet = [];
@@ -3726,12 +3726,12 @@ var ResourcesMostFree = Object.freeze({
 
   /**
    *  Return slots of each resource and the union slot for any available view
-   * 
-   * @param {Object} cracResult 
-   * @param {Object} business 
-   * @param {Array} taxonomies 
-   * @param {Array} resources 
-   * @param {Array} taxonomiesRooms 
+   *
+   * @param {Object} cracResult
+   * @param {Object} business
+   * @param {Array} taxonomies
+   * @param {Array} resources
+   * @param {Array} taxonomiesRooms
    */
   function prepareSlots$1(cracResult, business, taxonomies, resources, taxonomiesRooms) {
 
