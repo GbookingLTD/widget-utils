@@ -3235,7 +3235,7 @@ var ResourcesMostFree = Object.freeze({
     var firstActiveBit = null;
     var lastActiveBit = null;
     for (var ii = bitmask.length - 1; ii >= bitmask.length - 24 * 60 / cracSlotSize; ii--) {
-      if (bitmask[ii] == 1 && !firstActiveBit) {
+      if (bitmask[ii] == 1 && firstActiveBit !== null) {
         firstActiveBit = ii;
       }
       if (bitmask[ii] == 1) {
