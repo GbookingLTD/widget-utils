@@ -130,7 +130,7 @@ function getDayBoundsFromCracSlot(date,slot){
   var firstActiveBit = null;
   var lastActiveBit = null;
   for (var ii=bitmask.length - 1; ii >= bitmask.length - 24 * 60 /cracSlotSize; ii--){
-    if ( bitmask[ii] == 1 &&  firstActiveBit !== null){
+    if ( bitmask[ii] == 1 &&  firstActiveBit === null){
       firstActiveBit = ii;
     }
     if ( bitmask[ii] == 1){
