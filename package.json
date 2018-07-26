@@ -26,6 +26,9 @@
   },
   "dependencies": {
     "crac-utils": "http://git.dev.gbooking.ru/gbooking/crac-utils/repository/archive.tar.gz?ref=v1.3.9",
-    "supports-color": "^5.4.0"
+    "supports-color": "^5.4.0",
+    "moment": "^2.19.1",
+    "moment-range": "^3.0.3",
+    "moment-timezone": "^0.5.14"
   }
 }

@@ -1,7 +1,7 @@
 "use strict";
 
 import _ from 'lodash';
-import moment from 'moment';
+import moment from 'moment-timezone';
 import {getRoomCapacityByService, getServiceRoomVector, getWorkerBookingVector} from "../rooms";
 import {newBusyBitset, newFreeBitset, prepareBitset, setUnion} from "../../bower_components/crac-utils/src";
 import {getServiceDuration} from "../taxonomies";
@@ -16,7 +16,7 @@ export function setSlotSize (slotSize) {
 
 /**
  * Return map of taxonomies, and foreach taxonomy map of resources and durations
- * 
+ *
  * @param {Array} businessResources
  * @param {Array} businessTaxonomies
  */
@@ -33,7 +33,7 @@ function getServiceDurationByWorker(businessResources, businessTaxonomies) {
 
 /**
  * Return map of resources each resource the total duration to execute all taxonomies
- * 
+ *
  * @param {*} ServiceDurationByWorker
  * @param {*} taxonomies
  * @param {*} resources
@@ -90,10 +90,10 @@ function getBitSetsFromCracSlots(cracSlot, roomCapacityByService, taxonomies, re
 }
 
 /**
- * Способ формирования слотов из вектора возможности записи (1 - можно записаться на это время 
+ * Способ формирования слотов из вектора возможности записи (1 - можно записаться на это время
  * с учётом длительностей услуг и, возможно, других условий, 0 - нет возможности записи), при котором
  * слоты формируются с шагом равным размеру бита в CRAC векторе.
- * 
+ *
  * @param {bitset} bookingVector
  */
 function getGreedySlots(bookingVector) {
@@ -111,7 +111,7 @@ function getGreedySlots(bookingVector) {
  *
  * Данный метод используется для обработки запросов с использованием комнат.
  * Данный метод возвращает данные в формате crunch busySlots.
- * 
+ *
  * @param {Object} cracResult
  * @param {Object} business
  * @param {Array} taxonomyIDs
@@ -126,7 +126,7 @@ export function prepareSlots(cracResult, business, taxonomyIDs, resourceIDs, tax
   let businessWorkers = _.filter(business.resources, function (r) {
     return r.status === 'ACTIVE' && resourceIDs.indexOf(r.id) > -1;
   });
-  
+
   let businessTaxonomies = _.filter(business.taxonomies, function (t) {
     return t.active && taxonomyIDs.indexOf(t.id) > -1;
   });
@@ -134,7 +134,7 @@ export function prepareSlots(cracResult, business, taxonomyIDs, resourceIDs, tax
   let serviceDurationByWorker = getServiceDurationByWorker(businessWorkers, businessTaxonomies);
   let totalServicesDurationByWorker = getTotalDurationsByWorker(serviceDurationByWorker, taxonomyIDs, resourceIDs);
   let roomCapacityByService = getRoomCapacityByService(business.taxonomy_tree_capacity, taxonomiesRooms);
-  
+
   let isAvailableResource = {};
   cracResult.forEach(function (cracSlot) {
     let bitSets = getBitSetsFromCracSlots(cracSlot, roomCapacityByService, taxonomyIDs, resourceIDs, taxonomiesRooms);
@@ -149,14 +149,14 @@ export function prepareSlots(cracResult, business, taxonomyIDs, resourceIDs, tax
       let room = _.find(taxonomiesRooms, { taxonomy: tId });
       let roomBitSet = room ? bitSets.rooms[room.room] : [];
       resourceIDs.forEach(function (rId) {
-        serviceRoomVectors[tId][rId] = getServiceRoomVector(bitSets.resources[rId], rId, roomBitSet, 
+        serviceRoomVectors[tId][rId] = getServiceRoomVector(bitSets.resources[rId], rId, roomBitSet,
           totalServicesDurationByWorker[rId], serviceDurationByWorker[tId], SLOT_SIZE);
       });
     });
 
     let anyAvailableVector = newBusyBitset(SLOT_SIZE);
     resourceIDs.forEach(function (rId) {
-      let workerBookingsVector = getWorkerBookingVector(serviceRoomVectors, rId, serviceDurationByWorker, 
+      let workerBookingsVector = getWorkerBookingVector(serviceRoomVectors, rId, serviceDurationByWorker,
         taxonomyIDs, taxonomiesRooms, SLOT_SIZE);
       let resourceSlots = getGreedySlots(workerBookingsVector);
       daySlots.resources.push({ id: rId, slots: resourceSlots });

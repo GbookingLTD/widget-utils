@@ -1,6 +1,6 @@
 "use strict";
 
-import moment from 'moment';
+import moment from 'moment-timezone';
 import { ScheduleBusySlotsCutter } from './scheduleBusySlotsCutter';
 import { setBusinessDateTZ, getDateLikeUTC } from '../dateTime';
 import { checkSlotInterval, alignmentBusySlotsByTaxonomyDuration } from '../busySlots';

@@ -20,6 +20,9 @@
     "tests"
   ],
   "dependencies": {
-    "crac-utils": "http://git.dev.gbooking.ru/gbooking/crac-utils/repository/archive.tar.gz?ref=v1.3.9"
+    "crac-utils": "http://git.dev.gbooking.ru/gbooking/crac-utils/repository/archive.tar.gz?ref=v1.3.9",
+    "moment": "^2.19.1",
+    "moment-range": "^3.0.3",
+    "moment-timezone": "^0.5.14"
   }
 }

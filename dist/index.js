@@ -1,8 +1,8 @@
 (function (global, factory) {
-  typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory(require('lodash'), require('moment'), require('moment-timezone')) :
-  typeof define === 'function' && define.amd ? define(['lodash', 'moment', 'moment-timezone'], factory) :
-  (global.WidgetUtils = factory(global._,global.moment,global.momentTimezone));
-}(this, function (_$1,moment,momentTimezone) { 'use strict';
+  typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory(require('lodash'), require('moment-timezone')) :
+  typeof define === 'function' && define.amd ? define(['lodash', 'moment-timezone'], factory) :
+  (global.WidgetUtils = factory(global._,global.moment));
+}(this, function (_$1,moment) { 'use strict';
 
   _$1 = 'default' in _$1 ? _$1['default'] : _$1;
   moment = 'default' in moment ? moment['default'] : moment;
@@ -1128,7 +1128,7 @@ var taxonomies = Object.freeze({
 
   /**
    * Return map of taxonomies, and foreach taxonomy map of resources and durations
-   * 
+   *
    * @param {Array} businessResources
    * @param {Array} businessTaxonomies
    */
@@ -1145,7 +1145,7 @@ var taxonomies = Object.freeze({
 
   /**
    * Return map of resources each resource the total duration to execute all taxonomies
-   * 
+   *
    * @param {*} ServiceDurationByWorker
    * @param {*} taxonomies
    * @param {*} resources
@@ -1202,10 +1202,10 @@ var taxonomies = Object.freeze({
   }
 
   /**
-   * Способ формирования слотов из вектора возможности записи (1 - можно записаться на это время 
+   * Способ формирования слотов из вектора возможности записи (1 - можно записаться на это время
    * с учётом длительностей услуг и, возможно, других условий, 0 - нет возможности записи), при котором
    * слоты формируются с шагом равным размеру бита в CRAC векторе.
-   * 
+   *
    * @param {bitset} bookingVector
    */
   function getGreedySlots(bookingVector) {
@@ -1223,7 +1223,7 @@ var taxonomies = Object.freeze({
    *
    * Данный метод используется для обработки запросов с использованием комнат.
    * Данный метод возвращает данные в формате crunch busySlots.
-   * 
+   *
    * @param {Object} cracResult
    * @param {Object} business
    * @param {Array} taxonomyIDs
@@ -2310,7 +2310,7 @@ var Discounts = Object.freeze({
       key: "createSlot",
 
       /**
-       * 
+       *
        * @param {number} start
        * @param {number} duration
        * @param {boolean} available
@@ -2329,7 +2329,7 @@ var Discounts = Object.freeze({
       }
 
       /**
-       * 
+       *
        * @param {Array<number>} bitset
        * @param {number} vectorSlotSize
        * @param {number} duration
@@ -2357,9 +2357,9 @@ var Discounts = Object.freeze({
     }
 
     /**
-     * Инициализация границ набора слотов за день. 
+     * Инициализация границ набора слотов за день.
      * Если набор слотов пустой, то устанавливает {start:0, end:0}.
-     * 
+     *
      * @private
      */
 
@@ -2373,13 +2373,13 @@ var Discounts = Object.freeze({
 
       /**
        * Если начальная или конечная даты слота выходят за рамки дня - возвращает число, меньше нуля.
-       * 
-       * Если текущий слот неактивный и "заканчивается" на свободное время - сдвинуть его вперёд на позицию 
-       * первого свободного бита. Если слот при этом стал свободным, то сохранить позицию, в противном случае, 
-       * вернуть позицию. Возможно сделать наоборот - если предыдущий занятый слот заканчивается на свободное время, 
+       *
+       * Если текущий слот неактивный и "заканчивается" на свободное время - сдвинуть его вперёд на позицию
+       * первого свободного бита. Если слот при этом стал свободным, то сохранить позицию, в противном случае,
+       * вернуть позицию. Возможно сделать наоборот - если предыдущий занятый слот заканчивается на свободное время,
        * то сдвинуть текущий слот назад (под "заканчивается" понимаю крайний правый бит в слоте, который уже
        * не будет участвовать в следующем, с учётом шага сетки).
-       * 
+       *
        * @param {number} prevStart начало предыдущего слота в минутах от начала дня (если -1, то возвращает начало дня)
        * @private
        */
@@ -2448,7 +2448,7 @@ var Discounts = Object.freeze({
   }(ScheduleSlotsIterator);
 
   /**
-   * Данный класс инкапсулирует данные CRAC по одному дню и, в случае необходимости, 
+   * Данный класс инкапсулирует данные CRAC по одному дню и, в случае необходимости,
    * на их основе "нарезает слоты" за этот день.
    * Данный класс ничего не должен знать про структуру данных бизнеса. Его сфера ответственности - данные CRAC.
    * Если необходимо использовать данные бизнеса - передавайте их через параметры функций или свойства объекта.
@@ -2456,7 +2456,7 @@ var Discounts = Object.freeze({
   var ScheduleCRACDaySlots = function () {
 
     /**
-     * 
+     *
      * @param {CRACResourcesAndRoomsSlot} cracDay raw CRAC data
      * @param {Date} businessNow now time in business timezone (in tz_like_utc representation)
      * @param {function(ScheduleSlotsIterator)} cutSlotsFn
@@ -2481,7 +2481,7 @@ var Discounts = Object.freeze({
 
       /**
        * Create all slots from raw CRAC data.
-       * 
+       *
        * @param {string} resourceID specific resource. Could be 'ANY' for any available
        * @param {number} duration
        * @param {number} slotSize
@@ -2529,7 +2529,7 @@ var Discounts = Object.freeze({
   /**
    * Принимает на вход объект-хранилище слотов CRACResourcesAndRoomsSlot, биизнес данные, работника, услугу
    * и возвращает готовый набор слотов.
-   * 
+   *
    * @param {CRACResourcesAndRoomsSlot} cracDay
    * @param business
    * @param taxonomy

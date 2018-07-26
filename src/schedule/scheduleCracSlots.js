@@ -1,6 +1,6 @@
 "use strict";
 
-import moment from 'moment';
+import moment from 'moment-timezone';
 import {getBusinessDateLikeUTC} from "../dateTime";
 import {getServiceDuration} from "../taxonomies";
 import {
@@ -9,7 +9,7 @@ import {
   cutSlotsWithoutBusy,
   cutSlotsWithoutStartBusy,
 } from "./scheduleSlots";
-import {getCracVectorSlotSize, _findBack0, getFirstLastMinutes, 
+import {getCracVectorSlotSize, _findBack0, getFirstLastMinutes,
   isSlotAvailable} from '../../bower_components/crac-utils/src';
 import {CRACResourcesAndRoomsSlot} from "./CRACResponse";
 
@@ -19,7 +19,7 @@ let assert = console.assert ? console.assert.bind(console) : function() {};
 
 export class ScheduleCracSlotsIterator extends ScheduleSlotsIterator {
   /**
-   * 
+   *
    * @param {number} start
    * @param {number} duration
    * @param {boolean} available
@@ -36,9 +36,9 @@ export class ScheduleCracSlotsIterator extends ScheduleSlotsIterator {
       available: available
     };
   }
-  
+
   /**
-   * 
+   *
    * @param {Array<number>} bitset
    * @param {number} vectorSlotSize
    * @param {number} duration
@@ -58,9 +58,9 @@ export class ScheduleCracSlotsIterator extends ScheduleSlotsIterator {
   }
 
   /**
-   * Инициализация границ набора слотов за день. 
+   * Инициализация границ набора слотов за день.
    * Если набор слотов пустой, то устанавливает {start:0, end:0}.
-   * 
+   *
    * @private
    */
   _initializeDayBounds() {
@@ -70,13 +70,13 @@ export class ScheduleCracSlotsIterator extends ScheduleSlotsIterator {
 
   /**
    * Если начальная или конечная даты слота выходят за рамки дня - возвращает число, меньше нуля.
-   * 
-   * Если текущий слот неактивный и "заканчивается" на свободное время - сдвинуть его вперёд на позицию 
-   * первого свободного бита. Если слот при этом стал свободным, то сохранить позицию, в противном случае, 
-   * вернуть позицию. Возможно сделать наоборот - если предыдущий занятый слот заканчивается на свободное время, 
+   *
+   * Если текущий слот неактивный и "заканчивается" на свободное время - сдвинуть его вперёд на позицию
+   * первого свободного бита. Если слот при этом стал свободным, то сохранить позицию, в противном случае,
+   * вернуть позицию. Возможно сделать наоборот - если предыдущий занятый слот заканчивается на свободное время,
    * то сдвинуть текущий слот назад (под "заканчивается" понимаю крайний правый бит в слоте, который уже
    * не будет участвовать в следующем, с учётом шага сетки).
-   * 
+   *
    * @param {number} prevStart начало предыдущего слота в минутах от начала дня (если -1, то возвращает начало дня)
    * @private
    */
@@ -87,17 +87,17 @@ export class ScheduleCracSlotsIterator extends ScheduleSlotsIterator {
     if (end > this.dayBounds.end) {
       return {start: -1, duration: false};
     }
-    
+
     let available = isSlotAvailable(this.bitset,
         start,
         start + this.duration,
         this.vectorSlotSize);
-    
+
     if (!available) {
       // Необходимо проверить конечный бит - если это 1, то пройтись по вектору, найдя первый 0 бит.
       // Следующая за ним позиция и будет искомой.
       // Затем проверим, будет ли в новой позиции слот доступным для записи.
-      
+
       const lastBitPosition = Math.floor((start + this.slotSize - 1) / this.vectorSlotSize);
       const p = {i:lastBitPosition >> 5, b:lastBitPosition % 32};
       const offset = _findBack0(this.bitset, p, this.slotSize);
@@ -111,24 +111,24 @@ export class ScheduleCracSlotsIterator extends ScheduleSlotsIterator {
     if (this.nowMinutes >= 0) {
       if (start < this.nowMinutes) available = false;
     }
-    
+
     return {start, available};
   }
-  
+
   createSlot(start, available) {
     if (start < 0) return null;
-    
+
     let slot = ScheduleCracSlotsIterator.createSlot(
       start,
       this.duration,
       available);
-    
+
     return this.enhanceSlotFn ? this.enhanceSlotFn(slot) : slot;
   }
 
   nextSlot() {
     // first call or next one
-    let {start, available} = this.curSlot === null ? this._lookupNextSlot(-1) : 
+    let {start, available} = this.curSlot === null ? this._lookupNextSlot(-1) :
       this._lookupNextSlot(this.curSlot.start);
     return this.curSlot = this.createSlot(start, available);
   }
@@ -140,7 +140,7 @@ export class ScheduleCracSlotsIterator extends ScheduleSlotsIterator {
 }
 
 /**
- * Данный класс инкапсулирует данные CRAC по одному дню и, в случае необходимости, 
+ * Данный класс инкапсулирует данные CRAC по одному дню и, в случае необходимости,
  * на их основе "нарезает слоты" за этот день.
  * Данный класс ничего не должен знать про структуру данных бизнеса. Его сфера ответственности - данные CRAC.
  * Если необходимо использовать данные бизнеса - передавайте их через параметры функций или свойства объекта.
@@ -148,7 +148,7 @@ export class ScheduleCracSlotsIterator extends ScheduleSlotsIterator {
 export class ScheduleCRACDaySlots {
 
   /**
-   * 
+   *
    * @param {CRACResourcesAndRoomsSlot} cracDay raw CRAC data
    * @param {Date} businessNow now time in business timezone (in tz_like_utc representation)
    * @param {function(ScheduleSlotsIterator)} cutSlotsFn
@@ -164,10 +164,10 @@ export class ScheduleCRACDaySlots {
   isThisDay() {
     return this.cracDay.date.substr(0, 10) === this.businessNow.toISOString().substr(0, 10);
   }
-  
+
   /**
    * Create all slots from raw CRAC data.
-   * 
+   *
    * @param {string} resourceID specific resource. Could be 'ANY' for any available
    * @param {number} duration
    * @param {number} slotSize
@@ -199,14 +199,14 @@ export class ScheduleCRACDaySlots {
   }
 }
 
-function getMinutesFromStartOfDay(d) { 
-  return d.getUTCHours() * 60 + d.getUTCMinutes(); 
+function getMinutesFromStartOfDay(d) {
+  return d.getUTCHours() * 60 + d.getUTCMinutes();
 }
 
 /**
  * Принимает на вход объект-хранилище слотов CRACResourcesAndRoomsSlot, биизнес данные, работника, услугу
  * и возвращает готовый набор слотов.
- * 
+ *
  * @param {CRACResourcesAndRoomsSlot} cracDay
  * @param business
  * @param taxonomy
@@ -222,7 +222,7 @@ export function getSlotsFromBusinessAndCRAC(cracDay, business, taxonomy, worker,
 export function getSlotsFromBusinessAndCRACWithDuration(cracDay, business, workerID, taxDuration, enhanceSlotFn) {
   assert(cracDay instanceof CRACResourcesAndRoomsSlot, 'cracDay should be instance of CRACResourcesAndRoomsSlot');
   const widgetConfiguration = business.widget_configuration;
-  let forceSlotSize = widgetConfiguration && widgetConfiguration.displaySlotSize && 
+  let forceSlotSize = widgetConfiguration && widgetConfiguration.displaySlotSize &&
       widgetConfiguration.displaySlotSize < taxDuration;
   let slotSize = forceSlotSize ? widgetConfiguration.displaySlotSize : taxDuration;
   let cutSlots = widgetConfiguration.hideGraySlots ? cutSlotsWithoutBusy : cutSlots;
