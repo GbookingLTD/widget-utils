@@ -2071,8 +2071,8 @@ var Discounts = Object.freeze({
             this.resources.push({
               id: res.resourceId,
               durations: res.durations || [],
-              bitset: prepareBitset(res.bitset, getCracVectorSlotSize(res.bitset))
-              //taxonomyBitSet: prepareBitset(res.taxonomyBitSet, getCracVectorSlotSize(res.taxonomyBitSet))
+              bitset: prepareBitset(res.bitset, getCracVectorSlotSize(res.bitset)),
+              taxonomyBitSet: prepareBitset(res.taxonomyBitSet, getCracVectorSlotSize(res.taxonomyBitSet))
             });
           }
         } catch (err) {
@@ -2100,7 +2100,9 @@ var Discounts = Object.freeze({
         var resourceData = this.resources.find(function (r) {
           return r.id === resourceID;
         });
-        if (resourceData) return resourceData.bitset;
+        if (resourceData) return resourceData.taxonomyBitSet.find(function (n) {
+          return n !== 0;
+        }) ? resourceData.taxonomyBitSet : resourceData.bitset;
         return null;
       }
     }, {

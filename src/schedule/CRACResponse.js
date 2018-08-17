@@ -36,7 +36,7 @@ export class CRACResourcesAndRoomsSlot {
         id: res.resourceId,
         durations: res.durations || [],
         bitset: prepareBitset(res.bitset, getCracVectorSlotSize(res.bitset)),
-        //taxonomyBitSet: prepareBitset(res.taxonomyBitSet, getCracVectorSlotSize(res.taxonomyBitSet))
+        taxonomyBitSet: prepareBitset(res.taxonomyBitSet, getCracVectorSlotSize(res.taxonomyBitSet))
       });
     }
     
@@ -47,7 +47,7 @@ export class CRACResourcesAndRoomsSlot {
     const isExcluded = this.excludedResources && this.excludedResources.indexOf(resourceID) !== -1;
     if (isExcluded) return null;
     const resourceData = this.resources.find(r => r.id === resourceID);
-    if (resourceData) return resourceData.bitset;
+    if (resourceData) return resourceData.taxonomyBitSet.find(n => n !== 0) ? resourceData.taxonomyBitSet : resourceData.bitset;
     return null;
   }
   
