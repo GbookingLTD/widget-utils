@@ -1,6 +1,6 @@
 "use strict";
 
-import {prepareBitset, getCracVectorSlotSize, calcCRACSlotIntermediate} from '../../bower_components/crac-utils/src';
+import {prepareBitset, getCracVectorSlotSize, calcCRACSlotIntermediate, setUnion} from '../../bower_components/crac-utils/src';
 
 let assert = console.assert ? console.assert.bind(console) : function() {};
 
@@ -31,13 +31,18 @@ export class CRACResourcesAndRoomsSlot {
     for (const res of cracSlot.resources || []) {
       assert(res.resourceId, 'resource should have id');
       bitsetAssert(res.bitset);
-      bitsetAssert(res.taxonomyBitSet);
-      this.resources.push({
+      // bitsetAssert(res.taxonomyBitSet);
+      let resource = {
         id: res.resourceId,
         durations: res.durations || [],
-        bitset: prepareBitset(res.bitset, getCracVectorSlotSize(res.bitset)),
-        taxonomyBitSet: prepareBitset(res.taxonomyBitSet, getCracVectorSlotSize(res.taxonomyBitSet))
-      });
+        bitset: prepareBitset(res.bitset, getCracVectorSlotSize(res.bitset))
+      };
+      
+      try {
+        resource.taxonomyBitSet = prepareBitset(res.taxonomyBitSet, getCracVectorSlotSize(res.taxonomyBitSet))
+      } catch (e) {}
+      
+      this.resources.push(resource);
     }
     
     this.excludedResources = cracSlot.excludedResources || [];
@@ -47,7 +52,7 @@ export class CRACResourcesAndRoomsSlot {
     const isExcluded = this.excludedResources && this.excludedResources.indexOf(resourceID) !== -1;
     if (isExcluded) return null;
     const resourceData = this.resources.find(r => r.id === resourceID);
-    if (resourceData) return resourceData.taxonomyBitSet.find(n => n !== 0) ? resourceData.taxonomyBitSet : resourceData.bitset;
+    if (resourceData) return resourceData.taxonomyBitSet ? setUnion(resourceData.bitset, resourceData.taxonomyBitSet) : resourceData.bitset;
     return null;
   }
   

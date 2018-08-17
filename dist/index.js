@@ -2067,13 +2067,18 @@ var Discounts = Object.freeze({
 
             assert(res.resourceId, 'resource should have id');
             bitsetAssert(res.bitset);
-            bitsetAssert(res.taxonomyBitSet);
-            this.resources.push({
+            // bitsetAssert(res.taxonomyBitSet);
+            var resource = {
               id: res.resourceId,
               durations: res.durations || [],
-              bitset: prepareBitset(res.bitset, getCracVectorSlotSize(res.bitset)),
-              taxonomyBitSet: prepareBitset(res.taxonomyBitSet, getCracVectorSlotSize(res.taxonomyBitSet))
-            });
+              bitset: prepareBitset(res.bitset, getCracVectorSlotSize(res.bitset))
+            };
+
+            try {
+              resource.taxonomyBitSet = prepareBitset(res.taxonomyBitSet, getCracVectorSlotSize(res.taxonomyBitSet));
+            } catch (e) {}
+
+            this.resources.push(resource);
           }
         } catch (err) {
           _didIteratorError = true;
@@ -2100,9 +2105,7 @@ var Discounts = Object.freeze({
         var resourceData = this.resources.find(function (r) {
           return r.id === resourceID;
         });
-        if (resourceData) return resourceData.taxonomyBitSet.find(function (n) {
-          return n !== 0;
-        }) ? resourceData.taxonomyBitSet : resourceData.bitset;
+        if (resourceData) return resourceData.taxonomyBitSet ? setUnion(resourceData.bitset, resourceData.taxonomyBitSet) : resourceData.bitset;
         return null;
       }
     }, {
