@@ -1,6 +1,6 @@
 {
   "name": "widget-utils",
-  "version": "0.7.37",
+  "version": "0.7.38",
   "scripts": {
     "test": "npm run build && node_modules/.bin/mocha test/**/*",
     "dev": "./node_modules/.bin/gulp dev",
@@ -25,7 +25,7 @@
     "rollup-plugin-includepaths": "0.1.5"
   },
   "dependencies": {
-    "crac-utils": "http://git.dev.gbooking.ru/gbooking/crac-utils/repository/archive.tar.gz?ref=v1.3.9",
+    "crac-utils": "http://git.dev.gbooking.ru/gbooking/crac-utils/repository/archive.tar.gz?ref=v1.3.10",
     "supports-color": "^5.4.0"
   }
 }
