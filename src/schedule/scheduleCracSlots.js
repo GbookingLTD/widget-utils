@@ -8,6 +8,7 @@ import {
   cutSlots,
   cutSlotsWithoutBusy,
   cutSlotsWithoutStartBusy,
+  cutSlotsWithoutStartFinishBusy,
 } from "./scheduleSlots";
 import {getCracVectorSlotSize, _findBack0, getFirstLastMinutes, 
   isSlotAvailable} from '../../bower_components/crac-utils/src';
@@ -182,8 +183,8 @@ export class ScheduleCRACDaySlots {
 
   getSlotsIterator(resourceID, duration, slotSize, enhanceSlotFn = null) {
     const cracDay = this.cracDay;
-    const bitset = ANY === resourceID ? cracDay.getResourceIntersection() :
-      cracDay.getResource(resourceID);
+    const bitset = ANY === resourceID ? cracDay.getResourceUnionBitset() :
+      cracDay.getResourceBitset(resourceID);
     if (bitset) {
       const vectorSlotSize = getCracVectorSlotSize(bitset);
       const iterator = new ScheduleCracSlotsIterator(bitset, vectorSlotSize, duration, slotSize, enhanceSlotFn && enhanceSlotFn.bind(cracDay));
@@ -232,6 +233,6 @@ export function getSlotsFromBusinessAndCRACWithDuration(cracDay, business, worke
     // supported only one taxonomy
     slotSize = res.durations[0] || slotSize;
   }
-  const scheduleCRACSlots = new ScheduleCRACDaySlots(cracDay, businessNow, cutSlots);
+  const scheduleCRACSlots = new ScheduleCRACDaySlots(cracDay, businessNow, cutSlotsWithoutStartFinishBusy, cutSlotsWithoutStartFinishBusy);
   return scheduleCRACSlots.cutSlots(workerID, taxDuration, slotSize, enhanceSlotFn);
 }

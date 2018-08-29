@@ -784,13 +784,6 @@ var Booking = Object.freeze({
     return r;
   }
 
-  function calcCRACSlotIntermediate(slot) {
-    return slot.resources.reduce(function (ret, res) {
-      var bitset = res.taxonomyBitSet ? setAnd(res.bitset, res.taxonomyBitSet) : res.bitset;
-      return setUnion(ret, bitset);
-    }, newBusyBitset());
-  }
-
   function getDayBoundsFromCracSlot(date, bitset) {
     var cracSlotSize = getCracVectorSlotSize(bitset);
     bitset = prepareBitset(bitset, cracSlotSize);
@@ -2098,8 +2091,8 @@ var Discounts = Object.freeze({
         this.excludedResources = cracSlot.excludedResources || [];
       }
     }, {
-      key: 'getResource',
-      value: function getResource(resourceID) {
+      key: 'getResourceBitset',
+      value: function getResourceBitset(resourceID) {
         var isExcluded = this.excludedResources && this.excludedResources.indexOf(resourceID) !== -1;
         if (isExcluded) return null;
         var resourceData = this.resources.find(function (r) {
@@ -2109,9 +2102,12 @@ var Discounts = Object.freeze({
         return null;
       }
     }, {
-      key: 'getResourceIntersection',
-      value: function getResourceIntersection() {
-        return calcCRACSlotIntermediate(this);
+      key: 'getResourceUnionBitset',
+      value: function getResourceUnionBitset() {
+        return this.resources.reduce(function (ret, res) {
+          var bitset = res.taxonomyBitSet ? setUnion(res.bitset, res.taxonomyBitSet) : res.bitset;
+          return setUnion(ret, bitset);
+        }, newBusyBitset());
       }
     }]);
     return CRACResourcesAndRoomsSlot;
@@ -2303,6 +2299,25 @@ var Discounts = Object.freeze({
     }
 
     return slots;
+  }
+
+  /**
+   * Create day slots from abstract slots iterator without start and finish busy slots.
+   * @param {ScheduleSlotsIterator} iterator
+   * @returns {Array} day slots
+   */
+  function cutSlotsWithoutStartFinishBusy(iterator) {
+    var slots = cutSlotsWithoutStartBusy(iterator);
+    // skip unavailable slots from end of day
+    var lastPosition = -1;
+    for (var i = slots.length - 1; i >= 0; i--) {
+      if (slots[i].available) {
+        lastPosition = i;
+        break;
+      }
+    }
+
+    return lastPosition < 0 ? [] : slots.slice(0, lastPosition + 1);
   }
 
   var ANY = 'ANY';
@@ -2509,7 +2524,7 @@ var Discounts = Object.freeze({
         var enhanceSlotFn = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : null;
 
         var cracDay = this.cracDay;
-        var bitset = ANY === resourceID ? cracDay.getResourceIntersection() : cracDay.getResource(resourceID);
+        var bitset = ANY === resourceID ? cracDay.getResourceUnionBitset() : cracDay.getResourceBitset(resourceID);
         if (bitset) {
           var vectorSlotSize = getCracVectorSlotSize(bitset);
           var iterator = new ScheduleCracSlotsIterator(bitset, vectorSlotSize, duration, slotSize, enhanceSlotFn && enhanceSlotFn.bind(cracDay));
@@ -2561,7 +2576,7 @@ var Discounts = Object.freeze({
       // supported only one taxonomy
       slotSize = res.durations[0] || slotSize;
     }
-    var scheduleCRACSlots = new ScheduleCRACDaySlots(cracDay, businessNow, cutSlots);
+    var scheduleCRACSlots = new ScheduleCRACDaySlots(cracDay, businessNow, cutSlotsWithoutStartFinishBusy, cutSlotsWithoutStartFinishBusy);
     return scheduleCRACSlots.cutSlots(workerID, taxDuration, slotSize, enhanceSlotFn);
   }
 
@@ -2582,6 +2597,7 @@ var Discounts = Object.freeze({
   	cutSlots: cutSlots$1,
   	cutSlotsWithoutBusy: cutSlotsWithoutBusy,
   	cutSlotsWithoutStartBusy: cutSlotsWithoutStartBusy,
+  	cutSlotsWithoutStartFinishBusy: cutSlotsWithoutStartFinishBusy,
   	ScheduleCracSlotsIterator: ScheduleCracSlotsIterator,
   	ScheduleCRACDaySlots: ScheduleCRACDaySlots,
   	getSlotsFromBusinessAndCRAC: getSlotsFromBusinessAndCRAC,
@@ -3924,7 +3940,7 @@ var Crac = Object.freeze({
   });
 
   // Remove this function after migration
-  function calcCRACSlotIntermediate$1(slot, vectorSlotSize) {
+  function calcCRACSlotIntermediate(slot, vectorSlotSize) {
     return slot.resources.reduce(function (ret, res) {
       var bitset = res.taxonomyBitSet ? setAnd$1(cracValueToBits(res.bitset), cracValueToBits(res.taxonomyBitSet)) : cracValueToBits(res.bitset);
       return setUnion$1(ret, bitset);
@@ -3936,7 +3952,7 @@ var Crac = Object.freeze({
 
 
   var CracUtils = Object.freeze({
-    calcCRACSlotIntermediate: calcCRACSlotIntermediate$1
+    calcCRACSlotIntermediate: calcCRACSlotIntermediate
   });
 
   var index = {

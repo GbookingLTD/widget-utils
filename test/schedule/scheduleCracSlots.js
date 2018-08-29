@@ -28,7 +28,11 @@ function stringCracVector(str, cracVectorSize) {
   }
   return str;
 }
-
+describe('CRACResourcesAndRoomsSlot', function() {
+  it('', function() {
+    
+  });
+});
 describe('ScheduleCracSlotsIterator (with cutSlotsWithoutBusyBounds)', function() {
   it('empty bitset', function() {
     const iterator = new Schedule.ScheduleCracSlotsIterator(busyBitSets[5], 5, 30, 30);

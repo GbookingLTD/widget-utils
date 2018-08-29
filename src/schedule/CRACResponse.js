@@ -1,6 +1,6 @@
 "use strict";
 
-import {prepareBitset, getCracVectorSlotSize, calcCRACSlotIntermediate, setUnion} from '../../bower_components/crac-utils/src';
+import {prepareBitset, getCracVectorSlotSize, calcCRACSlotIntermediate, setUnion, newBusyBitset} from '../../bower_components/crac-utils/src';
 
 let assert = console.assert ? console.assert.bind(console) : function() {};
 
@@ -48,7 +48,7 @@ export class CRACResourcesAndRoomsSlot {
     this.excludedResources = cracSlot.excludedResources || [];
   }
   
-  getResource(resourceID) {
+  getResourceBitset(resourceID) {
     const isExcluded = this.excludedResources && this.excludedResources.indexOf(resourceID) !== -1;
     if (isExcluded) return null;
     const resourceData = this.resources.find(r => r.id === resourceID);
@@ -56,8 +56,11 @@ export class CRACResourcesAndRoomsSlot {
     return null;
   }
   
-  getResourceIntersection() {
-    return calcCRACSlotIntermediate(this);
+  getResourceUnionBitset() {
+    return this.resources.reduce((ret, res) => {
+      let bitset = res.taxonomyBitSet ? setUnion(res.bitset, res.taxonomyBitSet) : res.bitset;
+      return setUnion(ret, bitset);
+    }, newBusyBitset());
   }
 }
 

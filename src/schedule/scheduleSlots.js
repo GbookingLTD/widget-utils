@@ -100,3 +100,22 @@ export function cutSlotsWithoutStartBusy(iterator) {
 
   return slots;
 }
+
+/**
+ * Create day slots from abstract slots iterator without start and finish busy slots.
+ * @param {ScheduleSlotsIterator} iterator
+ * @returns {Array} day slots
+ */
+export function cutSlotsWithoutStartFinishBusy(iterator) {
+  let slots = cutSlotsWithoutStartBusy(iterator);
+  // skip unavailable slots from end of day
+  let lastPosition = -1;
+  for (let i = slots.length - 1; i >= 0; i--) {
+    if (slots[i].available) {
+      lastPosition = i;
+      break;
+    }
+  }
+
+  return lastPosition < 0 ? [] : slots.slice(0, lastPosition + 1);
+}
