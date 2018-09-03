@@ -205,6 +205,23 @@ function getMinutesFromStartOfDay(d) {
 }
 
 /**
+ * Возвращает готовый набор слотов для случая выбора нескольких последовательно идущих услуг.
+ * 
+ * Суммируем продолжительность услуг.
+ * 
+ * @param {CRACResourcesAndRoomsSlot} cracDay
+ * @param business
+ * @param multiServices
+ * @param worker
+ * @param enhanceSlotFn
+ * @return {Object|Array|*|void}
+ */
+export function getSlotsFromBusinessAndCRACMultiServices(cracDay, business, multiServices, worker, enhanceSlotFn) {
+  let totalDuration = multiServices.reduce((sum, taxonomy) => sum + getServiceDuration(taxonomy, worker), 0);
+  return getSlotsFromBusinessAndCRACWithDuration(cracDay, business, worker.id, totalDuration, enhanceSlotFn);  
+}
+
+/**
  * Принимает на вход объект-хранилище слотов CRACResourcesAndRoomsSlot, биизнес данные, работника, услугу
  * и возвращает готовый набор слотов.
  * 
