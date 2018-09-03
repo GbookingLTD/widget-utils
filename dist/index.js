@@ -2424,7 +2424,7 @@ var Discounts = Object.freeze({
 
           var lastBitPosition = Math.floor((start + this.slotSize - 1) / this.vectorSlotSize);
           var p = { i: lastBitPosition >> 5, b: lastBitPosition % 32 };
-          var offset = _findBack0(this.bitset, p, this.slotSize);
+          var offset = _findBack0(this.bitset, p, Math.floor(this.slotSize / this.vectorSlotSize));
           if (offset > 0) {
             var checkStart = start + (this.slotSize - offset * this.vectorSlotSize);
             available = isSlotAvailable(this.bitset, checkStart, checkStart + this.duration, this.vectorSlotSize);

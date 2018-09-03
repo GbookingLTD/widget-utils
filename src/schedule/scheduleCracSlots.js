@@ -101,7 +101,7 @@ export class ScheduleCracSlotsIterator extends ScheduleSlotsIterator {
       
       const lastBitPosition = Math.floor((start + this.slotSize - 1) / this.vectorSlotSize);
       const p = {i:lastBitPosition >> 5, b:lastBitPosition % 32};
-      const offset = _findBack0(this.bitset, p, this.slotSize);
+      const offset = _findBack0(this.bitset, p, Math.floor(this.slotSize / this.vectorSlotSize));
       if (offset > 0) {
         let checkStart = start + (this.slotSize - offset * this.vectorSlotSize);
         available = isSlotAvailable(this.bitset, checkStart, checkStart + this.duration, this.vectorSlotSize);
