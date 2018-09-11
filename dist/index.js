@@ -301,7 +301,7 @@ var DateTime = Object.freeze({
   }
 
   /**
-   * @deprecated
+   * Check is date forbidden by widget configurations bookableDateRanges or bookableMonthsCount
    * @param widgetConfiguration
    * @param date
    * @param ignoreStartDate
@@ -2330,7 +2330,7 @@ var Discounts = Object.freeze({
       key: "createSlot",
 
       /**
-       * 
+       *
        * @param {number} start
        * @param {number} duration
        * @param {boolean} available
@@ -2349,7 +2349,7 @@ var Discounts = Object.freeze({
       }
 
       /**
-       * 
+       *
        * @param {Array<number>} bitset
        * @param {number} vectorSlotSize
        * @param {number} duration
@@ -2377,9 +2377,9 @@ var Discounts = Object.freeze({
     }
 
     /**
-     * Инициализация границ набора слотов за день. 
+     * Инициализация границ набора слотов за день.
      * Если набор слотов пустой, то устанавливает {start:0, end:0}.
-     * 
+     *
      * @private
      */
 
@@ -2393,13 +2393,13 @@ var Discounts = Object.freeze({
 
       /**
        * Если начальная или конечная даты слота выходят за рамки дня - возвращает число, меньше нуля.
-       * 
-       * Если текущий слот неактивный и "заканчивается" на свободное время - сдвинуть его вперёд на позицию 
-       * первого свободного бита. Если слот при этом стал свободным, то сохранить позицию, в противном случае, 
-       * вернуть позицию. Возможно сделать наоборот - если предыдущий занятый слот заканчивается на свободное время, 
+       *
+       * Если текущий слот неактивный и "заканчивается" на свободное время - сдвинуть его вперёд на позицию
+       * первого свободного бита. Если слот при этом стал свободным, то сохранить позицию, в противном случае,
+       * вернуть позицию. Возможно сделать наоборот - если предыдущий занятый слот заканчивается на свободное время,
        * то сдвинуть текущий слот назад (под "заканчивается" понимаю крайний правый бит в слоте, который уже
        * не будет участвовать в следующем, с учётом шага сетки).
-       * 
+       *
        * @param {number} prevStart начало предыдущего слота в минутах от начала дня (если -1, то возвращает начало дня)
        * @private
        */
@@ -2468,7 +2468,7 @@ var Discounts = Object.freeze({
   }(ScheduleSlotsIterator);
 
   /**
-   * Данный класс инкапсулирует данные CRAC по одному дню и, в случае необходимости, 
+   * Данный класс инкапсулирует данные CRAC по одному дню и, в случае необходимости,
    * на их основе "нарезает слоты" за этот день.
    * Данный класс ничего не должен знать про структуру данных бизнеса. Его сфера ответственности - данные CRAC.
    * Если необходимо использовать данные бизнеса - передавайте их через параметры функций или свойства объекта.
@@ -2476,7 +2476,7 @@ var Discounts = Object.freeze({
   var ScheduleCRACDaySlots = function () {
 
     /**
-     * 
+     *
      * @param {CRACResourcesAndRoomsSlot} cracDay raw CRAC data
      * @param {Date} businessNow now time in business timezone (in tz_like_utc representation)
      * @param {function(ScheduleSlotsIterator)} cutSlotsFn
@@ -2501,7 +2501,7 @@ var Discounts = Object.freeze({
 
       /**
        * Create all slots from raw CRAC data.
-       * 
+       *
        * @param {string} resourceID specific resource. Could be 'ANY' for any available
        * @param {number} duration
        * @param {number} slotSize
@@ -2568,7 +2568,7 @@ var Discounts = Object.freeze({
   /**
    * Принимает на вход объект-хранилище слотов CRACResourcesAndRoomsSlot, биизнес данные, работника, услугу
    * и возвращает готовый набор слотов.
-   * 
+   *
    * @param {CRACResourcesAndRoomsSlot} cracDay
    * @param business
    * @param taxonomy
@@ -2584,6 +2584,10 @@ var Discounts = Object.freeze({
   function getSlotsFromBusinessAndCRACWithDuration(cracDay, business, workerID, taxDuration, enhanceSlotFn) {
     assert$1(cracDay instanceof CRACResourcesAndRoomsSlot, 'cracDay should be instance of CRACResourcesAndRoomsSlot');
     var widgetConfiguration = business.widget_configuration;
+    var isForbidden = isDateForbidden(widgetConfiguration, cracDay.date, widgetConfiguration.bookableDateRanges && widgetConfiguration.bookableDateRanges.enabled);
+    if (isForbidden) {
+      return [];
+    }
     var forceSlotSize = widgetConfiguration && widgetConfiguration.displaySlotSize && widgetConfiguration.displaySlotSize < taxDuration;
     var slotSize = forceSlotSize ? widgetConfiguration.displaySlotSize : taxDuration;
     var cutSlots = widgetConfiguration.hideGraySlots ? cutSlotsWithoutBusy : cutSlots;
@@ -3960,7 +3964,7 @@ var Crac = Object.freeze({
   });
 
   // Remove this function after migration
-  function calcCRACSlotIntermediate(slot, vectorSlotSize) {
+  function calcCRACSlotIntermediate$1(slot, vectorSlotSize) {
     return slot.resources.reduce(function (ret, res) {
       var bitset = res.taxonomyBitSet ? setAnd$1(cracValueToBits(res.bitset), cracValueToBits(res.taxonomyBitSet)) : cracValueToBits(res.bitset);
       return setUnion$1(ret, bitset);
@@ -3972,7 +3976,7 @@ var Crac = Object.freeze({
 
 
   var CracUtils = Object.freeze({
-    calcCRACSlotIntermediate: calcCRACSlotIntermediate
+    calcCRACSlotIntermediate: calcCRACSlotIntermediate$1
   });
 
   var index = {

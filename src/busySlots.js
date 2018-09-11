@@ -180,7 +180,7 @@ export function isBusyDay(day, crunchv2, taxonomy, slotSize, busySlots, business
 }
 
 /**
- * @deprecated
+ * Check is date forbidden by widget configurations bookableDateRanges or bookableMonthsCount
  * @param widgetConfiguration
  * @param date
  * @param ignoreStartDate
