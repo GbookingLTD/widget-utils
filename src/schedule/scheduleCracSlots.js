@@ -207,9 +207,9 @@ function getMinutesFromStartOfDay(d) {
 
 /**
  * Возвращает готовый набор слотов для случая выбора нескольких последовательно идущих услуг.
- * 
+ *
  * Суммируем продолжительность услуг.
- * 
+ *
  * @param {CRACResourcesAndRoomsSlot} cracDay
  * @param business
  * @param multiServices
@@ -219,7 +219,7 @@ function getMinutesFromStartOfDay(d) {
  */
 export function getSlotsFromBusinessAndCRACMultiServices(cracDay, business, multiServices, worker, enhanceSlotFn) {
   let totalDuration = multiServices.reduce((sum, taxonomy) => sum + getServiceDuration(taxonomy, worker), 0);
-  return getSlotsFromBusinessAndCRACWithDuration(cracDay, business, worker.id, totalDuration, enhanceSlotFn);  
+  return getSlotsFromBusinessAndCRACWithDuration(cracDay, business, worker.id, totalDuration, enhanceSlotFn);
 }
 
 /**
@@ -241,7 +241,7 @@ export function getSlotsFromBusinessAndCRAC(cracDay, business, taxonomy, worker,
 export function getSlotsFromBusinessAndCRACWithDuration(cracDay, business, workerID, taxDuration, enhanceSlotFn) {
   assert(cracDay instanceof CRACResourcesAndRoomsSlot, 'cracDay should be instance of CRACResourcesAndRoomsSlot');
   const widgetConfiguration = business.widget_configuration;
-  const isForbidden = isDateForbidden(widgetConfiguration, cracDay.date, widgetConfiguration.bookableDateRanges &&  widgetConfiguration.bookableDateRanges.enabled);
+  const isForbidden = isDateForbidden(widgetConfiguration, cracDay.date);
   if(isForbidden){
     return [];
   }

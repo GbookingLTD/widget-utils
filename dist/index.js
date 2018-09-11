@@ -2548,9 +2548,9 @@ var Discounts = Object.freeze({
 
   /**
    * Возвращает готовый набор слотов для случая выбора нескольких последовательно идущих услуг.
-   * 
+   *
    * Суммируем продолжительность услуг.
-   * 
+   *
    * @param {CRACResourcesAndRoomsSlot} cracDay
    * @param business
    * @param multiServices
@@ -2584,7 +2584,7 @@ var Discounts = Object.freeze({
   function getSlotsFromBusinessAndCRACWithDuration(cracDay, business, workerID, taxDuration, enhanceSlotFn) {
     assert$1(cracDay instanceof CRACResourcesAndRoomsSlot, 'cracDay should be instance of CRACResourcesAndRoomsSlot');
     var widgetConfiguration = business.widget_configuration;
-    var isForbidden = isDateForbidden(widgetConfiguration, cracDay.date, widgetConfiguration.bookableDateRanges && widgetConfiguration.bookableDateRanges.enabled);
+    var isForbidden = isDateForbidden(widgetConfiguration, cracDay.date);
     if (isForbidden) {
       return [];
     }
