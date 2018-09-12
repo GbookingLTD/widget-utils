@@ -2,6 +2,7 @@ import _ from 'lodash';
 import moment from 'moment';
 import { alignSlotTime, getDateLikeUTC, setBusinessDateTZ } from './dateTime';
 import { isDateForbidden, checkDate } from './busySlots';
+import { getSlotsFromBusinessAndCRAC } from './schedule/scheduleCracSlots';
 
 /**
  *
@@ -64,6 +65,37 @@ function calendarBookingTimeGT(businessData, slots, slotSize, day) {
       }
     }
     return selectedSlot;
+  }
+}
+
+/**
+ * Search for first available slot
+ *
+ * @param cracDays
+ * @param businessData
+ * @param taxonomy
+ * @param day
+ */
+export function calendarBookingTimeCRAC(cracDays, businessData, taxonomy, day) {
+  var widgetConfiguration = businessData.business.widget_configuration;
+  if (isDateForbidden(widgetConfiguration, day.date)) {
+    return;
+  }
+
+  var cracDay = _(cracDays).find(function (d) {
+    return moment(d.date).isSame(day.date, 'day');
+  });
+  if (cracDay) {
+    for (let index in cracDay.resources) {
+      const businessResource = _.find(businessData.business.resources, {id: cracDay.resources[index].id});
+      if (!!businessResource) {
+        const slots = getSlotsFromBusinessAndCRAC(cracDay, businessData.business, taxonomy, businessResource)
+          .filter(slot => slot.available);
+        if (slots.length) {
+          return moment.utc(cracDay.date).add(slots[0].start, 'm');
+        }
+      }
+    }
   }
 }
 

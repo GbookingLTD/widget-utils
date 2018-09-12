@@ -373,73 +373,420 @@ var BusySlots = Object.freeze({
     alignmentBusySlotsByTaxonomyDuration: alignmentBusySlotsByTaxonomyDuration
   });
 
+  var TAXONOMY_CHILDREN = 'CHILDREN';
+  var TAXONOMY_ADULT = 'PARENT';
+  var TAXONOMY_COMMON = 'COMMON';
+
+  function getServiceDuration(taxonomy, resource) {
+    if (resource) {
+      var taxLevel = (_.find(resource.taxonomyLevels, { id: taxonomy.id }) || {}).level;
+      if (typeof taxLevel !== 'undefined') {
+        var level = _.find(taxonomy.additionalDurations, { level: taxLevel });
+        if (level) {
+          return level.duration ? level.duration : taxonomy.duration;
+        }
+      }
+    }
+    return taxonomy.duration;
+  }
+
   /**
-   *
-   * Do not supported for GT
-   *
-   * @param businessData
-   * @param busySlots
-   * @param slotSize
-   * @param day
-   * @returns {boolean}
+   * Возвращает минимальную длительность из всех услуг.
+   * 
+   * Необходимо, например, для получения ближайшего доступного для записи по услуге(-ам) дня.
+   * 
+   * @param taxonomies
+   * @param resources
    */
-  function calendarBookingTime(businessData, busySlots, slotSize, day, isGT) {
-    var widgetConfiguration = businessData.business.widget_configuration;
-    if (isDateForbidden(widgetConfiguration, day.date)) {
-      return;
-    }
-    if (isGT) {
-      return calendarBookingTimeGT(businessData, busySlots, slotSize, day);
-    }
-    var slotDay = _$1(busySlots.days).find(function (d) {
-      return moment(d.date).isSame(day.date, 'day');
-    });
-    if (slotDay) {
-      var startTime = moment.utc(slotDay.start_time);
-      var endTime = moment.utc(slotDay.end_time);
-
-      var now = moment.utc();
-      var businessOffset = moment.tz(now, businessData.business.general_info.timezone);
-      var businessNow = moment.utc().add(businessOffset._offset, 'm');
-
-      if (businessNow.isSame(startTime, 'day') && businessNow > startTime) {
-        startTime = alignSlotTime(startTime, slotSize, businessNow, true);
-      }
-      businessData.business.general_info.min_booking_time && startTime.add('hours', businessData.business.general_info.min_booking_time);
-
-      for (var slot_time = startTime; slot_time.isBefore(endTime);) {
-        var dateCheck = checkDate(slotDay.slots, slot_time);
-        if (dateCheck[0] !== 0) {
-          return slot_time;
+  function findMinResourceServiceDuration(taxonomies, resources) {
+    var minDuration = Number.MAX_SAFE_INTEGER;
+    taxonomies.forEach(function (tax) {
+      resources.forEach(function (res) {
+        var duration = getServiceDuration(tax, res);
+        if (duration < minDuration) {
+          minDuration = duration;
         }
-        slot_time.add('minutes', slotSize);
-      }
-    }
+      });
+    });
+
+    return minDuration;
   }
 
-  function calendarBookingTimeGT(businessData, slots, slotSize, day) {
+  function setupChildishnes(taxonomies, resources) {
+    var C = {}; // child taxonomies
+    var P = {}; // adult taxonomies
+    var N = {}; // common taxonomies
 
-    var slotDay = _$1(slots.days).find(function (d) {
-      return moment(d.date).isSame(day.date, 'day');
-    });
-    var selectedSlot = undefined;
-    if (slotDay && slotDay.slots && slotDay.slots.length > 0) {
-      for (var i = 0; i < slotDay.slots.length; i++) {
-        if (slotDay.slots[i].space_left > 0) {
-          var checkSlot = moment.utc(slotDay.date).add(slotDay.slots[i].time, 'm');
-          if (checkSlot > moment.utc()) {
-            selectedSlot = checkSlot;
-            break;
+
+    if (!Array.isArray(taxonomies) || !Array.isArray(resources)) {
+      console.log('empty data');
+      return taxonomies;
+    }
+
+    resources.forEach(function (r) {
+      if (r.taxonomyChildren && r.taxonomyChildren.length > 0) {
+        var rChildID = {}; // all tax id where children=true
+        var rParentID = {}; // all tax id where children=false
+
+        r.taxonomyChildren.forEach(function (c) {
+          if (c !== null && typeof c.children !== 'undefined' && typeof c.taxonomyID !== 'undefined') {
+            c.children === true ? rChildID[c.taxonomyID] = true : rParentID[c.taxonomyID] = true;
           }
-        }
+        });
+
+        r.taxonomyChildren.forEach(function (c) {
+          if (c !== null && typeof c.children !== 'undefined' && typeof c.taxonomyID !== 'undefined') {
+            // если услуга встречается 2-ды - как взрослая и как детская
+            if (rChildID[c.taxonomyID] && rParentID[c.taxonomyID]) N[c.taxonomyID] = true;else if (rChildID[c.taxonomyID]) C[c.taxonomyID] = true;else if (rParentID[c.taxonomyID]) P[c.taxonomyID] = true;
+          }
+        });
       }
-      return selectedSlot;
-    }
+    });
+
+    var getTaxonomyTypes = function getTaxonomyTypes(C, P, N, taxonomyID) {
+      var types = [];
+      if (C[taxonomyID]) {
+        types.push(TAXONOMY_CHILDREN);
+      }
+      if (P[taxonomyID]) {
+        types.push(TAXONOMY_ADULT);
+      }
+      if (!C[taxonomyID] && !P[taxonomyID] || N[taxonomyID]) {
+        types.push(TAXONOMY_COMMON);
+      }
+      return types;
+    };
+
+    taxonomies.forEach(function (t) {
+      t.childrenTypes = getTaxonomyTypes(C, P, N, parseInt(t.id));
+    });
+    return taxonomies;
   }
 
-var Booking = Object.freeze({
-    calendarBookingTime: calendarBookingTime
+var taxonomies = Object.freeze({
+    getServiceDuration: getServiceDuration,
+    findMinResourceServiceDuration: findMinResourceServiceDuration,
+    setupChildishnes: setupChildishnes
   });
+
+  var asyncGenerator = function () {
+    function AwaitValue(value) {
+      this.value = value;
+    }
+
+    function AsyncGenerator(gen) {
+      var front, back;
+
+      function send(key, arg) {
+        return new Promise(function (resolve, reject) {
+          var request = {
+            key: key,
+            arg: arg,
+            resolve: resolve,
+            reject: reject,
+            next: null
+          };
+
+          if (back) {
+            back = back.next = request;
+          } else {
+            front = back = request;
+            resume(key, arg);
+          }
+        });
+      }
+
+      function resume(key, arg) {
+        try {
+          var result = gen[key](arg);
+          var value = result.value;
+
+          if (value instanceof AwaitValue) {
+            Promise.resolve(value.value).then(function (arg) {
+              resume("next", arg);
+            }, function (arg) {
+              resume("throw", arg);
+            });
+          } else {
+            settle(result.done ? "return" : "normal", result.value);
+          }
+        } catch (err) {
+          settle("throw", err);
+        }
+      }
+
+      function settle(type, value) {
+        switch (type) {
+          case "return":
+            front.resolve({
+              value: value,
+              done: true
+            });
+            break;
+
+          case "throw":
+            front.reject(value);
+            break;
+
+          default:
+            front.resolve({
+              value: value,
+              done: false
+            });
+            break;
+        }
+
+        front = front.next;
+
+        if (front) {
+          resume(front.key, front.arg);
+        } else {
+          back = null;
+        }
+      }
+
+      this._invoke = send;
+
+      if (typeof gen.return !== "function") {
+        this.return = undefined;
+      }
+    }
+
+    if (typeof Symbol === "function" && Symbol.asyncIterator) {
+      AsyncGenerator.prototype[Symbol.asyncIterator] = function () {
+        return this;
+      };
+    }
+
+    AsyncGenerator.prototype.next = function (arg) {
+      return this._invoke("next", arg);
+    };
+
+    AsyncGenerator.prototype.throw = function (arg) {
+      return this._invoke("throw", arg);
+    };
+
+    AsyncGenerator.prototype.return = function (arg) {
+      return this._invoke("return", arg);
+    };
+
+    return {
+      wrap: function (fn) {
+        return function () {
+          return new AsyncGenerator(fn.apply(this, arguments));
+        };
+      },
+      await: function (value) {
+        return new AwaitValue(value);
+      }
+    };
+  }();
+
+  var classCallCheck = function (instance, Constructor) {
+    if (!(instance instanceof Constructor)) {
+      throw new TypeError("Cannot call a class as a function");
+    }
+  };
+
+  var createClass = function () {
+    function defineProperties(target, props) {
+      for (var i = 0; i < props.length; i++) {
+        var descriptor = props[i];
+        descriptor.enumerable = descriptor.enumerable || false;
+        descriptor.configurable = true;
+        if ("value" in descriptor) descriptor.writable = true;
+        Object.defineProperty(target, descriptor.key, descriptor);
+      }
+    }
+
+    return function (Constructor, protoProps, staticProps) {
+      if (protoProps) defineProperties(Constructor.prototype, protoProps);
+      if (staticProps) defineProperties(Constructor, staticProps);
+      return Constructor;
+    };
+  }();
+
+  var inherits = function (subClass, superClass) {
+    if (typeof superClass !== "function" && superClass !== null) {
+      throw new TypeError("Super expression must either be null or a function, not " + typeof superClass);
+    }
+
+    subClass.prototype = Object.create(superClass && superClass.prototype, {
+      constructor: {
+        value: subClass,
+        enumerable: false,
+        writable: true,
+        configurable: true
+      }
+    });
+    if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass;
+  };
+
+  var possibleConstructorReturn = function (self, call) {
+    if (!self) {
+      throw new ReferenceError("this hasn't been initialised - super() hasn't been called");
+    }
+
+    return call && (typeof call === "object" || typeof call === "function") ? call : self;
+  };
+
+  var ScheduleSlotsIterator = function () {
+    function ScheduleSlotsIterator() {
+      classCallCheck(this, ScheduleSlotsIterator);
+    }
+
+    createClass(ScheduleSlotsIterator, [{
+      key: "isSlotAvailable",
+
+      /**
+       * @return {boolean}
+       */
+      value: function isSlotAvailable() {}
+
+      /**
+       * @return {{start: {number}, end: {number}, available: {boolean}}}
+       */
+
+    }, {
+      key: "nextSlot",
+      value: function nextSlot() {}
+    }]);
+    return ScheduleSlotsIterator;
+  }();
+
+  /**
+   * Контейнер для данных расписания одного дня. 
+   * Предоставляет интерфейс к данным такого расписания.
+   * Данный класс служит моделью для визуального представления (или ответа на запрос).
+   */
+  var ScheduleDay = function () {
+    function ScheduleDay() {
+      classCallCheck(this, ScheduleDay);
+    }
+
+    createClass(ScheduleDay, [{
+      key: "isDayAvailable",
+
+      /**
+       * @return {boolean}
+       */
+      value: function isDayAvailable() {}
+
+      /**
+       * 
+       * @return {Array<{start: {number}, end: {number}, available: {boolean}}>}
+       */
+
+    }, {
+      key: "getSlots",
+      value: function getSlots() {}
+    }]);
+    return ScheduleDay;
+  }();
+
+  /**
+   * Контейнер для данных расписания одного дня для данных.
+   * Принимает на вход массив слотов и, таким образом, работает тривиальным образом.
+   */
+  var ScheduleSlotsDay = function (_ScheduleDay) {
+    inherits(ScheduleSlotsDay, _ScheduleDay);
+
+    /**
+     * 
+     * @param {Array<{start: {number}, end: {number}, available: {boolean}}>} slots
+     * @return {Object|Array|*|void}
+     */
+    function ScheduleSlotsDay(slots) {
+      classCallCheck(this, ScheduleSlotsDay);
+
+      var _this = possibleConstructorReturn(this, (ScheduleSlotsDay.__proto__ || Object.getPrototypeOf(ScheduleSlotsDay)).call(this));
+
+      _this.slots = slots;
+      return _this;
+    }
+
+    createClass(ScheduleSlotsDay, [{
+      key: "isDayAvailable",
+      value: function isDayAvailable() {
+        return this.slots.length > 0;
+      }
+    }, {
+      key: "getSlots",
+      value: function getSlots() {
+        return this.slots;
+      }
+    }]);
+    return ScheduleSlotsDay;
+  }(ScheduleDay);
+
+  /**
+   * Create day slots from abstract slots iterator.
+   * @param {ScheduleSlotsIterator} iterator
+   * @returns {Array} day slots
+   */
+  function cutSlots$1(iterator) {
+    var slot = void 0,
+        slots = [];
+    while (slot = iterator.nextSlot()) {
+      slots.push(slot);
+    }
+
+    return slots;
+  }
+
+  /**
+   * Create day slots from abstract slots iterator without busy bound slots.
+   * @param {ScheduleSlotsIterator} iterator
+   * @returns {Array} day slots
+   */
+  function cutSlotsWithoutBusy(iterator) {
+    var slot = void 0,
+        slots = [];
+    while (slot = iterator.nextSlot()) {
+      if (slot.available) slots.push(slot);
+    }
+
+    return slots;
+  }
+
+  /**
+   * Create day slots from abstract slots iterator without start busy slots.
+   * @param {ScheduleSlotsIterator} iterator
+   * @returns {Array} day slots
+   */
+  function cutSlotsWithoutStartBusy(iterator) {
+    var slot = void 0,
+        slots = [];
+    // skip unavailable slots from start of day
+    while ((slot = iterator.nextSlot()) && !slot.available) {}
+    if (!slot) return slots;
+
+    slots.push(slot);
+    while (slot = iterator.nextSlot()) {
+      slots.push(slot);
+    }
+
+    return slots;
+  }
+
+  /**
+   * Create day slots from abstract slots iterator without start and finish busy slots.
+   * @param {ScheduleSlotsIterator} iterator
+   * @returns {Array} day slots
+   */
+  function cutSlotsWithoutStartFinishBusy(iterator) {
+    var slots = cutSlotsWithoutStartBusy(iterator);
+    // skip unavailable slots from end of day
+    var lastPosition = -1;
+    for (var i = slots.length - 1; i >= 0; i--) {
+      if (slots[i].available) {
+        lastPosition = i;
+        break;
+      }
+    }
+
+    return lastPosition < 0 ? [] : slots.slice(0, lastPosition + 1);
+  }
 
   var minutesInDay = 1440;
   var defaultVectorSlotSize = 5;
@@ -784,6 +1131,531 @@ var Booking = Object.freeze({
     return r;
   }
 
+  var assert$1 = console.assert ? console.assert.bind(console) : function () {};
+
+  var CRACResourcesAndRoomsSlot = function () {
+    /* date;
+    dateUnix;
+    dateDate;
+    resources;
+    durations;*/
+
+    function CRACResourcesAndRoomsSlot(cracSlot) {
+      classCallCheck(this, CRACResourcesAndRoomsSlot);
+
+      this.prepare(cracSlot);
+    }
+
+    createClass(CRACResourcesAndRoomsSlot, [{
+      key: 'prepare',
+      value: function prepare(cracSlot) {
+        var dateUnix = void 0;
+        assert$1(cracSlot.date && !isNaN(dateUnix = Date.parse(cracSlot.date)), 'cracSlot.date should be valid date');
+        this.date = cracSlot.date;
+        this.dateUnix = dateUnix;
+        this.dateDate = new Date(dateUnix);
+
+        var bitsetAssert = function bitsetAssert(bitset) {
+          assert$1(bitset && (typeof bitset === 'string' && bitset.length >= 288 || Array.isArray(bitset) && bitset.length >= 9), 'res.bitset should contain at least 288 bits');
+        };
+
+        this.resources = [];
+        var _iteratorNormalCompletion = true;
+        var _didIteratorError = false;
+        var _iteratorError = undefined;
+
+        try {
+          for (var _iterator = (cracSlot.resources || [])[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+            var res = _step.value;
+
+            assert$1(res.resourceId, 'resource should have id');
+            bitsetAssert(res.bitset);
+            // bitsetAssert(res.taxonomyBitSet);
+            var resource = {
+              id: res.resourceId,
+              durations: res.durations || [],
+              bitset: prepareBitset(res.bitset, getCracVectorSlotSize(res.bitset))
+            };
+
+            try {
+              resource.taxonomyBitSet = prepareBitset(res.taxonomyBitSet, getCracVectorSlotSize(res.taxonomyBitSet));
+            } catch (e) {}
+
+            this.resources.push(resource);
+          }
+        } catch (err) {
+          _didIteratorError = true;
+          _iteratorError = err;
+        } finally {
+          try {
+            if (!_iteratorNormalCompletion && _iterator.return) {
+              _iterator.return();
+            }
+          } finally {
+            if (_didIteratorError) {
+              throw _iteratorError;
+            }
+          }
+        }
+
+        this.excludedResources = cracSlot.excludedResources || [];
+      }
+    }, {
+      key: 'getResourceBitset',
+      value: function getResourceBitset(resourceID) {
+        var isExcluded = this.excludedResources && this.excludedResources.indexOf(resourceID) !== -1;
+        if (isExcluded) return null;
+        var resourceData = this.resources.find(function (r) {
+          return r.id === resourceID;
+        });
+        if (resourceData) return resourceData.taxonomyBitSet ? setUnion(resourceData.bitset, resourceData.taxonomyBitSet) : resourceData.bitset;
+        return null;
+      }
+    }, {
+      key: 'getResourceUnionBitset',
+      value: function getResourceUnionBitset() {
+        return this.resources.reduce(function (ret, res) {
+          var bitset = res.taxonomyBitSet ? setUnion(res.bitset, res.taxonomyBitSet) : res.bitset;
+          return setUnion(ret, bitset);
+        }, newBusyBitset());
+      }
+    }]);
+    return CRACResourcesAndRoomsSlot;
+  }();
+
+  var CRACResourcesAndRoomsResponse = function () {
+    /* error;
+    slots;*/
+
+    function CRACResourcesAndRoomsResponse(cracData) {
+      classCallCheck(this, CRACResourcesAndRoomsResponse);
+
+      this.slots = [];
+      this.prepare(cracData);
+    }
+
+    createClass(CRACResourcesAndRoomsResponse, [{
+      key: 'prepare',
+      value: function prepare(cracData) {
+        if (cracData.error) this.error = cracData.error;
+        if (!cracData.slots) return false;
+        this.slots = [];
+        var _iteratorNormalCompletion2 = true;
+        var _didIteratorError2 = false;
+        var _iteratorError2 = undefined;
+
+        try {
+          for (var _iterator2 = cracData.slots[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
+            var cracSlot = _step2.value;
+
+            var slot = new CRACResourcesAndRoomsSlot(cracSlot);
+            this.slots.push(slot);
+          }
+        } catch (err) {
+          _didIteratorError2 = true;
+          _iteratorError2 = err;
+        } finally {
+          try {
+            if (!_iteratorNormalCompletion2 && _iterator2.return) {
+              _iterator2.return();
+            }
+          } finally {
+            if (_didIteratorError2) {
+              throw _iteratorError2;
+            }
+          }
+        }
+
+        return true;
+      }
+    }]);
+    return CRACResourcesAndRoomsResponse;
+  }();
+
+  var ANY = 'ANY';
+
+  var assert = console.assert ? console.assert.bind(console) : function () {};
+
+  var ScheduleCracSlotsIterator = function (_ScheduleSlotsIterato) {
+    inherits(ScheduleCracSlotsIterator, _ScheduleSlotsIterato);
+    createClass(ScheduleCracSlotsIterator, null, [{
+      key: "createSlot",
+
+      /**
+       *
+       * @param {number} start
+       * @param {number} duration
+       * @param {boolean} available
+       * @return {{start: number, end: number, duration: number, available: boolean}}
+       * @private
+       */
+      value: function createSlot(start, duration, available) {
+        assert(start >= 0 && start < 1440, 'Start should be more or equal than 0 and less than 1440');
+        assert(duration > 0, 'Duration should be more than 0');
+        return {
+          start: start,
+          end: start + duration,
+          duration: duration,
+          available: available
+        };
+      }
+
+      /**
+       *
+       * @param {Array<number>} bitset
+       * @param {number} vectorSlotSize
+       * @param {number} duration
+       * @param {number} scheduleSlotSize
+       * @param {function|null} enhanceSlotFn функция для изменения формата слота/добавления дополнительных данных для него
+       */
+
+    }]);
+
+    function ScheduleCracSlotsIterator(bitset, vectorSlotSize, duration, scheduleSlotSize) {
+      var enhanceSlotFn = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : null;
+      classCallCheck(this, ScheduleCracSlotsIterator);
+
+      var _this = possibleConstructorReturn(this, (ScheduleCracSlotsIterator.__proto__ || Object.getPrototypeOf(ScheduleCracSlotsIterator)).call(this));
+
+      _this.bitset = bitset;
+      _this.vectorSlotSize = vectorSlotSize;
+      _this.duration = duration;
+      _this.slotSize = scheduleSlotSize;
+      _this.enhanceSlotFn = enhanceSlotFn;
+      _this.nowMinutes = -1;
+      _this.curSlot = null;
+      _this._initializeDayBounds();
+      return _this;
+    }
+
+    /**
+     * Инициализация границ набора слотов за день.
+     * Если набор слотов пустой, то устанавливает {start:0, end:0}.
+     *
+     * @private
+     */
+
+
+    createClass(ScheduleCracSlotsIterator, [{
+      key: "_initializeDayBounds",
+      value: function _initializeDayBounds() {
+        var bounds = getFirstLastMinutes(this.bitset, this.vectorSlotSize);
+        this.dayBounds = { start: bounds.start || 0, end: bounds.end || 0 };
+      }
+
+      /**
+       * Если начальная или конечная даты слота выходят за рамки дня - возвращает число, меньше нуля.
+       *
+       * Если текущий слот неактивный и "заканчивается" на свободное время - сдвинуть его вперёд на позицию
+       * первого свободного бита. Если слот при этом стал свободным, то сохранить позицию, в противном случае,
+       * вернуть позицию. Возможно сделать наоборот - если предыдущий занятый слот заканчивается на свободное время,
+       * то сдвинуть текущий слот назад (под "заканчивается" понимаю крайний правый бит в слоте, который уже
+       * не будет участвовать в следующем, с учётом шага сетки).
+       *
+       * @param {number} prevStart начало предыдущего слота в минутах от начала дня (если -1, то возвращает начало дня)
+       * @private
+       */
+
+    }, {
+      key: "_lookupNextSlot",
+      value: function _lookupNextSlot(prevStart) {
+        var start = void 0,
+            end = void 0;
+        start = prevStart === -1 ? this.dayBounds.start : prevStart + this.slotSize;
+        end = start + this.duration;
+        if (end > this.dayBounds.end) {
+          return { start: -1, duration: false };
+        }
+
+        var available = isSlotAvailable(this.bitset, start, start + this.duration, this.vectorSlotSize);
+
+        if (!available) {
+          // Необходимо проверить конечный бит - если это 1, то пройтись по вектору, найдя первый 0 бит.
+          // Следующая за ним позиция и будет искомой.
+          // Затем проверим, будет ли в новой позиции слот доступным для записи.
+
+          var lastBitPosition = Math.floor((start + this.slotSize - 1) / this.vectorSlotSize);
+          var p = { i: lastBitPosition >> 5, b: lastBitPosition % 32 };
+          var offset = _findBack0(this.bitset, p, Math.floor(this.slotSize / this.vectorSlotSize));
+          if (offset > 0) {
+            var checkStart = start + (this.slotSize - offset * this.vectorSlotSize);
+            available = isSlotAvailable(this.bitset, checkStart, checkStart + this.duration, this.vectorSlotSize);
+            if (available) start = checkStart;
+          }
+        }
+
+        if (this.nowMinutes >= 0) {
+          if (start < this.nowMinutes) available = false;
+        }
+
+        return { start: start, available: available };
+      }
+    }, {
+      key: "createSlot",
+      value: function createSlot(start, available) {
+        if (start < 0) return null;
+
+        var slot = ScheduleCracSlotsIterator.createSlot(start, this.duration, available);
+
+        return this.enhanceSlotFn ? this.enhanceSlotFn(slot) : slot;
+      }
+    }, {
+      key: "nextSlot",
+      value: function nextSlot() {
+        // first call or next one
+        var _ref = this.curSlot === null ? this._lookupNextSlot(-1) : this._lookupNextSlot(this.curSlot.start),
+            start = _ref.start,
+            available = _ref.available;
+
+        return this.curSlot = this.createSlot(start, available);
+      }
+    }, {
+      key: "isSlotAvailable",
+      value: function isSlotAvailable() {
+        if (this.curSlot === null) return false;
+        return this.curSlot.available;
+      }
+    }]);
+    return ScheduleCracSlotsIterator;
+  }(ScheduleSlotsIterator);
+
+  /**
+   * Данный класс инкапсулирует данные CRAC по одному дню и, в случае необходимости,
+   * на их основе "нарезает слоты" за этот день.
+   * Данный класс ничего не должен знать про структуру данных бизнеса. Его сфера ответственности - данные CRAC.
+   * Если необходимо использовать данные бизнеса - передавайте их через параметры функций или свойства объекта.
+   */
+  var ScheduleCRACDaySlots = function () {
+
+    /**
+     *
+     * @param {CRACResourcesAndRoomsSlot} cracDay raw CRAC data
+     * @param {Date} businessNow now time in business timezone (in tz_like_utc representation)
+     * @param {function(ScheduleSlotsIterator)} cutSlotsFn
+     * @param {function(ScheduleSlotsIterator)} cutSlotsThisDayFn
+     */
+    function ScheduleCRACDaySlots(cracDay, businessNow) {
+      var cutSlotsFn = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : cutSlots$1;
+      var cutSlotsThisDayFn = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : cutSlotsWithoutStartBusy;
+      classCallCheck(this, ScheduleCRACDaySlots);
+
+      this.cracDay = cracDay;
+      this.businessNow = businessNow;
+      this.cutSlotsFn = cutSlotsFn;
+      this.cutSlotsThisDayFn = cutSlotsThisDayFn;
+    }
+
+    createClass(ScheduleCRACDaySlots, [{
+      key: "isThisDay",
+      value: function isThisDay() {
+        return this.cracDay.date.substr(0, 10) === this.businessNow.toISOString().substr(0, 10);
+      }
+
+      /**
+       * Create all slots from raw CRAC data.
+       *
+       * @param {string} resourceID specific resource. Could be 'ANY' for any available
+       * @param {number} duration
+       * @param {number} slotSize
+       * @param {function|null} enhanceSlotFn
+       * @returns {Array<{start: {number}, end: {number}, available: {boolean}}>} slots
+       */
+
+    }, {
+      key: "cutSlots",
+      value: function cutSlots(resourceID, duration, slotSize) {
+        var enhanceSlotFn = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : null;
+
+        var iterator = this.getSlotsIterator(resourceID, duration, slotSize, enhanceSlotFn);
+        var _cutSlots = this.isThisDay() ? this.cutSlotsThisDayFn : this.cutSlotsFn;
+        return iterator ? _cutSlots(iterator) : null;
+      }
+    }, {
+      key: "getSlotsIterator",
+      value: function getSlotsIterator(resourceID, duration, slotSize) {
+        var enhanceSlotFn = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : null;
+
+        var cracDay = this.cracDay;
+        var bitset = ANY === resourceID ? cracDay.getResourceUnionBitset() : cracDay.getResourceBitset(resourceID);
+        if (bitset) {
+          var vectorSlotSize = getCracVectorSlotSize(bitset);
+          var iterator = new ScheduleCracSlotsIterator(bitset, vectorSlotSize, duration, slotSize, enhanceSlotFn && enhanceSlotFn.bind(cracDay));
+          // Если текущий день, то необходимо не учитывать слоты времени, которое уже истекло
+          if (this.isThisDay()) {
+            iterator.nowMinutes = getMinutesFromStartOfDay(this.businessNow);
+          }
+
+          return iterator;
+        }
+
+        return null;
+      }
+    }]);
+    return ScheduleCRACDaySlots;
+  }();
+
+  function getMinutesFromStartOfDay(d) {
+    return d.getUTCHours() * 60 + d.getUTCMinutes();
+  }
+
+  /**
+   * Возвращает готовый набор слотов для случая выбора нескольких последовательно идущих услуг.
+   *
+   * Суммируем продолжительность услуг.
+   *
+   * @param {CRACResourcesAndRoomsSlot} cracDay
+   * @param business
+   * @param multiServices
+   * @param worker
+   * @param enhanceSlotFn
+   * @return {Object|Array|*|void}
+   */
+  function getSlotsFromBusinessAndCRACMultiServices(cracDay, business, multiServices, worker, enhanceSlotFn) {
+    var totalDuration = multiServices.reduce(function (sum, taxonomy) {
+      return sum + getServiceDuration(taxonomy, worker);
+    }, 0);
+    return getSlotsFromBusinessAndCRACWithDuration(cracDay, business, worker.id, totalDuration, enhanceSlotFn);
+  }
+
+  /**
+   * Принимает на вход объект-хранилище слотов CRACResourcesAndRoomsSlot, биизнес данные, работника, услугу
+   * и возвращает готовый набор слотов.
+   *
+   * @param {CRACResourcesAndRoomsSlot} cracDay
+   * @param business
+   * @param taxonomy
+   * @param worker
+   * @param enhanceSlotFn
+   * @return {Object|Array|*|void}
+   */
+  function getSlotsFromBusinessAndCRAC(cracDay, business, taxonomy, worker, enhanceSlotFn) {
+    var taxDuration = getServiceDuration(taxonomy, worker);
+    return getSlotsFromBusinessAndCRACWithDuration(cracDay, business, worker.id, taxDuration, enhanceSlotFn);
+  }
+
+  function getSlotsFromBusinessAndCRACWithDuration(cracDay, business, workerID, taxDuration, enhanceSlotFn) {
+    assert(cracDay instanceof CRACResourcesAndRoomsSlot, 'cracDay should be instance of CRACResourcesAndRoomsSlot');
+    var widgetConfiguration = business.widget_configuration;
+    var isForbidden = isDateForbidden(widgetConfiguration, cracDay.date);
+    if (isForbidden) {
+      return [];
+    }
+    var forceSlotSize = widgetConfiguration && widgetConfiguration.displaySlotSize && widgetConfiguration.displaySlotSize < taxDuration;
+    var slotSize = forceSlotSize ? widgetConfiguration.displaySlotSize : taxDuration;
+    var cutSlots = widgetConfiguration.hideGraySlots ? cutSlotsWithoutBusy : cutSlots;
+    var businessNow = getBusinessDateLikeUTC(moment.utc(), { business: business }).toDate();
+    var res = cracDay.resources.find(function (res) {
+      return res.id === workerID;
+    });
+    if (res && res.durations.length) {
+      // supported only one taxonomy
+      slotSize = res.durations[0] || slotSize;
+    }
+    var scheduleCRACSlots = new ScheduleCRACDaySlots(cracDay, businessNow, cutSlotsWithoutStartFinishBusy, cutSlotsWithoutStartFinishBusy);
+    return scheduleCRACSlots.cutSlots(workerID, taxDuration, slotSize, enhanceSlotFn);
+  }
+
+  /**
+   *
+   * Do not supported for GT
+   *
+   * @param businessData
+   * @param busySlots
+   * @param slotSize
+   * @param day
+   * @returns {boolean}
+   */
+  function calendarBookingTime(businessData, busySlots, slotSize, day, isGT) {
+    var widgetConfiguration = businessData.business.widget_configuration;
+    if (isDateForbidden(widgetConfiguration, day.date)) {
+      return;
+    }
+    if (isGT) {
+      return calendarBookingTimeGT(businessData, busySlots, slotSize, day);
+    }
+    var slotDay = _$1(busySlots.days).find(function (d) {
+      return moment(d.date).isSame(day.date, 'day');
+    });
+    if (slotDay) {
+      var startTime = moment.utc(slotDay.start_time);
+      var endTime = moment.utc(slotDay.end_time);
+
+      var now = moment.utc();
+      var businessOffset = moment.tz(now, businessData.business.general_info.timezone);
+      var businessNow = moment.utc().add(businessOffset._offset, 'm');
+
+      if (businessNow.isSame(startTime, 'day') && businessNow > startTime) {
+        startTime = alignSlotTime(startTime, slotSize, businessNow, true);
+      }
+      businessData.business.general_info.min_booking_time && startTime.add('hours', businessData.business.general_info.min_booking_time);
+
+      for (var slot_time = startTime; slot_time.isBefore(endTime);) {
+        var dateCheck = checkDate(slotDay.slots, slot_time);
+        if (dateCheck[0] !== 0) {
+          return slot_time;
+        }
+        slot_time.add('minutes', slotSize);
+      }
+    }
+  }
+
+  function calendarBookingTimeGT(businessData, slots, slotSize, day) {
+
+    var slotDay = _$1(slots.days).find(function (d) {
+      return moment(d.date).isSame(day.date, 'day');
+    });
+    var selectedSlot = undefined;
+    if (slotDay && slotDay.slots && slotDay.slots.length > 0) {
+      for (var i = 0; i < slotDay.slots.length; i++) {
+        if (slotDay.slots[i].space_left > 0) {
+          var checkSlot = moment.utc(slotDay.date).add(slotDay.slots[i].time, 'm');
+          if (checkSlot > moment.utc()) {
+            selectedSlot = checkSlot;
+            break;
+          }
+        }
+      }
+      return selectedSlot;
+    }
+  }
+
+  /**
+   * Search for first available slot
+   *
+   * @param cracDays
+   * @param businessData
+   * @param taxonomy
+   * @param day
+   */
+  function calendarBookingTimeCRAC(cracDays, businessData, taxonomy, day) {
+    var widgetConfiguration = businessData.business.widget_configuration;
+    if (isDateForbidden(widgetConfiguration, day.date)) {
+      return;
+    }
+
+    var cracDay = _$1(cracDays).find(function (d) {
+      return moment(d.date).isSame(day.date, 'day');
+    });
+    if (cracDay) {
+      for (var index in cracDay.resources) {
+        var businessResource = _$1.find(businessData.business.resources, { id: cracDay.resources[index].id });
+        if (!!businessResource) {
+          var slots = getSlotsFromBusinessAndCRAC(cracDay, businessData.business, taxonomy, businessResource).filter(function (slot) {
+            return slot.available;
+          });
+          if (slots.length) {
+            return moment.utc(cracDay.date).add(slots[0].start, 'm');
+          }
+        }
+      }
+    }
+  }
+
+var Booking = Object.freeze({
+    calendarBookingTime: calendarBookingTime,
+    calendarBookingTimeCRAC: calendarBookingTimeCRAC
+  });
+
   function getDayBoundsFromCracSlot(date, bitset) {
     var cracSlotSize = getCracVectorSlotSize(bitset);
     bitset = prepareBitset(bitset, cracSlotSize);
@@ -1015,102 +1887,6 @@ var Booking = Object.freeze({
     return capacity;
   }
 
-  var TAXONOMY_CHILDREN = 'CHILDREN';
-  var TAXONOMY_ADULT = 'PARENT';
-  var TAXONOMY_COMMON = 'COMMON';
-
-  function getServiceDuration(taxonomy, resource) {
-    if (resource) {
-      var taxLevel = (_.find(resource.taxonomyLevels, { id: taxonomy.id }) || {}).level;
-      if (typeof taxLevel !== 'undefined') {
-        var level = _.find(taxonomy.additionalDurations, { level: taxLevel });
-        if (level) {
-          return level.duration ? level.duration : taxonomy.duration;
-        }
-      }
-    }
-    return taxonomy.duration;
-  }
-
-  /**
-   * Возвращает минимальную длительность из всех услуг.
-   * 
-   * Необходимо, например, для получения ближайшего доступного для записи по услуге(-ам) дня.
-   * 
-   * @param taxonomies
-   * @param resources
-   */
-  function findMinResourceServiceDuration(taxonomies, resources) {
-    var minDuration = Number.MAX_SAFE_INTEGER;
-    taxonomies.forEach(function (tax) {
-      resources.forEach(function (res) {
-        var duration = getServiceDuration(tax, res);
-        if (duration < minDuration) {
-          minDuration = duration;
-        }
-      });
-    });
-
-    return minDuration;
-  }
-
-  function setupChildishnes(taxonomies, resources) {
-    var C = {}; // child taxonomies
-    var P = {}; // adult taxonomies
-    var N = {}; // common taxonomies
-
-
-    if (!Array.isArray(taxonomies) || !Array.isArray(resources)) {
-      console.log('empty data');
-      return taxonomies;
-    }
-
-    resources.forEach(function (r) {
-      if (r.taxonomyChildren && r.taxonomyChildren.length > 0) {
-        var rChildID = {}; // all tax id where children=true
-        var rParentID = {}; // all tax id where children=false
-
-        r.taxonomyChildren.forEach(function (c) {
-          if (c !== null && typeof c.children !== 'undefined' && typeof c.taxonomyID !== 'undefined') {
-            c.children === true ? rChildID[c.taxonomyID] = true : rParentID[c.taxonomyID] = true;
-          }
-        });
-
-        r.taxonomyChildren.forEach(function (c) {
-          if (c !== null && typeof c.children !== 'undefined' && typeof c.taxonomyID !== 'undefined') {
-            // если услуга встречается 2-ды - как взрослая и как детская
-            if (rChildID[c.taxonomyID] && rParentID[c.taxonomyID]) N[c.taxonomyID] = true;else if (rChildID[c.taxonomyID]) C[c.taxonomyID] = true;else if (rParentID[c.taxonomyID]) P[c.taxonomyID] = true;
-          }
-        });
-      }
-    });
-
-    var getTaxonomyTypes = function getTaxonomyTypes(C, P, N, taxonomyID) {
-      var types = [];
-      if (C[taxonomyID]) {
-        types.push(TAXONOMY_CHILDREN);
-      }
-      if (P[taxonomyID]) {
-        types.push(TAXONOMY_ADULT);
-      }
-      if (!C[taxonomyID] && !P[taxonomyID] || N[taxonomyID]) {
-        types.push(TAXONOMY_COMMON);
-      }
-      return types;
-    };
-
-    taxonomies.forEach(function (t) {
-      t.childrenTypes = getTaxonomyTypes(C, P, N, parseInt(t.id));
-    });
-    return taxonomies;
-  }
-
-var taxonomies = Object.freeze({
-    getServiceDuration: getServiceDuration,
-    findMinResourceServiceDuration: findMinResourceServiceDuration,
-    setupChildishnes: setupChildishnes
-  });
-
   var SLOT_SIZE = 5;
   var VECTOR_SIZE = 24 * 60 / SLOT_SIZE;
 
@@ -1280,167 +2056,6 @@ var taxonomies = Object.freeze({
 
     return finalSlots;
   }
-
-  var asyncGenerator = function () {
-    function AwaitValue(value) {
-      this.value = value;
-    }
-
-    function AsyncGenerator(gen) {
-      var front, back;
-
-      function send(key, arg) {
-        return new Promise(function (resolve, reject) {
-          var request = {
-            key: key,
-            arg: arg,
-            resolve: resolve,
-            reject: reject,
-            next: null
-          };
-
-          if (back) {
-            back = back.next = request;
-          } else {
-            front = back = request;
-            resume(key, arg);
-          }
-        });
-      }
-
-      function resume(key, arg) {
-        try {
-          var result = gen[key](arg);
-          var value = result.value;
-
-          if (value instanceof AwaitValue) {
-            Promise.resolve(value.value).then(function (arg) {
-              resume("next", arg);
-            }, function (arg) {
-              resume("throw", arg);
-            });
-          } else {
-            settle(result.done ? "return" : "normal", result.value);
-          }
-        } catch (err) {
-          settle("throw", err);
-        }
-      }
-
-      function settle(type, value) {
-        switch (type) {
-          case "return":
-            front.resolve({
-              value: value,
-              done: true
-            });
-            break;
-
-          case "throw":
-            front.reject(value);
-            break;
-
-          default:
-            front.resolve({
-              value: value,
-              done: false
-            });
-            break;
-        }
-
-        front = front.next;
-
-        if (front) {
-          resume(front.key, front.arg);
-        } else {
-          back = null;
-        }
-      }
-
-      this._invoke = send;
-
-      if (typeof gen.return !== "function") {
-        this.return = undefined;
-      }
-    }
-
-    if (typeof Symbol === "function" && Symbol.asyncIterator) {
-      AsyncGenerator.prototype[Symbol.asyncIterator] = function () {
-        return this;
-      };
-    }
-
-    AsyncGenerator.prototype.next = function (arg) {
-      return this._invoke("next", arg);
-    };
-
-    AsyncGenerator.prototype.throw = function (arg) {
-      return this._invoke("throw", arg);
-    };
-
-    AsyncGenerator.prototype.return = function (arg) {
-      return this._invoke("return", arg);
-    };
-
-    return {
-      wrap: function (fn) {
-        return function () {
-          return new AsyncGenerator(fn.apply(this, arguments));
-        };
-      },
-      await: function (value) {
-        return new AwaitValue(value);
-      }
-    };
-  }();
-
-  var classCallCheck = function (instance, Constructor) {
-    if (!(instance instanceof Constructor)) {
-      throw new TypeError("Cannot call a class as a function");
-    }
-  };
-
-  var createClass = function () {
-    function defineProperties(target, props) {
-      for (var i = 0; i < props.length; i++) {
-        var descriptor = props[i];
-        descriptor.enumerable = descriptor.enumerable || false;
-        descriptor.configurable = true;
-        if ("value" in descriptor) descriptor.writable = true;
-        Object.defineProperty(target, descriptor.key, descriptor);
-      }
-    }
-
-    return function (Constructor, protoProps, staticProps) {
-      if (protoProps) defineProperties(Constructor.prototype, protoProps);
-      if (staticProps) defineProperties(Constructor, staticProps);
-      return Constructor;
-    };
-  }();
-
-  var inherits = function (subClass, superClass) {
-    if (typeof superClass !== "function" && superClass !== null) {
-      throw new TypeError("Super expression must either be null or a function, not " + typeof superClass);
-    }
-
-    subClass.prototype = Object.create(superClass && superClass.prototype, {
-      constructor: {
-        value: subClass,
-        enumerable: false,
-        writable: true,
-        configurable: true
-      }
-    });
-    if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass;
-  };
-
-  var possibleConstructorReturn = function (self, call) {
-    if (!self) {
-      throw new ReferenceError("this hasn't been initialised - super() hasn't been called");
-    }
-
-    return call && (typeof call === "object" || typeof call === "function") ? call : self;
-  };
 
   /**
    * "Нарезает" слоты из определённого промежуточного формата (busySlots, crac, любой другой) 
@@ -2020,588 +2635,6 @@ var Discounts = Object.freeze({
     }]);
     return ScheduleBusySlotsCutterV2;
   }(ScheduleBusySlotsCutter);
-
-  var assert = console.assert ? console.assert.bind(console) : function () {};
-
-  var CRACResourcesAndRoomsSlot = function () {
-    /* date;
-    dateUnix;
-    dateDate;
-    resources;
-    durations;*/
-
-    function CRACResourcesAndRoomsSlot(cracSlot) {
-      classCallCheck(this, CRACResourcesAndRoomsSlot);
-
-      this.prepare(cracSlot);
-    }
-
-    createClass(CRACResourcesAndRoomsSlot, [{
-      key: 'prepare',
-      value: function prepare(cracSlot) {
-        var dateUnix = void 0;
-        assert(cracSlot.date && !isNaN(dateUnix = Date.parse(cracSlot.date)), 'cracSlot.date should be valid date');
-        this.date = cracSlot.date;
-        this.dateUnix = dateUnix;
-        this.dateDate = new Date(dateUnix);
-
-        var bitsetAssert = function bitsetAssert(bitset) {
-          assert(bitset && (typeof bitset === 'string' && bitset.length >= 288 || Array.isArray(bitset) && bitset.length >= 9), 'res.bitset should contain at least 288 bits');
-        };
-
-        this.resources = [];
-        var _iteratorNormalCompletion = true;
-        var _didIteratorError = false;
-        var _iteratorError = undefined;
-
-        try {
-          for (var _iterator = (cracSlot.resources || [])[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
-            var res = _step.value;
-
-            assert(res.resourceId, 'resource should have id');
-            bitsetAssert(res.bitset);
-            // bitsetAssert(res.taxonomyBitSet);
-            var resource = {
-              id: res.resourceId,
-              durations: res.durations || [],
-              bitset: prepareBitset(res.bitset, getCracVectorSlotSize(res.bitset))
-            };
-
-            try {
-              resource.taxonomyBitSet = prepareBitset(res.taxonomyBitSet, getCracVectorSlotSize(res.taxonomyBitSet));
-            } catch (e) {}
-
-            this.resources.push(resource);
-          }
-        } catch (err) {
-          _didIteratorError = true;
-          _iteratorError = err;
-        } finally {
-          try {
-            if (!_iteratorNormalCompletion && _iterator.return) {
-              _iterator.return();
-            }
-          } finally {
-            if (_didIteratorError) {
-              throw _iteratorError;
-            }
-          }
-        }
-
-        this.excludedResources = cracSlot.excludedResources || [];
-      }
-    }, {
-      key: 'getResourceBitset',
-      value: function getResourceBitset(resourceID) {
-        var isExcluded = this.excludedResources && this.excludedResources.indexOf(resourceID) !== -1;
-        if (isExcluded) return null;
-        var resourceData = this.resources.find(function (r) {
-          return r.id === resourceID;
-        });
-        if (resourceData) return resourceData.taxonomyBitSet ? setUnion(resourceData.bitset, resourceData.taxonomyBitSet) : resourceData.bitset;
-        return null;
-      }
-    }, {
-      key: 'getResourceUnionBitset',
-      value: function getResourceUnionBitset() {
-        return this.resources.reduce(function (ret, res) {
-          var bitset = res.taxonomyBitSet ? setUnion(res.bitset, res.taxonomyBitSet) : res.bitset;
-          return setUnion(ret, bitset);
-        }, newBusyBitset());
-      }
-    }]);
-    return CRACResourcesAndRoomsSlot;
-  }();
-
-  var CRACResourcesAndRoomsResponse = function () {
-    /* error;
-    slots;*/
-
-    function CRACResourcesAndRoomsResponse(cracData) {
-      classCallCheck(this, CRACResourcesAndRoomsResponse);
-
-      this.slots = [];
-      this.prepare(cracData);
-    }
-
-    createClass(CRACResourcesAndRoomsResponse, [{
-      key: 'prepare',
-      value: function prepare(cracData) {
-        if (cracData.error) this.error = cracData.error;
-        if (!cracData.slots) return false;
-        this.slots = [];
-        var _iteratorNormalCompletion2 = true;
-        var _didIteratorError2 = false;
-        var _iteratorError2 = undefined;
-
-        try {
-          for (var _iterator2 = cracData.slots[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
-            var cracSlot = _step2.value;
-
-            var slot = new CRACResourcesAndRoomsSlot(cracSlot);
-            this.slots.push(slot);
-          }
-        } catch (err) {
-          _didIteratorError2 = true;
-          _iteratorError2 = err;
-        } finally {
-          try {
-            if (!_iteratorNormalCompletion2 && _iterator2.return) {
-              _iterator2.return();
-            }
-          } finally {
-            if (_didIteratorError2) {
-              throw _iteratorError2;
-            }
-          }
-        }
-
-        return true;
-      }
-    }]);
-    return CRACResourcesAndRoomsResponse;
-  }();
-
-  var ScheduleSlotsIterator = function () {
-    function ScheduleSlotsIterator() {
-      classCallCheck(this, ScheduleSlotsIterator);
-    }
-
-    createClass(ScheduleSlotsIterator, [{
-      key: "isSlotAvailable",
-
-      /**
-       * @return {boolean}
-       */
-      value: function isSlotAvailable() {}
-
-      /**
-       * @return {{start: {number}, end: {number}, available: {boolean}}}
-       */
-
-    }, {
-      key: "nextSlot",
-      value: function nextSlot() {}
-    }]);
-    return ScheduleSlotsIterator;
-  }();
-
-  /**
-   * Контейнер для данных расписания одного дня. 
-   * Предоставляет интерфейс к данным такого расписания.
-   * Данный класс служит моделью для визуального представления (или ответа на запрос).
-   */
-  var ScheduleDay = function () {
-    function ScheduleDay() {
-      classCallCheck(this, ScheduleDay);
-    }
-
-    createClass(ScheduleDay, [{
-      key: "isDayAvailable",
-
-      /**
-       * @return {boolean}
-       */
-      value: function isDayAvailable() {}
-
-      /**
-       * 
-       * @return {Array<{start: {number}, end: {number}, available: {boolean}}>}
-       */
-
-    }, {
-      key: "getSlots",
-      value: function getSlots() {}
-    }]);
-    return ScheduleDay;
-  }();
-
-  /**
-   * Контейнер для данных расписания одного дня для данных.
-   * Принимает на вход массив слотов и, таким образом, работает тривиальным образом.
-   */
-  var ScheduleSlotsDay = function (_ScheduleDay) {
-    inherits(ScheduleSlotsDay, _ScheduleDay);
-
-    /**
-     * 
-     * @param {Array<{start: {number}, end: {number}, available: {boolean}}>} slots
-     * @return {Object|Array|*|void}
-     */
-    function ScheduleSlotsDay(slots) {
-      classCallCheck(this, ScheduleSlotsDay);
-
-      var _this = possibleConstructorReturn(this, (ScheduleSlotsDay.__proto__ || Object.getPrototypeOf(ScheduleSlotsDay)).call(this));
-
-      _this.slots = slots;
-      return _this;
-    }
-
-    createClass(ScheduleSlotsDay, [{
-      key: "isDayAvailable",
-      value: function isDayAvailable() {
-        return this.slots.length > 0;
-      }
-    }, {
-      key: "getSlots",
-      value: function getSlots() {
-        return this.slots;
-      }
-    }]);
-    return ScheduleSlotsDay;
-  }(ScheduleDay);
-
-  /**
-   * Create day slots from abstract slots iterator.
-   * @param {ScheduleSlotsIterator} iterator
-   * @returns {Array} day slots
-   */
-  function cutSlots$1(iterator) {
-    var slot = void 0,
-        slots = [];
-    while (slot = iterator.nextSlot()) {
-      slots.push(slot);
-    }
-
-    return slots;
-  }
-
-  /**
-   * Create day slots from abstract slots iterator without busy bound slots.
-   * @param {ScheduleSlotsIterator} iterator
-   * @returns {Array} day slots
-   */
-  function cutSlotsWithoutBusy(iterator) {
-    var slot = void 0,
-        slots = [];
-    while (slot = iterator.nextSlot()) {
-      if (slot.available) slots.push(slot);
-    }
-
-    return slots;
-  }
-
-  /**
-   * Create day slots from abstract slots iterator without start busy slots.
-   * @param {ScheduleSlotsIterator} iterator
-   * @returns {Array} day slots
-   */
-  function cutSlotsWithoutStartBusy(iterator) {
-    var slot = void 0,
-        slots = [];
-    // skip unavailable slots from start of day
-    while ((slot = iterator.nextSlot()) && !slot.available) {}
-    if (!slot) return slots;
-
-    slots.push(slot);
-    while (slot = iterator.nextSlot()) {
-      slots.push(slot);
-    }
-
-    return slots;
-  }
-
-  /**
-   * Create day slots from abstract slots iterator without start and finish busy slots.
-   * @param {ScheduleSlotsIterator} iterator
-   * @returns {Array} day slots
-   */
-  function cutSlotsWithoutStartFinishBusy(iterator) {
-    var slots = cutSlotsWithoutStartBusy(iterator);
-    // skip unavailable slots from end of day
-    var lastPosition = -1;
-    for (var i = slots.length - 1; i >= 0; i--) {
-      if (slots[i].available) {
-        lastPosition = i;
-        break;
-      }
-    }
-
-    return lastPosition < 0 ? [] : slots.slice(0, lastPosition + 1);
-  }
-
-  var ANY = 'ANY';
-
-  var assert$1 = console.assert ? console.assert.bind(console) : function () {};
-
-  var ScheduleCracSlotsIterator = function (_ScheduleSlotsIterato) {
-    inherits(ScheduleCracSlotsIterator, _ScheduleSlotsIterato);
-    createClass(ScheduleCracSlotsIterator, null, [{
-      key: "createSlot",
-
-      /**
-       *
-       * @param {number} start
-       * @param {number} duration
-       * @param {boolean} available
-       * @return {{start: number, end: number, duration: number, available: boolean}}
-       * @private
-       */
-      value: function createSlot(start, duration, available) {
-        assert$1(start >= 0 && start < 1440, 'Start should be more or equal than 0 and less than 1440');
-        assert$1(duration > 0, 'Duration should be more than 0');
-        return {
-          start: start,
-          end: start + duration,
-          duration: duration,
-          available: available
-        };
-      }
-
-      /**
-       *
-       * @param {Array<number>} bitset
-       * @param {number} vectorSlotSize
-       * @param {number} duration
-       * @param {number} scheduleSlotSize
-       * @param {function|null} enhanceSlotFn функция для изменения формата слота/добавления дополнительных данных для него
-       */
-
-    }]);
-
-    function ScheduleCracSlotsIterator(bitset, vectorSlotSize, duration, scheduleSlotSize) {
-      var enhanceSlotFn = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : null;
-      classCallCheck(this, ScheduleCracSlotsIterator);
-
-      var _this = possibleConstructorReturn(this, (ScheduleCracSlotsIterator.__proto__ || Object.getPrototypeOf(ScheduleCracSlotsIterator)).call(this));
-
-      _this.bitset = bitset;
-      _this.vectorSlotSize = vectorSlotSize;
-      _this.duration = duration;
-      _this.slotSize = scheduleSlotSize;
-      _this.enhanceSlotFn = enhanceSlotFn;
-      _this.nowMinutes = -1;
-      _this.curSlot = null;
-      _this._initializeDayBounds();
-      return _this;
-    }
-
-    /**
-     * Инициализация границ набора слотов за день.
-     * Если набор слотов пустой, то устанавливает {start:0, end:0}.
-     *
-     * @private
-     */
-
-
-    createClass(ScheduleCracSlotsIterator, [{
-      key: "_initializeDayBounds",
-      value: function _initializeDayBounds() {
-        var bounds = getFirstLastMinutes(this.bitset, this.vectorSlotSize);
-        this.dayBounds = { start: bounds.start || 0, end: bounds.end || 0 };
-      }
-
-      /**
-       * Если начальная или конечная даты слота выходят за рамки дня - возвращает число, меньше нуля.
-       *
-       * Если текущий слот неактивный и "заканчивается" на свободное время - сдвинуть его вперёд на позицию
-       * первого свободного бита. Если слот при этом стал свободным, то сохранить позицию, в противном случае,
-       * вернуть позицию. Возможно сделать наоборот - если предыдущий занятый слот заканчивается на свободное время,
-       * то сдвинуть текущий слот назад (под "заканчивается" понимаю крайний правый бит в слоте, который уже
-       * не будет участвовать в следующем, с учётом шага сетки).
-       *
-       * @param {number} prevStart начало предыдущего слота в минутах от начала дня (если -1, то возвращает начало дня)
-       * @private
-       */
-
-    }, {
-      key: "_lookupNextSlot",
-      value: function _lookupNextSlot(prevStart) {
-        var start = void 0,
-            end = void 0;
-        start = prevStart === -1 ? this.dayBounds.start : prevStart + this.slotSize;
-        end = start + this.duration;
-        if (end > this.dayBounds.end) {
-          return { start: -1, duration: false };
-        }
-
-        var available = isSlotAvailable(this.bitset, start, start + this.duration, this.vectorSlotSize);
-
-        if (!available) {
-          // Необходимо проверить конечный бит - если это 1, то пройтись по вектору, найдя первый 0 бит.
-          // Следующая за ним позиция и будет искомой.
-          // Затем проверим, будет ли в новой позиции слот доступным для записи.
-
-          var lastBitPosition = Math.floor((start + this.slotSize - 1) / this.vectorSlotSize);
-          var p = { i: lastBitPosition >> 5, b: lastBitPosition % 32 };
-          var offset = _findBack0(this.bitset, p, Math.floor(this.slotSize / this.vectorSlotSize));
-          if (offset > 0) {
-            var checkStart = start + (this.slotSize - offset * this.vectorSlotSize);
-            available = isSlotAvailable(this.bitset, checkStart, checkStart + this.duration, this.vectorSlotSize);
-            if (available) start = checkStart;
-          }
-        }
-
-        if (this.nowMinutes >= 0) {
-          if (start < this.nowMinutes) available = false;
-        }
-
-        return { start: start, available: available };
-      }
-    }, {
-      key: "createSlot",
-      value: function createSlot(start, available) {
-        if (start < 0) return null;
-
-        var slot = ScheduleCracSlotsIterator.createSlot(start, this.duration, available);
-
-        return this.enhanceSlotFn ? this.enhanceSlotFn(slot) : slot;
-      }
-    }, {
-      key: "nextSlot",
-      value: function nextSlot() {
-        // first call or next one
-        var _ref = this.curSlot === null ? this._lookupNextSlot(-1) : this._lookupNextSlot(this.curSlot.start),
-            start = _ref.start,
-            available = _ref.available;
-
-        return this.curSlot = this.createSlot(start, available);
-      }
-    }, {
-      key: "isSlotAvailable",
-      value: function isSlotAvailable() {
-        if (this.curSlot === null) return false;
-        return this.curSlot.available;
-      }
-    }]);
-    return ScheduleCracSlotsIterator;
-  }(ScheduleSlotsIterator);
-
-  /**
-   * Данный класс инкапсулирует данные CRAC по одному дню и, в случае необходимости,
-   * на их основе "нарезает слоты" за этот день.
-   * Данный класс ничего не должен знать про структуру данных бизнеса. Его сфера ответственности - данные CRAC.
-   * Если необходимо использовать данные бизнеса - передавайте их через параметры функций или свойства объекта.
-   */
-  var ScheduleCRACDaySlots = function () {
-
-    /**
-     *
-     * @param {CRACResourcesAndRoomsSlot} cracDay raw CRAC data
-     * @param {Date} businessNow now time in business timezone (in tz_like_utc representation)
-     * @param {function(ScheduleSlotsIterator)} cutSlotsFn
-     * @param {function(ScheduleSlotsIterator)} cutSlotsThisDayFn
-     */
-    function ScheduleCRACDaySlots(cracDay, businessNow) {
-      var cutSlotsFn = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : cutSlots$1;
-      var cutSlotsThisDayFn = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : cutSlotsWithoutStartBusy;
-      classCallCheck(this, ScheduleCRACDaySlots);
-
-      this.cracDay = cracDay;
-      this.businessNow = businessNow;
-      this.cutSlotsFn = cutSlotsFn;
-      this.cutSlotsThisDayFn = cutSlotsThisDayFn;
-    }
-
-    createClass(ScheduleCRACDaySlots, [{
-      key: "isThisDay",
-      value: function isThisDay() {
-        return this.cracDay.date.substr(0, 10) === this.businessNow.toISOString().substr(0, 10);
-      }
-
-      /**
-       * Create all slots from raw CRAC data.
-       *
-       * @param {string} resourceID specific resource. Could be 'ANY' for any available
-       * @param {number} duration
-       * @param {number} slotSize
-       * @param {function|null} enhanceSlotFn
-       * @returns {Array<{start: {number}, end: {number}, available: {boolean}}>} slots
-       */
-
-    }, {
-      key: "cutSlots",
-      value: function cutSlots(resourceID, duration, slotSize) {
-        var enhanceSlotFn = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : null;
-
-        var iterator = this.getSlotsIterator(resourceID, duration, slotSize, enhanceSlotFn);
-        var _cutSlots = this.isThisDay() ? this.cutSlotsThisDayFn : this.cutSlotsFn;
-        return iterator ? _cutSlots(iterator) : null;
-      }
-    }, {
-      key: "getSlotsIterator",
-      value: function getSlotsIterator(resourceID, duration, slotSize) {
-        var enhanceSlotFn = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : null;
-
-        var cracDay = this.cracDay;
-        var bitset = ANY === resourceID ? cracDay.getResourceUnionBitset() : cracDay.getResourceBitset(resourceID);
-        if (bitset) {
-          var vectorSlotSize = getCracVectorSlotSize(bitset);
-          var iterator = new ScheduleCracSlotsIterator(bitset, vectorSlotSize, duration, slotSize, enhanceSlotFn && enhanceSlotFn.bind(cracDay));
-          // Если текущий день, то необходимо не учитывать слоты времени, которое уже истекло
-          if (this.isThisDay()) {
-            iterator.nowMinutes = getMinutesFromStartOfDay(this.businessNow);
-          }
-
-          return iterator;
-        }
-
-        return null;
-      }
-    }]);
-    return ScheduleCRACDaySlots;
-  }();
-
-  function getMinutesFromStartOfDay(d) {
-    return d.getUTCHours() * 60 + d.getUTCMinutes();
-  }
-
-  /**
-   * Возвращает готовый набор слотов для случая выбора нескольких последовательно идущих услуг.
-   *
-   * Суммируем продолжительность услуг.
-   *
-   * @param {CRACResourcesAndRoomsSlot} cracDay
-   * @param business
-   * @param multiServices
-   * @param worker
-   * @param enhanceSlotFn
-   * @return {Object|Array|*|void}
-   */
-  function getSlotsFromBusinessAndCRACMultiServices(cracDay, business, multiServices, worker, enhanceSlotFn) {
-    var totalDuration = multiServices.reduce(function (sum, taxonomy) {
-      return sum + getServiceDuration(taxonomy, worker);
-    }, 0);
-    return getSlotsFromBusinessAndCRACWithDuration(cracDay, business, worker.id, totalDuration, enhanceSlotFn);
-  }
-
-  /**
-   * Принимает на вход объект-хранилище слотов CRACResourcesAndRoomsSlot, биизнес данные, работника, услугу
-   * и возвращает готовый набор слотов.
-   *
-   * @param {CRACResourcesAndRoomsSlot} cracDay
-   * @param business
-   * @param taxonomy
-   * @param worker
-   * @param enhanceSlotFn
-   * @return {Object|Array|*|void}
-   */
-  function getSlotsFromBusinessAndCRAC(cracDay, business, taxonomy, worker, enhanceSlotFn) {
-    var taxDuration = getServiceDuration(taxonomy, worker);
-    return getSlotsFromBusinessAndCRACWithDuration(cracDay, business, worker.id, taxDuration, enhanceSlotFn);
-  }
-
-  function getSlotsFromBusinessAndCRACWithDuration(cracDay, business, workerID, taxDuration, enhanceSlotFn) {
-    assert$1(cracDay instanceof CRACResourcesAndRoomsSlot, 'cracDay should be instance of CRACResourcesAndRoomsSlot');
-    var widgetConfiguration = business.widget_configuration;
-    var isForbidden = isDateForbidden(widgetConfiguration, cracDay.date);
-    if (isForbidden) {
-      return [];
-    }
-    var forceSlotSize = widgetConfiguration && widgetConfiguration.displaySlotSize && widgetConfiguration.displaySlotSize < taxDuration;
-    var slotSize = forceSlotSize ? widgetConfiguration.displaySlotSize : taxDuration;
-    var cutSlots = widgetConfiguration.hideGraySlots ? cutSlotsWithoutBusy : cutSlots;
-    var businessNow = getBusinessDateLikeUTC(moment.utc(), { business: business }).toDate();
-    var res = cracDay.resources.find(function (res) {
-      return res.id === workerID;
-    });
-    if (res && res.durations.length) {
-      // supported only one taxonomy
-      slotSize = res.durations[0] || slotSize;
-    }
-    var scheduleCRACSlots = new ScheduleCRACDaySlots(cracDay, businessNow, cutSlotsWithoutStartFinishBusy, cutSlotsWithoutStartFinishBusy);
-    return scheduleCRACSlots.cutSlots(workerID, taxDuration, slotSize, enhanceSlotFn);
-  }
 
 
 
