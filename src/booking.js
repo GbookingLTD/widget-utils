@@ -3,6 +3,7 @@ import moment from 'moment';
 import { alignSlotTime, getDateLikeUTC, setBusinessDateTZ } from './dateTime';
 import { isDateForbidden, checkDate } from './busySlots';
 import { getSlotsFromBusinessAndCRAC } from './schedule/scheduleCracSlots';
+import * as DateTime from './dateTime';
 
 /**
  *
@@ -58,7 +59,7 @@ function calendarBookingTimeGT(businessData, slots, slotSize, day) {
     for (var i = 0; i < slotDay.slots.length; i++) {
       if (slotDay.slots[i].space_left > 0) {
         var checkSlot = moment.utc(slotDay.date).add(slotDay.slots[i].time, 'm');
-        if(checkSlot > moment.utc()){
+        if(checkSlot > DateTime.getBusinessDateLikeUTC(moment(), businessData)){
           selectedSlot = checkSlot;
           break;
         }
