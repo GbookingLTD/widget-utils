@@ -3175,6 +3175,23 @@ var langUtils = Object.freeze({
   });
 
   /**
+   * Убирает из списка тех работников, которых не нужно показывать в виджете.
+   *
+   * @param resources
+   * @param businessData
+   * @param options
+   * @returns {[]}
+   */
+  function clearHiddenResources(resources, businessData, options) {
+    options = options || {};
+    var showInactiveWorkers = options.showInactiveWorkers || false;
+    var showAllWorkers = businessData.business.widget_configuration.showAllWorkers;
+    return resources.filter(function (resource) {
+      return (showInactiveWorkers || resource.displayInWidget) && (showAllWorkers || !resource.scheduleIsEmpty);
+    });
+  }
+
+  /**
    * Выбираем только тех работников, которые выполяют указанную услугу (услуги).
    *
    * @param businessData
@@ -3189,20 +3206,23 @@ var langUtils = Object.freeze({
     }
 
     options = options || {};
-    var showInactiveWorkers = options.showInactiveWorkers || false;
+    if (typeof options.clearHiddenResources === 'undefined') options.clearHiddenResources = true;
 
-    var showAllWorkers = businessData.business.widget_configuration.showAllWorkers;
+    var resources = businessData.business.resources;
+    if (options.clearHiddenResources) {
+      resources = clearHiddenResources(resources, businessData, options);
+    }
 
     if (services.length > 1) {
-      return businessData.business.resources.filter(function (resource) {
+      return resources.filter(function (resource) {
         // worker should execute all services
         var intersection = _$1.intersection(resource.taxonomies, services);
-        return (showInactiveWorkers || resource.displayInWidget) && (showAllWorkers || !resource.scheduleIsEmpty) && intersection && intersection.length === services.length;
+        return intersection && intersection.length === services.length;
       });
     }
 
-    return businessData.business.resources.filter(function (resource) {
-      return (showInactiveWorkers || resource.displayInWidget) && (showAllWorkers || !resource.scheduleIsEmpty) && resource.taxonomies.indexOf('' + services[0]) !== -1;
+    return resources.filter(function (resource) {
+      return resource.taxonomies.indexOf('' + services[0]) !== -1;
     });
   }
 
@@ -3251,6 +3271,7 @@ var langUtils = Object.freeze({
   }
 
 var Resources = Object.freeze({
+    clearHiddenResources: clearHiddenResources,
     filterWorkersByTaxonomies: filterWorkersByTaxonomies,
     prepareWorkers: prepareWorkers
   });

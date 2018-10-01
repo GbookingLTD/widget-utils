@@ -1,6 +1,24 @@
 import _ from 'lodash';
 
 /**
+ * Убирает из списка тех работников, которых не нужно показывать в виджете.
+ *
+ * @param resources
+ * @param businessData
+ * @param options
+ * @returns {[]}
+ */
+export function clearHiddenResources(resources, businessData, options) {
+  options = options || {};
+  const showInactiveWorkers = options.showInactiveWorkers || false;
+  const showAllWorkers = businessData.business.widget_configuration.showAllWorkers;
+  return resources.filter(function (resource) {
+    return (showInactiveWorkers || resource.displayInWidget) &&
+      (showAllWorkers || !resource.scheduleIsEmpty)
+  });
+}
+
+/**
  * Выбираем только тех работников, которые выполяют указанную услугу (услуги).
  *
  * @param businessData
@@ -15,24 +33,23 @@ export function filterWorkersByTaxonomies(businessData, services, options) {
   }
   
   options = options || {};
-  var showInactiveWorkers = options.showInactiveWorkers || false;
+  if (typeof options.clearHiddenResources === 'undefined') options.clearHiddenResources = true;
 
-  const showAllWorkers = businessData.business.widget_configuration.showAllWorkers;
-
+  let resources = businessData.business.resources;
+  if (options.clearHiddenResources) {
+    resources = clearHiddenResources(resources, businessData, options);
+  }
+  
   if (services.length > 1) {
-    return businessData.business.resources.filter(function (resource) {
+    return resources.filter(function (resource) {
       // worker should execute all services
       let intersection = _.intersection(resource.taxonomies, services);
-      return (showInactiveWorkers || resource.displayInWidget) && 
-        (showAllWorkers || !resource.scheduleIsEmpty) &&
-        intersection && intersection.length === services.length;
+      return intersection && intersection.length === services.length;
     });
   }
   
-  return businessData.business.resources.filter(function (resource) {
-    return (showInactiveWorkers || resource.displayInWidget) &&
-      (showAllWorkers || !resource.scheduleIsEmpty) &&
-      resource.taxonomies.indexOf('' + services[0]) !== -1;
+  return resources.filter(function (resource) {
+    return resource.taxonomies.indexOf('' + services[0]) !== -1;
   });
 }
 
