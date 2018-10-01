@@ -1,6 +1,6 @@
 "use strict";
 
-import {prepareBitset, getCracVectorSlotSize, calcCRACSlotIntermediate, setUnion, newBusyBitset} from '../../bower_components/crac-utils/src';
+import {prepareBitset, getCracVectorSlotSize, setUnion, newBusyBitset} from '../../bower_components/crac-utils/src';
 
 let assert = console.assert ? console.assert.bind(console) : function() {};
 

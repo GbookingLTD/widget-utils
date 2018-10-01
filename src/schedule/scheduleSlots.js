@@ -61,7 +61,7 @@ export class ScheduleSlotsDay extends ScheduleDay {
  */
 export function cutSlots(iterator) {
   let slot, slots = [];
-  while (slot = iterator.nextSlot()) {
+  while ((slot = iterator.nextSlot())) {
     slots.push(slot);
   }
 
@@ -75,7 +75,7 @@ export function cutSlots(iterator) {
  */
 export function cutSlotsWithoutBusy(iterator) {
   let slot, slots = [];
-  while (slot = iterator.nextSlot()) {
+  while ((slot = iterator.nextSlot())) {
     if (slot.available) slots.push(slot);
   }
 
@@ -94,7 +94,7 @@ export function cutSlotsWithoutStartBusy(iterator) {
   if (!slot) return slots;
   
   slots.push(slot);
-  while (slot = iterator.nextSlot()) {
+  while ((slot = iterator.nextSlot())) {
     slots.push(slot);
   }
 
