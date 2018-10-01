@@ -24,9 +24,12 @@ export function filterWorkersByTaxonomies(businessData, services, options) {
       return (showInactiveWorkers || resource.displayInWidget) && intersection && intersection.length === services.length;
     });
   }
-
+  
+  const showAllWorkers = businessData.business.widget_configuration.showAllWorkers;
   return businessData.business.resources.filter(function (resource) {
-    return (showInactiveWorkers || resource.displayInWidget) && resource.taxonomies.indexOf('' + services[0]) !== -1;
+    return (showInactiveWorkers || resource.displayInWidget) &&
+      (showAllWorkers || !resource.scheduleIsEmpty) &&
+      resource.taxonomies.indexOf('' + services[0]) !== -1;
   });
 }
 
