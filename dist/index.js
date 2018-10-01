@@ -3195,7 +3195,7 @@ var langUtils = Object.freeze({
       return businessData.business.resources.filter(function (resource) {
         // worker should execute all services
         var intersection = _$1.intersection(resource.taxonomies, services);
-        return (showInactiveWorkers || resource.displayInWidget) && intersection && intersection.length === services.length;
+        return (showInactiveWorkers || resource.displayInWidget) && (showAllWorkers || !resource.scheduleIsEmpty) && intersection && intersection.length === services.length;
       });
     }
 

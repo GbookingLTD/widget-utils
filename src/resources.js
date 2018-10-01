@@ -21,7 +21,9 @@ export function filterWorkersByTaxonomies(businessData, services, options) {
     return businessData.business.resources.filter(function (resource) {
       // worker should execute all services
       let intersection = _.intersection(resource.taxonomies, services);
-      return (showInactiveWorkers || resource.displayInWidget) && intersection && intersection.length === services.length;
+      return (showInactiveWorkers || resource.displayInWidget) && 
+        (showAllWorkers || !resource.scheduleIsEmpty) &&
+        intersection && intersection.length === services.length;
     });
   }
   
