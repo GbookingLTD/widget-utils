@@ -3191,6 +3191,8 @@ var langUtils = Object.freeze({
     options = options || {};
     var showInactiveWorkers = options.showInactiveWorkers || false;
 
+    var showAllWorkers = businessData.business.widget_configuration.showAllWorkers;
+
     if (services.length > 1) {
       return businessData.business.resources.filter(function (resource) {
         // worker should execute all services
@@ -3199,7 +3201,6 @@ var langUtils = Object.freeze({
       });
     }
 
-    var showAllWorkers = businessData.business.widget_configuration.showAllWorkers;
     return businessData.business.resources.filter(function (resource) {
       return (showInactiveWorkers || resource.displayInWidget) && (showAllWorkers || !resource.scheduleIsEmpty) && resource.taxonomies.indexOf('' + services[0]) !== -1;
     });

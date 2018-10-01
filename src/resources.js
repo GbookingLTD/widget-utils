@@ -17,6 +17,8 @@ export function filterWorkersByTaxonomies(businessData, services, options) {
   options = options || {};
   var showInactiveWorkers = options.showInactiveWorkers || false;
 
+  const showAllWorkers = businessData.business.widget_configuration.showAllWorkers;
+
   if (services.length > 1) {
     return businessData.business.resources.filter(function (resource) {
       // worker should execute all services
@@ -27,7 +29,6 @@ export function filterWorkersByTaxonomies(businessData, services, options) {
     });
   }
   
-  const showAllWorkers = businessData.business.widget_configuration.showAllWorkers;
   return businessData.business.resources.filter(function (resource) {
     return (showInactiveWorkers || resource.displayInWidget) &&
       (showAllWorkers || !resource.scheduleIsEmpty) &&
