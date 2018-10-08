@@ -1,11 +1,14 @@
 "use strict";
 
-import moment from 'moment';
+import Moment from 'moment-timezone';
+import { extendMoment } from 'moment-range';
 import { ScheduleBusySlotsCutter } from './scheduleBusySlotsCutter';
 import { setBusinessDateTZ, getDateLikeUTC } from '../dateTime';
 import { checkSlotInterval, alignmentBusySlotsByTaxonomyDuration } from '../busySlots';
 import { getServiceDiscountsAndExceptions } from '../discounts';
 import { getServiceDuration } from '../taxonomies';
+
+const moment = extendMoment(Moment);
 
 /**
  * Ожидается набор слотов в формате busySlots.

@@ -1,7 +1,7 @@
 'use strict';
 
 import _ from 'lodash';
-import moment from 'moment';
+import moment from 'moment-timezone';
 import {newFreeBitset, prepareBitset, getCracVectorSlotSize, getFirstLastMinutes, setAnd} from '../../bower_components/crac-utils/src';
 
 function getDayBoundsFromCracSlot(date, bitset) {
@@ -19,10 +19,10 @@ function getDayBoundsFromCracSlot(date, bitset) {
 function cutSlotsFromCrac(cracSlot, date, startMinutes, endMinutes, scheduleStrategy, scheduleSlotSize) {
   let cracSlotSize = getCracVectorSlotSize(cracSlot.bitset);
   let bitset = prepareBitset(cracSlot.bitset, cracSlotSize);
-  let bitsetTaxonomy = cracSlot.taxonomyBitset ? 
+  let bitsetTaxonomy = cracSlot.taxonomyBitset ?
     prepareBitset(cracSlot.taxonomyBitset, cracSlotSize) : newFreeBitset();
   bitset = setAnd(bitset, bitsetTaxonomy);
-  
+
   let dayBounds = getDayBoundsFromCracSlot(date, bitset);
   const slots = cutSlots(date, bitset, cracSlotSize, scheduleSlotSize, scheduleStrategy);
   return {
