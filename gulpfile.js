@@ -19,7 +19,7 @@ gulp.task('compile', function() {
       globals: {
         'lodash': '_',
         'moment-timezone': 'moment',
-        'moment-range': 'moment-range',
+        'moment-range': 'momentRange',
       },
       //external: ['moment-timezone'],
       sourceMap: false,

@@ -21,7 +21,7 @@
     "gulp-watch": "4.3.11",
     "moment": "^2.22.2",
     "moment-timezone": "^0.5.21",
-    "moment-range": "~1.0.5",
+    "moment-range": "^3.0.3",
     "rollup-plugin-babel": "2.7.1",
     "rollup-plugin-includepaths": "0.1.5"
   },
