@@ -4035,6 +4035,141 @@ var Crac = Object.freeze({
     calcCRACSlotIntermediate: calcCRACSlotIntermediate
   });
 
+  /**
+   * Класс для сортировки без контекста услуги, а так же базовый класс для остальных индексов.
+   */
+  var WeightIndex = function () {
+    function WeightIndex(data) {
+      classCallCheck(this, WeightIndex);
+
+      this._index = null;
+      if (data) this.resetIndex(data);
+    }
+
+    createClass(WeightIndex, [{
+      key: "resetIndex",
+      value: function resetIndex(data) {
+        this._index = this._parseIndex(data);
+      }
+    }, {
+      key: "getIndex",
+      value: function getIndex() {
+        return this._index;
+      }
+    }, {
+      key: "_parseIndex",
+      value: function _parseIndex(data) {
+        return data;
+      }
+    }]);
+    return WeightIndex;
+  }();
+
+  var WorkloadWeightIndex = function (_WeightIndex) {
+    inherits(WorkloadWeightIndex, _WeightIndex);
+
+    function WorkloadWeightIndex(cracData, dir) {
+      classCallCheck(this, WorkloadWeightIndex);
+
+      var _this = possibleConstructorReturn(this, (WorkloadWeightIndex.__proto__ || Object.getPrototypeOf(WorkloadWeightIndex)).call(this, null));
+
+      _this.direction = dir || "DESC";
+      _this.resetIndex(cracData);
+      return _this;
+    }
+
+    createClass(WorkloadWeightIndex, [{
+      key: "_parseIndex",
+      value: function _parseIndex(cracData) {
+        var weights = cracData.weights;
+        var sortCriteria = void 0;
+        switch (this.direction) {
+          case "ASC":
+            sortCriteria = function sortCriteria(w) {
+              return w.weight;
+            };
+            break;
+          case "DESC":
+            sortCriteria = function sortCriteria(w) {
+              return 0x0FFFFFFF - w.weight;
+            };
+            break;
+          default:
+            throw Error("Wrong direction " + this.direction);
+        }
+
+        var index = 0;
+        return _$1(weights).sortBy(sortCriteria).reduce(function (ret, item) {
+          item.index = ++index;
+          ret[item.resource] = item;
+          return ret;
+        }, {});
+      }
+    }]);
+    return WorkloadWeightIndex;
+  }(WeightIndex);
+
+  var MostFreeWeightIndex = function (_WeightIndex2) {
+    inherits(MostFreeWeightIndex, _WeightIndex2);
+
+    function MostFreeWeightIndex(cracData) {
+      classCallCheck(this, MostFreeWeightIndex);
+      return possibleConstructorReturn(this, (MostFreeWeightIndex.__proto__ || Object.getPrototypeOf(MostFreeWeightIndex)).call(this, cracData));
+    }
+
+    createClass(MostFreeWeightIndex, [{
+      key: "_parseIndex",
+      value: function _parseIndex(cracData) {
+        var freeDates = cracData.weights;
+        var sortCriteria = function sortCriteria(item) {
+          if (item.date === null || item.date === MostFreeWeightIndex.ZeroDate) {
+            return Number.MAX_SAFE_INTEGER;
+          }
+          return Date.parse(item.date);
+        };
+
+        var index = 0;
+        return _$1(freeDates).sortBy(sortCriteria).reduce(function (ret, item) {
+          item.index = ++index;
+          ret[item.resource] = item;
+          return ret;
+        }, {});
+      }
+    }]);
+    return MostFreeWeightIndex;
+  }(WeightIndex);
+
+  MostFreeWeightIndex.ZeroDate = "0001-01-01T00:00:00Z";
+
+  /**
+   * General algorithm for workers sorting.
+   * 
+   * @param {Array<{id, order}>} workers
+   * @param {WeightIndex} index
+   * @return {*}
+   */
+  function getSortedWorkers(workers, index) {
+    var weights = index.getIndex();
+    // use sorting by "order" worker property by default
+    if (weights === null) return _$1.sortBy(workers, function (res) {
+      return res.order;
+    });
+
+    var indexOfNotWeights = workers.length;
+    return _$1.sortBy(workers, function (res) {
+      return weights[res.id] ? weights[res.id].index : ++indexOfNotWeights;
+    });
+  }
+
+
+
+  var SortedWorkers = Object.freeze({
+    WeightIndex: WeightIndex,
+    WorkloadWeightIndex: WorkloadWeightIndex,
+    MostFreeWeightIndex: MostFreeWeightIndex,
+    getSortedWorkers: getSortedWorkers
+  });
+
   var index = {
     DateTime: DateTime,
     BusySlots: BusySlots,
@@ -4049,7 +4184,8 @@ var Crac = Object.freeze({
     ResourcesMostFree: ResourcesMostFree,
     Discounts: Discounts,
     Crac: Crac,
-    CracUtils: CracUtils
+    CracUtils: CracUtils,
+    SortedWorkers: SortedWorkers
   };
 
   return index;
