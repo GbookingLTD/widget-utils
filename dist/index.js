@@ -377,6 +377,12 @@ var BusySlots = Object.freeze({
   var TAXONOMY_ADULT = 'PARENT';
   var TAXONOMY_COMMON = 'COMMON';
 
+  /**
+   * 
+   * @param {Array<{id, additionalDurations, duration}>} taxonomy
+   * @param {Array<{taxonomyLevels}>} resource
+   * @return {*}
+   */
   function getServiceDuration(taxonomy, resource) {
     if (resource) {
       var taxLevel = (_.find(resource.taxonomyLevels, { id: taxonomy.id }) || {}).level;
@@ -407,6 +413,18 @@ var BusySlots = Object.freeze({
           minDuration = duration;
         }
       });
+    });
+
+    return minDuration;
+  }
+
+  function getMinServiceDuration(taxonomies, res) {
+    var minDuration = Number.MAX_SAFE_INTEGER;
+    taxonomies.forEach(function (tax) {
+      var duration = getServiceDuration(tax, res);
+      if (duration < minDuration) {
+        minDuration = duration;
+      }
     });
 
     return minDuration;
@@ -466,6 +484,7 @@ var BusySlots = Object.freeze({
 var taxonomies = Object.freeze({
     getServiceDuration: getServiceDuration,
     findMinResourceServiceDuration: findMinResourceServiceDuration,
+    getMinServiceDuration: getMinServiceDuration,
     setupChildishnes: setupChildishnes
   });
 
@@ -3276,44 +3295,6 @@ var Resources = Object.freeze({
     prepareWorkers: prepareWorkers
   });
 
-  /*
-   В данном файле реализована стратегия показа списка работников "most_free".
-   Следите, чтобы сигнатуры функций из этого файла совпадали с сигнатурами функций из resources.js и наоборот.
-   */
-
-  /**
-   * 
-   * @param {Object} workloadIndex
-   * @param {Object} worker
-   * @private
-   */
-  function _sortByWorkload(workloadIndex, worker) {
-    return 10000000 - workloadIndex[worker.id].weight;
-  }
-
-  /**
-   * Подготавливает список работников и кабинетов для их отображения на виджете.
-   *
-   * @param $scope
-   * @param workers
-   * @param cabinets
-   * @param {Object} options
-   * @param {Object} options.workloadIndex
-   * @param {Function} options.sortByFn
-   * @param {Boolean} options.showInactiveWorkers
-   * @param {Boolean} options.cabinetsEnabled
-   */
-  function prepareWorkers$1($scope, workers, cabinets, options) {
-    options = options || {};
-    options.sortByFn = _sortByWorkload.bind(null, options.workloadIndex);
-    return prepareWorkers($scope, workers, cabinets, options);
-  }
-
-var ResourcesMostFree = Object.freeze({
-    _sortByWorkload: _sortByWorkload,
-    prepareWorkers: prepareWorkers$1
-  });
-
   var SLOT_SIZE$1 = 5;
   var VECTOR_SIZE$1 = 24 * 60 / SLOT_SIZE$1;
   function getDayBoundsFromCracSlot$1(date, slot) {
@@ -4181,7 +4162,6 @@ var Crac = Object.freeze({
     taxonomies: taxonomies,
     Taxonomies: taxonomies,
     Resources: Resources,
-    ResourcesMostFree: ResourcesMostFree,
     Discounts: Discounts,
     Crac: Crac,
     CracUtils: CracUtils,
