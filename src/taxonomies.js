@@ -4,6 +4,12 @@ var TAXONOMY_CHILDREN = 'CHILDREN';
 var TAXONOMY_ADULT = 'PARENT';
 var TAXONOMY_COMMON = 'COMMON';
 
+/**
+ * 
+ * @param {Array<{id, additionalDurations, duration}>} taxonomy
+ * @param {Array<{taxonomyLevels}>} resource
+ * @return {*}
+ */
 export function getServiceDuration(taxonomy, resource) {
   if (resource) {
     var taxLevel = (_.find(resource.taxonomyLevels, {id: taxonomy.id}) || {}).level;
@@ -34,6 +40,18 @@ export function findMinResourceServiceDuration(taxonomies, resources) {
         minDuration = duration;
       }
     });
+  });
+
+  return minDuration;
+}
+
+export function getMinServiceDuration(taxonomies, res) {
+  var minDuration = Number.MAX_SAFE_INTEGER;
+  taxonomies.forEach(function (tax) {
+    let duration = getServiceDuration(tax, res);
+    if (duration < minDuration) {
+      minDuration = duration;
+    }
   });
 
   return minDuration;

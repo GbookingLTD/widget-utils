@@ -378,6 +378,12 @@ var BusySlots = Object.freeze({
   var TAXONOMY_ADULT = 'PARENT';
   var TAXONOMY_COMMON = 'COMMON';
 
+  /**
+   * 
+   * @param {Array<{id, additionalDurations, duration}>} taxonomy
+   * @param {Array<{taxonomyLevels}>} resource
+   * @return {*}
+   */
   function getServiceDuration(taxonomy, resource) {
     if (resource) {
       var taxLevel = (_.find(resource.taxonomyLevels, { id: taxonomy.id }) || {}).level;
@@ -408,6 +414,18 @@ var BusySlots = Object.freeze({
           minDuration = duration;
         }
       });
+    });
+
+    return minDuration;
+  }
+
+  function getMinServiceDuration(taxonomies, res) {
+    var minDuration = Number.MAX_SAFE_INTEGER;
+    taxonomies.forEach(function (tax) {
+      var duration = getServiceDuration(tax, res);
+      if (duration < minDuration) {
+        minDuration = duration;
+      }
     });
 
     return minDuration;
@@ -467,6 +485,7 @@ var BusySlots = Object.freeze({
 var taxonomies = Object.freeze({
     getServiceDuration: getServiceDuration,
     findMinResourceServiceDuration: findMinResourceServiceDuration,
+    getMinServiceDuration: getMinServiceDuration,
     setupChildishnes: setupChildishnes
   });
 
@@ -3281,44 +3300,6 @@ var Resources = Object.freeze({
     prepareWorkers: prepareWorkers
   });
 
-  /*
-   В данном файле реализована стратегия показа списка работников "most_free".
-   Следите, чтобы сигнатуры функций из этого файла совпадали с сигнатурами функций из resources.js и наоборот.
-   */
-
-  /**
-   * 
-   * @param {Object} workloadIndex
-   * @param {Object} worker
-   * @private
-   */
-  function _sortByWorkload(workloadIndex, worker) {
-    return 10000000 - workloadIndex[worker.id].weight;
-  }
-
-  /**
-   * Подготавливает список работников и кабинетов для их отображения на виджете.
-   *
-   * @param $scope
-   * @param workers
-   * @param cabinets
-   * @param {Object} options
-   * @param {Object} options.workloadIndex
-   * @param {Function} options.sortByFn
-   * @param {Boolean} options.showInactiveWorkers
-   * @param {Boolean} options.cabinetsEnabled
-   */
-  function prepareWorkers$1($scope, workers, cabinets, options) {
-    options = options || {};
-    options.sortByFn = _sortByWorkload.bind(null, options.workloadIndex);
-    return prepareWorkers($scope, workers, cabinets, options);
-  }
-
-var ResourcesMostFree = Object.freeze({
-    _sortByWorkload: _sortByWorkload,
-    prepareWorkers: prepareWorkers$1
-  });
-
   var SLOT_SIZE$1 = 5;
   var VECTOR_SIZE$1 = 24 * 60 / SLOT_SIZE$1;
   function getDayBoundsFromCracSlot$1(date, slot) {
@@ -4040,6 +4021,141 @@ var Crac = Object.freeze({
     calcCRACSlotIntermediate: calcCRACSlotIntermediate$1
   });
 
+  /**
+   * Класс для сортировки без контекста услуги, а так же базовый класс для остальных индексов.
+   */
+  var WeightIndex = function () {
+    function WeightIndex(data) {
+      classCallCheck(this, WeightIndex);
+
+      this._index = null;
+      if (data) this.resetIndex(data);
+    }
+
+    createClass(WeightIndex, [{
+      key: "resetIndex",
+      value: function resetIndex(data) {
+        this._index = this._parseIndex(data);
+      }
+    }, {
+      key: "getIndex",
+      value: function getIndex() {
+        return this._index;
+      }
+    }, {
+      key: "_parseIndex",
+      value: function _parseIndex(data) {
+        return data;
+      }
+    }]);
+    return WeightIndex;
+  }();
+
+  var WorkloadWeightIndex = function (_WeightIndex) {
+    inherits(WorkloadWeightIndex, _WeightIndex);
+
+    function WorkloadWeightIndex(cracData, dir) {
+      classCallCheck(this, WorkloadWeightIndex);
+
+      var _this = possibleConstructorReturn(this, (WorkloadWeightIndex.__proto__ || Object.getPrototypeOf(WorkloadWeightIndex)).call(this, null));
+
+      _this.direction = dir || "DESC";
+      _this.resetIndex(cracData);
+      return _this;
+    }
+
+    createClass(WorkloadWeightIndex, [{
+      key: "_parseIndex",
+      value: function _parseIndex(cracData) {
+        var weights = cracData.weights;
+        var sortCriteria = void 0;
+        switch (this.direction) {
+          case "ASC":
+            sortCriteria = function sortCriteria(w) {
+              return w.weight;
+            };
+            break;
+          case "DESC":
+            sortCriteria = function sortCriteria(w) {
+              return 0x0FFFFFFF - w.weight;
+            };
+            break;
+          default:
+            throw Error("Wrong direction " + this.direction);
+        }
+
+        var index = 0;
+        return _$1(weights).sortBy(sortCriteria).reduce(function (ret, item) {
+          item.index = ++index;
+          ret[item.resource] = item;
+          return ret;
+        }, {});
+      }
+    }]);
+    return WorkloadWeightIndex;
+  }(WeightIndex);
+
+  var MostFreeWeightIndex = function (_WeightIndex2) {
+    inherits(MostFreeWeightIndex, _WeightIndex2);
+
+    function MostFreeWeightIndex(cracData) {
+      classCallCheck(this, MostFreeWeightIndex);
+      return possibleConstructorReturn(this, (MostFreeWeightIndex.__proto__ || Object.getPrototypeOf(MostFreeWeightIndex)).call(this, cracData));
+    }
+
+    createClass(MostFreeWeightIndex, [{
+      key: "_parseIndex",
+      value: function _parseIndex(cracData) {
+        var freeDates = cracData.weights;
+        var sortCriteria = function sortCriteria(item) {
+          if (item.date === null || item.date === MostFreeWeightIndex.ZeroDate) {
+            return Number.MAX_SAFE_INTEGER;
+          }
+          return Date.parse(item.date);
+        };
+
+        var index = 0;
+        return _$1(freeDates).sortBy(sortCriteria).reduce(function (ret, item) {
+          item.index = ++index;
+          ret[item.resource] = item;
+          return ret;
+        }, {});
+      }
+    }]);
+    return MostFreeWeightIndex;
+  }(WeightIndex);
+
+  MostFreeWeightIndex.ZeroDate = "0001-01-01T00:00:00Z";
+
+  /**
+   * General algorithm for workers sorting.
+   * 
+   * @param {Array<{id, order}>} workers
+   * @param {WeightIndex} index
+   * @return {*}
+   */
+  function getSortedWorkers(workers, index) {
+    var weights = index.getIndex();
+    // use sorting by "order" worker property by default
+    if (weights === null) return _$1.sortBy(workers, function (res) {
+      return res.order;
+    });
+
+    var indexOfNotWeights = workers.length;
+    return _$1.sortBy(workers, function (res) {
+      return weights[res.id] ? weights[res.id].index : ++indexOfNotWeights;
+    });
+  }
+
+
+
+  var SortedWorkers = Object.freeze({
+    WeightIndex: WeightIndex,
+    WorkloadWeightIndex: WorkloadWeightIndex,
+    MostFreeWeightIndex: MostFreeWeightIndex,
+    getSortedWorkers: getSortedWorkers
+  });
+
   var index = {
     DateTime: DateTime,
     BusySlots: BusySlots,
@@ -4051,10 +4167,10 @@ var Crac = Object.freeze({
     taxonomies: taxonomies,
     Taxonomies: taxonomies,
     Resources: Resources,
-    ResourcesMostFree: ResourcesMostFree,
     Discounts: Discounts,
     Crac: Crac,
-    CracUtils: CracUtils
+    CracUtils: CracUtils,
+    SortedWorkers: SortedWorkers
   };
 
   return index;
