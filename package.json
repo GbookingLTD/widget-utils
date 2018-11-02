@@ -5,6 +5,7 @@
     "test": "npm run build && node_modules/.bin/mocha test/**/*",
     "dev": "./node_modules/.bin/gulp dev",
     "build": "./node_modules/.bin/gulp build",
+    "bump": "./node_modules/.bin/gulp bump",
     "_startMinutes": "npm run build"
   },
   "main": "dist/index.js",
@@ -26,6 +27,7 @@
   },
   "dependencies": {
     "crac-utils": "http://git.dev.gbooking.ru/gbooking/crac-utils/repository/archive.tar.gz?ref=v1.3.10",
+    "gulp-bump": "^3.1.1",
     "supports-color": "^5.4.0"
   }
 }
