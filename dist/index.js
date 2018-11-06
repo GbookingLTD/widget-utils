@@ -3259,6 +3259,7 @@ var langUtils = Object.freeze({
         var index = 0;
         return _$1(weights).sortBy(sortCriteria).reduce(function (ret, item) {
           item.index = ++index;
+          item.value = item.weight;
           ret[item.resource] = item;
           return ret;
         }, {});
@@ -3289,6 +3290,7 @@ var langUtils = Object.freeze({
         var index = 0;
         return _$1(freeDates).sortBy(sortCriteria).reduce(function (ret, item) {
           item.index = ++index;
+          item.value = item.date;
           ret[item.resource] = item;
           return ret;
         }, {});
