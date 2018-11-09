@@ -1,5 +1,8 @@
 import _ from 'lodash';
-import moment from 'moment';
+import Moment from 'moment-timezone';
+import { extendMoment } from 'moment-range';
+
+const moment = extendMoment(Moment);
 
 const days = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
 const weekDaysMap = {

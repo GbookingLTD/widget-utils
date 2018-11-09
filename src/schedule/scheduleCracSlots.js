@@ -1,7 +1,7 @@
 "use strict";
 
-import moment from 'moment';
 import {isDateForbidden} from "../busySlots"
+import moment from 'moment-timezone';
 import {getBusinessDateLikeUTC} from "../dateTime";
 import {getServiceDuration} from "../taxonomies";
 import {

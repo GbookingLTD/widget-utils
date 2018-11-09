@@ -1,7 +1,7 @@
 "use strict";
 
 import _ from 'lodash';
-import moment from 'moment';
+import moment from 'moment-timezone';
 import {getServiceDiscountsAndExceptions} from "../discounts";
 import {ScheduleBusySlotsCutter} from "./scheduleBusySlotsCutter";
 
@@ -12,7 +12,7 @@ export class ScheduleBusySlotsCutterV2 extends ScheduleBusySlotsCutter {
     this.logedInProfile = logedInProfile;
     this.appointmentCount = appointmentCount;
   }
-  
+
   cutSlots(busySlotsDay, now) {
     let slots = [];
     let self = this;
@@ -63,7 +63,7 @@ export class ScheduleBusySlotsCutterV2 extends ScheduleBusySlotsCutter {
       });
       slot_time.add('minutes', self.forceSlotSize ? self.slotSize : duration);
     });
-    
+
     return slots;
   }
 }

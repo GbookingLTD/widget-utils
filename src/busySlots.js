@@ -1,7 +1,9 @@
 import _ from 'lodash';
-import moment from 'moment';
+import Moment from 'moment-timezone';
 import { getDateLikeUTC, setBusinessDateTZ } from './dateTime';
+import { extendMoment } from 'moment-range';
 
+const moment = extendMoment(Moment);
 /**
  * Calculates whether the busy day.
  *

@@ -1,5 +1,5 @@
 import _ from 'lodash';
-import moment from 'moment';
+import moment from 'moment-timezone';
 import { alignSlotTime, getDateLikeUTC, setBusinessDateTZ } from './dateTime';
 import { isDateForbidden, checkDate } from './busySlots';
 import { getSlotsFromBusinessAndCRAC } from './schedule/scheduleCracSlots';
