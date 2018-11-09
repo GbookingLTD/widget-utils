@@ -1,4 +1,5 @@
 import _ from 'lodash';
+import {getSortedWorkers} from './sortedWorkers';
 
 /**
  * Убирает из списка тех работников, которых не нужно показывать в виджете.
@@ -73,7 +74,17 @@ export function prepareWorkers($scope, workers, cabinets, options) {
   let activeWorkers = options.showInactiveWorkers ? workers : _.filter(workers, {'status': 'ACTIVE'});
   let hasOrder = _.all(activeWorkers, 'order');
 
-  $scope.workers = _.sortBy(activeWorkers, options.sortByFn || (hasOrder ? 'order' : 'name'));
+  let sortedWorkers;
+  if (options.sortByFn) {
+    sortedWorkers = _.sortBy(activeWorkers, options.sortByFn);
+  } else if (options.weightIndex) {
+    sortedWorkers = getSortedWorkers(workers, options.weightIndex);
+  } else {
+    sortedWorkers = _.sortBy(activeWorkers, hasOrder ? 'order' : 'name');
+  }
+  
+  $scope.workers = sortedWorkers;
+  
   for (let intIndex = 0; intIndex < $scope.workers.length; intIndex++) {
     $scope.workers[intIndex].showDescription = ($scope.workers[intIndex].description || '').substring(0, 70);
     $scope.workers[intIndex].isFullDescription = ($scope.workers[intIndex].description || '').length <= 70;

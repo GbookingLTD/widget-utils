@@ -1,6 +1,7 @@
 'use strict';
 
 var gulp = require('gulp');
+var bump = require('gulp-bump');
 
 var $ = require('gulp-load-plugins')({
   pattern: ['gulp-*', 'del']
@@ -46,6 +47,12 @@ gulp.task('watch', function() {
 
 gulp.task('clean', function () {
   return $.del(['dist/**']);
+});
+
+gulp.task('bump', function(){
+  gulp.src(['./bower.json', './package.json'])
+  .pipe(bump({type:'patch'}))
+  .pipe(gulp.dest('./'));
 });
 
 gulp.task('build', ['clean'], function() {
