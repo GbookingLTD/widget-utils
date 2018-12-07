@@ -2794,11 +2794,6 @@ var Discounts = Object.freeze({
     return phoneData[countryCode];
   }
 
-  function defaultExtractor(value) {
-    var regex = /\+(\d+)\((\d+)\) (\d+)-(\d+)/;
-    return value.match(regex);
-  }
-
   function defaultStringMaker(p) {
     if (!p || !p.number) return '';
     //let p = person.phone[0];
@@ -2960,7 +2955,13 @@ var Discounts = Object.freeze({
         var digits = value.replace(/\D/g, '');
         return [digits.substring(0, 3), digits.substring(3)];
       },
-      phoneExtractor: defaultExtractor,
+      phoneExtractor: function phoneExtractor(value) {
+        var digits = value.replace(/\D/g, '');
+        if (digits.length >= 10) {
+          return ['', '1', digits.substring(digits.length - 10, digits.length - 7), digits.substring(digits.length - 7), ''];
+        }
+        return ['', '1', '', '', ''];
+      },
       phoneStringMaker: defaultStringMaker
     },
     'UA': {

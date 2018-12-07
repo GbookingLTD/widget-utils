@@ -1,9 +1,9 @@
 {
   "name": "widget-utils",
-  "version": "0.7.55",
+  "version": "0.7.58",
   "authors": [
     "swvitaliy <sw.vitaliy@gmail.com>",
-    "vasiliy0s <talk@vasiliy0s.com>",
+    "props <sergey@gbooking.ru>",
     "alexz <alex.zhukov@gbooking.ru>"
   ],
   "description": "",
