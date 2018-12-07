@@ -2893,6 +2893,34 @@ var Discounts = Object.freeze({
         return defaultStringMaker(p);
       }
     },
+    'PS': {
+      code: '970',
+      mask: 'dddddddddd',
+      rules: {
+        "9": null,
+        "d": /\d/
+      },
+      phoneExtractorWidget: function phoneExtractorWidget(value) {
+        if (value[0] === '0') {
+          return [value.substring(1, 3), value.substring(3)];
+        }
+        return ['', ''];
+      },
+      phoneExtractor: function phoneExtractor(value) {
+        if (value[0] === '0' && value.length === 10) {
+          return ['', '970', value.substring(1, 3), value.substring(3), ''];
+        }
+        return ['', '970', '', '', ''];
+      },
+      phoneStringMaker: function phoneStringMaker(p) {
+        if (!p) return '';
+        var countryCode = (p.country_code || '').replace("+");
+        if (countryCode === "970") {
+          return p.number ? "0" + p.area_code + p.number : "";
+        }
+        return defaultStringMaker(p);
+      }
+    },
     'FR': {
       code: '33',
       mask: 'dddddddddd',
@@ -3165,6 +3193,7 @@ var phoneUtils = Object.freeze({
     'fr_FR': 'fr-fr',
     'en_US': 'en-us',
     'he_IL': 'he-il',
+    'ar_PS': 'ar-ps',
     'lv_LV': 'lv-lv',
     'lt_LT': 'lt-lt',
     'et_ET': 'et-et',
@@ -3184,6 +3213,7 @@ var phoneUtils = Object.freeze({
     'HE': 'he_IL',
     'HU': 'hu_HU',
     'IL': 'he_IL',
+    'PS': 'he_PS',
     'LV': 'lv_LV',
     'LT': 'lt_LT',
     'ET': 'et_ET',

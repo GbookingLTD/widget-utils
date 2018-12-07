@@ -154,6 +154,34 @@ function defaultStringMaker(p) {
           return defaultStringMaker(p);
         }
       },
+      'PS': {
+        code: '970',
+        mask: 'dddddddddd',
+        rules: {
+          "9": null,
+          "d": /\d/
+        },
+        phoneExtractorWidget: function (value) {
+          if (value[0] === '0') {
+            return [value.substring(1, 3), value.substring(3)];
+          }
+          return ['', ''];
+        },
+        phoneExtractor: function (value) {
+          if (value[0] === '0' && value.length === 10) {
+            return ['', '970', value.substring(1, 3), value.substring(3), ''];
+          }
+          return ['', '970', '', '', ''];
+        },
+        phoneStringMaker(p){
+          if (!p) return '';
+          let countryCode = (p.country_code || '').replace("+");
+          if (countryCode === "970") {
+            return p.number ? `0${p.area_code}${p.number}` : "";
+          }
+          return defaultStringMaker(p);
+        }
+      },
       'FR': {
         code: '33',
         mask: 'dddddddddd',
