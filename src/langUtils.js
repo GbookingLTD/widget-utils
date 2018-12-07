@@ -33,7 +33,7 @@ var countryToLang = {
   'HE': 'he_IL',
   'HU': 'hu_HU',
   'IL': 'he_IL',
-  'PS': 'he_PS',
+  'PS': 'ar_PS',
   'LV': 'lv_LV',
   'LT': 'lt_LT',
   'ET': 'et_ET',
