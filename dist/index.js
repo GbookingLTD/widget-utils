@@ -2296,7 +2296,7 @@ var Booking = Object.freeze({
     }
 
     //Checking for Campaign & Regular Discounts, Regular Discounts has lower priority than Campaign Discounts
-    if (!slot.discount && typeof service.discounts.regular !== 'undefined') {
+    if (_$1.isUndefined(slot.discount) && typeof service.discounts.regular !== 'undefined') {
       service.discounts.regular.forEach(function (discount) {
         var end = moment$3(discount.start).add(discount.weeklyRepeat, 'weeks');
         if (discount.active && (time.isAfter(discount.start) && time.isBefore(end) || discount.unlimWeeklyRepeat)) {
@@ -3214,7 +3214,7 @@ var phoneUtils = Object.freeze({
     'HE': 'he_IL',
     'HU': 'hu_HU',
     'IL': 'he_IL',
-    'PS': 'he_PS',
+    'PS': 'ar_PS',
     'LV': 'lv_LV',
     'LT': 'lt_LT',
     'ET': 'et_ET',
