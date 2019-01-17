@@ -1666,7 +1666,7 @@ var taxonomies = Object.freeze({
     }
 
     //Checking for Campaign & Regular Discounts, Regular Discounts has lower priority than Campaign Discounts
-    if (!slot.discount && typeof service.discounts.regular !== 'undefined') {
+    if (_$1.isUndefined(slot.discount) && typeof service.discounts.regular !== 'undefined') {
       service.discounts.regular.forEach(function (discount) {
         var end = moment(discount.start).add(discount.weeklyRepeat, 'weeks');
         if (discount.active && (time.isAfter(discount.start) && time.isBefore(end) || discount.unlimWeeklyRepeat)) {
