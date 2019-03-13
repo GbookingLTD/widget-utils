@@ -1563,7 +1563,8 @@ var taxonomies = Object.freeze({
     var forceSlotSize = widgetConfiguration && widgetConfiguration.displaySlotSize && widgetConfiguration.displaySlotSize < taxDuration;
     var slotSize = forceSlotSize ? widgetConfiguration.displaySlotSize : taxDuration;
     var cutSlots = widgetConfiguration.hideGraySlots ? cutSlotsWithoutBusy : cutSlots;
-    var businessNow = getBusinessDateLikeUTC(moment.utc(), { business: business }).toDate();
+    var now = business.general_info && business.general_info.min_booking_time ? moment.utc().add(business.general_info.min_booking_time, 'h') : moment.utc();
+    var businessNow = getBusinessDateLikeUTC(now, { business: business }).toDate();
     var res = cracDay.resources.find(function (res) {
       return res.id === workerID;
     });
