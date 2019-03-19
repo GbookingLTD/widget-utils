@@ -1470,6 +1470,11 @@ var taxonomies = Object.freeze({
       value: function isThisDay() {
         return this.cracDay.date.substr(0, 10) === this.businessNow.toISOString().substr(0, 10);
       }
+    }, {
+      key: "isDayBefore",
+      value: function isDayBefore() {
+        return !this.isThisDay && moment.utc(this.cracDay.date).isBefore(this.businessNow);
+      }
 
       /**
        * Create all slots from raw CRAC data.
@@ -1486,6 +1491,9 @@ var taxonomies = Object.freeze({
       value: function cutSlots(resourceID, duration, slotSize) {
         var enhanceSlotFn = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : null;
 
+        if (this.isDayBefore()) {
+          return [];
+        }
         var iterator = this.getSlotsIterator(resourceID, duration, slotSize, enhanceSlotFn);
         var _cutSlots = this.isThisDay() ? this.cutSlotsThisDayFn : this.cutSlotsFn;
         return iterator ? _cutSlots(iterator) : null;

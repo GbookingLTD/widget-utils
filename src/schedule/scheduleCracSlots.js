@@ -167,6 +167,10 @@ export class ScheduleCRACDaySlots {
     return this.cracDay.date.substr(0, 10) === this.businessNow.toISOString().substr(0, 10);
   }
 
+  isDayBefore() {
+    return !this.isThisDay && moment.utc(this.cracDay.date).isBefore(this.businessNow);
+  }
+
   /**
    * Create all slots from raw CRAC data.
    *
@@ -177,6 +181,9 @@ export class ScheduleCRACDaySlots {
    * @returns {Array<{start: {number}, end: {number}, available: {boolean}}>} slots
    */
   cutSlots(resourceID, duration, slotSize, enhanceSlotFn = null) {
+    if(this.isDayBefore()){
+      return [];
+    }
     const iterator = this.getSlotsIterator(resourceID, duration, slotSize, enhanceSlotFn);
     const _cutSlots = this.isThisDay() ? this.cutSlotsThisDayFn : this.cutSlotsFn;
     return iterator ? _cutSlots(iterator) : null;
