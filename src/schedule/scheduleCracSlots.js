@@ -168,7 +168,7 @@ export class ScheduleCRACDaySlots {
   }
 
   isDayBefore() {
-    return !this.isThisDay && moment.utc(this.cracDay.date).isBefore(this.businessNow);
+    return moment.utc(this.cracDay.date).isBefore(moment.utc(this.businessNow).startOf('day'));
   }
 
   /**
