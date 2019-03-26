@@ -1585,6 +1585,170 @@ var taxonomies = Object.freeze({
   }
 
   /**
+   * Принимает на вход объект-хранилище слотов CRACResourcesAndRoomsSlot, биизнес данные, работника, услугу
+   * и возвращает готовый набор слотов.
+   *
+   * @param {CRACResourcesAndRoomsSlot} cracDay
+   * @param business
+   * @param resourceId
+   * @param slotSize
+   * @param enhanceSlotFn
+   * @param resourceIdList
+   * @param taxonomy
+   * @return {Object|Array|*|void}
+   */
+  function getSlotsFromBusinessAndCRACWithAdjacent(cracDay, business, resourceId, slotSize, enhanceSlotFn, resourceIdList, taxonomy) {
+    var useAdjacentTaxonomies = !!business.backoffice_configuration.useAdjacentTaxonomies;
+    if (taxonomy.adjacentTaxonomies && taxonomy.adjacentTaxonomies.length) {
+      taxonomy.adjacentTaxonomies.sort(function (a, b) {
+        return a.order > b.order ? 1 : -1;
+      });
+    }
+    var adjasentTaxonomies = _$1.cloneDeep(taxonomy.adjacentTaxonomies) || [];
+    if (!useAdjacentTaxonomies || adjasentTaxonomies.length === 0) {
+      var cracRes = _$1.find(cracDay.resources, { id: resourceId });
+      var slotSizeRes = cracRes.durations[0] || slotSize;
+
+      return getSlotsFromBusinessAndCRACWithDuration(cracDay, business, resourceId, slotSizeRes, enhanceSlotFn);
+    }
+
+    adjasentTaxonomies.forEach(function (tax) {
+      if (!tax.slots) {
+        tax.slots = [];
+      }
+
+      if (!tax.isAnyAvailable) {
+        var taxSlots = getSlotsFromBusinessAndCRACWithDuration(cracDay, business, resourceId, tax.slotDuration, enhanceSlotFn);
+        tax.slots.push(taxSlots);
+      } else {
+        var resourceList = getResourceListByTaxID(business, tax.taxonomyID, resourceIdList);
+        resourceList.forEach(function (r) {
+          var taxSlots = getSlotsFromBusinessAndCRACWithDuration(cracDay, business, r, tax.slotDuration, enhanceSlotFn);
+          tax.slots.push(taxSlots);
+        });
+      }
+    });
+
+    return combineAdjacentSlots(adjasentTaxonomies);
+  }
+
+  /**
+   * Filtering resourceIdList by taxonomy
+   *
+   * @param {Business} business
+   * @param {String} taxonomyId
+   * @param {Array[String]} resourceIdList
+   */
+  function getResourceListByTaxID(business, taxonomyId, resourceIdList) {
+    var result = [];
+    business.resources.forEach(function (res) {
+      if (res.id && resourceIdList.indexOf(res.id) >= 0 && res.taxonomies.indexOf(taxonomyId) >= 0) {
+        result.push(res.id);
+      }
+    });
+
+    return result;
+  }
+
+  /**
+   * combine slots for adjacent taxononmy
+   * by slots of simple taxonomies in adjacentTaxonomy
+   *
+   * @param {*} resTaxData
+   * @returns {Array[Slot]} slots
+   */
+  function combineAdjacentSlots(adjasentTaxonomies) {
+    var slots = [];
+    if (!adjasentTaxonomies[0].slots || adjasentTaxonomies[0].slots.length === 0) {
+      return [];
+    }
+    var startTime = 0;
+    var endTime = 0;
+    adjasentTaxonomies[0].slots.forEach(function (taxSlots) {
+      if (taxSlots.length === 0) {
+        return;
+      }
+      if (startTime === 0 || taxSlots[0].start < startTime) {
+        startTime = taxSlots[0].start;
+      }
+      var taxSlotsCnt = taxSlots.length;
+      if (endTime === 0 || taxSlots[taxSlotsCnt - 1].end > endTime) {
+        endTime = taxSlots[taxSlotsCnt - 1].end;
+      }
+    });
+
+    var time = startTime;
+    while (time < endTime) {
+      var adjacentSlot = checkAdjacentSlot(adjasentTaxonomies, time, 0);
+      adjacentSlot.start = time;
+      adjacentSlot.duration = adjacentSlot.end - time;
+      adjacentSlot.value = formatMinutesAsHourString(time, false);
+      slots.push(adjacentSlot);
+      time = adjacentSlot.end;
+    }
+
+    return slots;
+  }
+
+  /** Check do we have slots for taxonomy from adjacent taxononmy.
+   *  We start from taxonomy with order = 1 and
+   *  if it has available slot - we add taxonomy duration and check next taxonomy slots
+   *
+   * @param {Array} adjasentTaxonomies
+   * @param {Number} time
+   * @param {Number} level
+   * @return {Slot}
+   */
+  function checkAdjacentSlot(adjasentTaxonomies, time, level) {
+    var slot = void 0;
+    adjasentTaxonomies[level].slots.forEach(function (resSlots) {
+      if (slot && slot.available && slot.enabled) {
+        return;
+      }
+      var resSlot = resSlots.find(function (s) {
+        return s.start === time;
+      });
+      if (!slot || resSlot.available && resSlot.enabled) {
+        slot = resSlot;
+      }
+    });
+
+    if (slot && slot.available && slot.enabled) {
+      if (adjasentTaxonomies.length === level + 1) {
+        return slot;
+      } else {
+        return checkAdjacentSlot(adjasentTaxonomies, slot.end, level + 1);
+      }
+    }
+
+    // if slot for some taxonomy was disabled we should skip duration of first taxonomy
+    var startTime = level === 0 ? time : time - adjasentTaxonomies[level - 1].slotDuration;
+
+    return {
+      start: startTime,
+      end: level === 0 ? time + adjasentTaxonomies[level].slotDuration : time,
+      available: slot ? slot.available : false,
+      enabled: slot ? slot.enabled : false,
+      duration: level === 0 ? adjasentTaxonomies[level].slotDuration : adjasentTaxonomies[level - 1].slotDuration,
+      discount: { isException: false },
+      value: formatMinutesAsHourString(startTime, false)
+    };
+  }
+
+  function formatMinutesAsHourString(input, noSeparator) {
+    var s1 = "" + parseInt(input / 60, 10);
+    if (s1.length < 2) {
+      s1 = "0" + s1;
+    }
+    var s2 = "" + input % 60;
+    if (s2.length < 2) {
+      s2 = "0" + s2;
+    }
+
+    return noSeparator ? s1 + s2 : s1 + ":" + s2;
+  }
+
+  /**
    *
    * Do not supported for GT
    *
@@ -2691,7 +2855,8 @@ var Discounts = Object.freeze({
   	ScheduleCRACDaySlots: ScheduleCRACDaySlots,
   	getSlotsFromBusinessAndCRACMultiServices: getSlotsFromBusinessAndCRACMultiServices,
   	getSlotsFromBusinessAndCRAC: getSlotsFromBusinessAndCRAC,
-  	getSlotsFromBusinessAndCRACWithDuration: getSlotsFromBusinessAndCRACWithDuration
+  	getSlotsFromBusinessAndCRACWithDuration: getSlotsFromBusinessAndCRACWithDuration,
+  	getSlotsFromBusinessAndCRACWithAdjacent: getSlotsFromBusinessAndCRACWithAdjacent
   });
 
   function roundNumberUsingRule(input, businessData, noCommas) {
