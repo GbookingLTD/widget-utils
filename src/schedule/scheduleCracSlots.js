@@ -276,15 +276,15 @@ export function getSlotsFromBusinessAndCRACWithDuration(cracDay, business, worke
  *
  * @param {CRACResourcesAndRoomsSlot} cracDay
  * @param business
- * @param resourceId
- * @param slotSize
+ * @param {string} resourceId
+ * @param {Number} slotSize
  * @param enhanceSlotFn
- * @param resourceIdList
+ * @param resourceList
  * @param taxonomy
  * @return {Object|Array|*|void}
  */
-export function getSlotsFromBusinessAndCRACWithAdjacent(cracDay, business, resourceId, slotSize, enhanceSlotFn, resourceIdList, taxonomy) {
-  let useAdjacentTaxonomies =  !!business.backoffice_configuration.useAdjacentTaxonomies;
+export function getSlotsFromBusinessAndCRACWithAdjacent(cracDay, business, resourceId, slotSize, enhanceSlotFn, resourceList, taxonomy) {
+  let useAdjacentTaxonomies = !!business.backoffice_configuration.useAdjacentTaxonomies;
   if(taxonomy.adjacentTaxonomies && taxonomy.adjacentTaxonomies.length){
     taxonomy.adjacentTaxonomies.sort((a,b) => {
       return a.order > b.order ? 1 : -1;
@@ -304,32 +304,30 @@ export function getSlotsFromBusinessAndCRACWithAdjacent(cracDay, business, resou
     }
 
     if (!tax.isAnyAvailable) {
-      const taxSlots = getSlotsFromBusinessAndCRACWithDuration(cracDay, business, resourceId, tax.slotDuration, enhanceSlotFn);
+      const taxSlots = getSlotsFromBusinessAndCRACWithDuration(cracDay, business, resourceId, tax.slotDuration);
       tax.slots.push(taxSlots);
     } else {
-      const resourceList = getResourceListByTaxID(business, tax.taxonomyID, resourceIdList);
-      resourceList.forEach((r) => {
-        const taxSlots = getSlotsFromBusinessAndCRACWithDuration(cracDay, business, r, tax.slotDuration, enhanceSlotFn);
+      const taxResourceList = getResourceListByTaxID(tax.taxonomyID, resourceList);
+      taxResourceList.forEach((r) => {
+        const taxSlots = getSlotsFromBusinessAndCRACWithDuration(cracDay, business, r, tax.slotDuration);
         tax.slots.push(taxSlots);
       });
     }
   });
 
-  return combineAdjacentSlots(adjasentTaxonomies);
+  return combineAdjacentSlots( adjasentTaxonomies, enhanceSlotFn && enhanceSlotFn.bind(cracDay) );
 }
 
 /**
- * Filtering resourceIdList by taxonomy
+ * Filtering resourceList by taxonomy
  *
- * @param {Business} business
  * @param {String} taxonomyId
- * @param {Array[String]} resourceIdList
+ * @param {Array[Resource]} resourceList
  */
-function getResourceListByTaxID (business, taxonomyId, resourceIdList) {
+function getResourceListByTaxID (taxonomyId, resourceList) {
   let result = [];
-  business.resources.forEach((res) => {
-    if (res.id && resourceIdList.indexOf(res.id) >= 0 &&
-        res.taxonomies.indexOf(taxonomyId) >= 0) {
+  resourceList.forEach((res) => {
+    if (res && res.taxonomies && res.taxonomies.indexOf(taxonomyId) >= 0) {
       result.push(res.id);
     }
   });
@@ -342,34 +340,33 @@ function getResourceListByTaxID (business, taxonomyId, resourceIdList) {
  * by slots of simple taxonomies in adjacentTaxonomy
  *
  * @param {*} resTaxData
+ * @param {*} enhanceSlotFn
  * @returns {Array[Slot]} slots
  */
-function combineAdjacentSlots(adjasentTaxonomies) {
+function combineAdjacentSlots(adjasentTaxonomies, enhanceSlotFn) {
   const slots = [];
   if (!adjasentTaxonomies[0].slots || adjasentTaxonomies[0].slots.length === 0) {
     return [];
   }
-  let startTime = 0;
+  let startTime = 1440;
   let endTime = 0;
   adjasentTaxonomies[0].slots.forEach((taxSlots) => {
     if (taxSlots.length === 0) {
       return ;
     }
-    if (startTime === 0 || taxSlots[0].start < startTime) {
-      startTime = taxSlots[0].start;
-    }
+    startTime = Math.min( taxSlots[0].start, startTime )
     const taxSlotsCnt = taxSlots.length;
-    if (endTime === 0 || taxSlots[taxSlotsCnt - 1].end > endTime) {
-      endTime = taxSlots[taxSlotsCnt - 1].end;
-    }
+    endTime = Math.max( taxSlots[ taxSlotsCnt - 1 ].end, endTime );
   });
 
   let time = startTime;
   while(time < endTime) {
-    const adjacentSlot = checkAdjacentSlot(adjasentTaxonomies, time, 0);
+    let adjacentSlot = checkAdjacentSlot(adjasentTaxonomies, time, 0);
     adjacentSlot.start = time;
     adjacentSlot.duration = adjacentSlot.end - time;
-    adjacentSlot.value = formatMinutesAsHourString(time, false);
+    if ( enhanceSlotFn ) {
+      adjacentSlot = enhanceSlotFn( adjacentSlot );
+    }
     slots.push(adjacentSlot);
     time = adjacentSlot.end;
   }
@@ -386,19 +383,16 @@ function combineAdjacentSlots(adjasentTaxonomies) {
  * @param {Number} level
  * @return {Slot}
  */
-function checkAdjacentSlot(adjasentTaxonomies, time, level) {
+function checkAdjacentSlot( adjasentTaxonomies, time, level ) {
   let slot;
   adjasentTaxonomies[level].slots.forEach((resSlots) => {
-    if (slot && slot.available && slot.enabled) {
-      return ;
+    if (slot) {
+      return false;
     }
-    const resSlot = resSlots.find(s => s.start === time);
-    if (!slot || (resSlot.available && resSlot.enabled)) {
-      slot = resSlot;
-    }
+    slot = resSlots.find(s => s.start === time && s.available);
   });
 
-  if (slot && slot.available && slot.enabled) {
+  if (slot) {
     if (adjasentTaxonomies.length === (level + 1)) {
       return slot;
     } else {
@@ -406,29 +400,14 @@ function checkAdjacentSlot(adjasentTaxonomies, time, level) {
     }
   }
 
+
   // if slot for some taxonomy was disabled we should skip duration of first taxonomy
   let startTime = level === 0 ? time : time - adjasentTaxonomies[level-1].slotDuration;
-
+  let endTime = level === 0 ? time + adjasentTaxonomies[ 0 ].slotDuration : time;
   return {
     start: startTime,
-    end: level === 0 ? time + adjasentTaxonomies[level].slotDuration : time,
-    available: slot ? slot.available : false,
-    enabled: slot ? slot.enabled : false,
-    duration: level === 0 ? adjasentTaxonomies[level].slotDuration : adjasentTaxonomies[level-1].slotDuration,
-    discount: { isException: false },
-    value: formatMinutesAsHourString(startTime, false),
+    end: endTime,
+    available: false,
+    duration: adjasentTaxonomies[ 0 ].slotDuration,
   };
-}
-
-function formatMinutesAsHourString(input, noSeparator) {
-  let s1 = ("" + parseInt(input / 60, 10));
-  if (s1.length < 2) {
-    s1 = "0" + s1;
-  }
-  let s2 = ("" + input % 60);
-  if (s2.length < 2) {
-    s2 = "0" + s2;
-  }
-
-  return noSeparator ? s1 + s2 : s1 + ":" + s2;
 }

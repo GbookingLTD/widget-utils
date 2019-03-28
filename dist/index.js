@@ -1590,14 +1590,14 @@ var taxonomies = Object.freeze({
    *
    * @param {CRACResourcesAndRoomsSlot} cracDay
    * @param business
-   * @param resourceId
-   * @param slotSize
+   * @param {string} resourceId
+   * @param {Number} slotSize
    * @param enhanceSlotFn
-   * @param resourceIdList
+   * @param resourceList
    * @param taxonomy
    * @return {Object|Array|*|void}
    */
-  function getSlotsFromBusinessAndCRACWithAdjacent(cracDay, business, resourceId, slotSize, enhanceSlotFn, resourceIdList, taxonomy) {
+  function getSlotsFromBusinessAndCRACWithAdjacent(cracDay, business, resourceId, slotSize, enhanceSlotFn, resourceList, taxonomy) {
     var useAdjacentTaxonomies = !!business.backoffice_configuration.useAdjacentTaxonomies;
     if (taxonomy.adjacentTaxonomies && taxonomy.adjacentTaxonomies.length) {
       taxonomy.adjacentTaxonomies.sort(function (a, b) {
@@ -1618,31 +1618,30 @@ var taxonomies = Object.freeze({
       }
 
       if (!tax.isAnyAvailable) {
-        var taxSlots = getSlotsFromBusinessAndCRACWithDuration(cracDay, business, resourceId, tax.slotDuration, enhanceSlotFn);
+        var taxSlots = getSlotsFromBusinessAndCRACWithDuration(cracDay, business, resourceId, tax.slotDuration);
         tax.slots.push(taxSlots);
       } else {
-        var resourceList = getResourceListByTaxID(business, tax.taxonomyID, resourceIdList);
-        resourceList.forEach(function (r) {
-          var taxSlots = getSlotsFromBusinessAndCRACWithDuration(cracDay, business, r, tax.slotDuration, enhanceSlotFn);
+        var taxResourceList = getResourceListByTaxID(tax.taxonomyID, resourceList);
+        taxResourceList.forEach(function (r) {
+          var taxSlots = getSlotsFromBusinessAndCRACWithDuration(cracDay, business, r, tax.slotDuration);
           tax.slots.push(taxSlots);
         });
       }
     });
 
-    return combineAdjacentSlots(adjasentTaxonomies);
+    return combineAdjacentSlots(adjasentTaxonomies, enhanceSlotFn && enhanceSlotFn.bind(cracDay));
   }
 
   /**
-   * Filtering resourceIdList by taxonomy
+   * Filtering resourceList by taxonomy
    *
-   * @param {Business} business
    * @param {String} taxonomyId
-   * @param {Array[String]} resourceIdList
+   * @param {Array[Resource]} resourceList
    */
-  function getResourceListByTaxID(business, taxonomyId, resourceIdList) {
+  function getResourceListByTaxID(taxonomyId, resourceList) {
     var result = [];
-    business.resources.forEach(function (res) {
-      if (res.id && resourceIdList.indexOf(res.id) >= 0 && res.taxonomies.indexOf(taxonomyId) >= 0) {
+    resourceList.forEach(function (res) {
+      if (res && res.taxonomies && res.taxonomies.indexOf(taxonomyId) >= 0) {
         result.push(res.id);
       }
     });
@@ -1655,26 +1654,23 @@ var taxonomies = Object.freeze({
    * by slots of simple taxonomies in adjacentTaxonomy
    *
    * @param {*} resTaxData
+   * @param {*} enhanceSlotFn
    * @returns {Array[Slot]} slots
    */
-  function combineAdjacentSlots(adjasentTaxonomies) {
+  function combineAdjacentSlots(adjasentTaxonomies, enhanceSlotFn) {
     var slots = [];
     if (!adjasentTaxonomies[0].slots || adjasentTaxonomies[0].slots.length === 0) {
       return [];
     }
-    var startTime = 0;
+    var startTime = 1440;
     var endTime = 0;
     adjasentTaxonomies[0].slots.forEach(function (taxSlots) {
       if (taxSlots.length === 0) {
         return;
       }
-      if (startTime === 0 || taxSlots[0].start < startTime) {
-        startTime = taxSlots[0].start;
-      }
+      startTime = Math.min(taxSlots[0].start, startTime);
       var taxSlotsCnt = taxSlots.length;
-      if (endTime === 0 || taxSlots[taxSlotsCnt - 1].end > endTime) {
-        endTime = taxSlots[taxSlotsCnt - 1].end;
-      }
+      endTime = Math.max(taxSlots[taxSlotsCnt - 1].end, endTime);
     });
 
     var time = startTime;
@@ -1682,7 +1678,9 @@ var taxonomies = Object.freeze({
       var adjacentSlot = checkAdjacentSlot(adjasentTaxonomies, time, 0);
       adjacentSlot.start = time;
       adjacentSlot.duration = adjacentSlot.end - time;
-      adjacentSlot.value = formatMinutesAsHourString(time, false);
+      if (enhanceSlotFn) {
+        adjacentSlot = enhanceSlotFn(adjacentSlot);
+      }
       slots.push(adjacentSlot);
       time = adjacentSlot.end;
     }
@@ -1702,18 +1700,15 @@ var taxonomies = Object.freeze({
   function checkAdjacentSlot(adjasentTaxonomies, time, level) {
     var slot = void 0;
     adjasentTaxonomies[level].slots.forEach(function (resSlots) {
-      if (slot && slot.available && slot.enabled) {
-        return;
+      if (slot) {
+        return false;
       }
-      var resSlot = resSlots.find(function (s) {
-        return s.start === time;
+      slot = resSlots.find(function (s) {
+        return s.start === time && s.available;
       });
-      if (!slot || resSlot.available && resSlot.enabled) {
-        slot = resSlot;
-      }
     });
 
-    if (slot && slot.available && slot.enabled) {
+    if (slot) {
       if (adjasentTaxonomies.length === level + 1) {
         return slot;
       } else {
@@ -1723,29 +1718,13 @@ var taxonomies = Object.freeze({
 
     // if slot for some taxonomy was disabled we should skip duration of first taxonomy
     var startTime = level === 0 ? time : time - adjasentTaxonomies[level - 1].slotDuration;
-
+    var endTime = level === 0 ? time + adjasentTaxonomies[0].slotDuration : time;
     return {
       start: startTime,
-      end: level === 0 ? time + adjasentTaxonomies[level].slotDuration : time,
-      available: slot ? slot.available : false,
-      enabled: slot ? slot.enabled : false,
-      duration: level === 0 ? adjasentTaxonomies[level].slotDuration : adjasentTaxonomies[level - 1].slotDuration,
-      discount: { isException: false },
-      value: formatMinutesAsHourString(startTime, false)
+      end: endTime,
+      available: false,
+      duration: adjasentTaxonomies[0].slotDuration
     };
-  }
-
-  function formatMinutesAsHourString(input, noSeparator) {
-    var s1 = "" + parseInt(input / 60, 10);
-    if (s1.length < 2) {
-      s1 = "0" + s1;
-    }
-    var s2 = "" + input % 60;
-    if (s2.length < 2) {
-      s2 = "0" + s2;
-    }
-
-    return noSeparator ? s1 + s2 : s1 + ":" + s2;
   }
 
   /**
