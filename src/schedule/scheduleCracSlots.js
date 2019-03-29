@@ -1,5 +1,6 @@
 "use strict";
 
+import _ from 'lodash';
 import {isDateForbidden} from "../busySlots"
 import moment from 'moment-timezone';
 import {getBusinessDateLikeUTC} from "../dateTime";
@@ -266,4 +267,147 @@ export function getSlotsFromBusinessAndCRACWithDuration(cracDay, business, worke
   }
   const scheduleCRACSlots = new ScheduleCRACDaySlots(cracDay, businessNow, cutSlotsWithoutStartFinishBusy, cutSlotsWithoutStartFinishBusy);
   return scheduleCRACSlots.cutSlots(workerID, taxDuration, slotSize, enhanceSlotFn);
+}
+
+
+/**
+ * Принимает на вход объект-хранилище слотов CRACResourcesAndRoomsSlot, биизнес данные, работника, услугу
+ * и возвращает готовый набор слотов.
+ *
+ * @param {CRACResourcesAndRoomsSlot} cracDay
+ * @param business
+ * @param {string} resourceId
+ * @param {Number} slotSize
+ * @param enhanceSlotFn
+ * @param resourceList
+ * @param taxonomy
+ * @return {Object|Array|*|void}
+ */
+export function getSlotsFromBusinessAndCRACWithAdjacent(cracDay, business, resourceId, slotSize, enhanceSlotFn, resourceList, taxonomy) {
+  let useAdjacentTaxonomies = !!business.backoffice_configuration.useAdjacentTaxonomies;
+  if(taxonomy.adjacentTaxonomies && taxonomy.adjacentTaxonomies.length){
+    taxonomy.adjacentTaxonomies.sort((a,b) => {
+      return a.order > b.order ? 1 : -1;
+     });
+  }
+  let adjasentTaxonomies = _.cloneDeep(taxonomy.adjacentTaxonomies) || [];
+  if (!useAdjacentTaxonomies || adjasentTaxonomies.length === 0) {
+    const cracRes = _.find(cracDay.resources, { id: resourceId });
+    const slotSizeRes = cracRes.durations[0] || slotSize;
+
+    return getSlotsFromBusinessAndCRACWithDuration(cracDay, business, resourceId, slotSizeRes, enhanceSlotFn)
+  }
+
+  adjasentTaxonomies.forEach((tax) => {
+    if (!tax.slots) {
+      tax.slots = [];
+    }
+
+    if (!tax.isAnyAvailable) {
+      const taxSlots = getSlotsFromBusinessAndCRACWithDuration(cracDay, business, resourceId, tax.slotDuration);
+      tax.slots.push(taxSlots);
+    } else {
+      const taxResourceList = getResourceListByTaxID(tax.taxonomyID, resourceList);
+      taxResourceList.forEach((r) => {
+        const taxSlots = getSlotsFromBusinessAndCRACWithDuration(cracDay, business, r, tax.slotDuration);
+        tax.slots.push(taxSlots);
+      });
+    }
+  });
+
+  return combineAdjacentSlots( adjasentTaxonomies, enhanceSlotFn && enhanceSlotFn.bind(cracDay) );
+}
+
+/**
+ * Filtering resourceList by taxonomy
+ *
+ * @param {String} taxonomyId
+ * @param {Array[Resource]} resourceList
+ */
+function getResourceListByTaxID (taxonomyId, resourceList) {
+  let result = [];
+  resourceList.forEach((res) => {
+    if (res && res.taxonomies && res.taxonomies.indexOf(taxonomyId) >= 0) {
+      result.push(res.id);
+    }
+  });
+
+  return result;
+}
+
+/**
+ * combine slots for adjacent taxononmy
+ * by slots of simple taxonomies in adjacentTaxonomy
+ *
+ * @param {*} resTaxData
+ * @param {*} enhanceSlotFn
+ * @returns {Array[Slot]} slots
+ */
+function combineAdjacentSlots(adjasentTaxonomies, enhanceSlotFn) {
+  const slots = [];
+  if (!adjasentTaxonomies[0].slots || adjasentTaxonomies[0].slots.length === 0) {
+    return [];
+  }
+  let startTime = 1440;
+  let endTime = 0;
+  adjasentTaxonomies[0].slots.forEach((taxSlots) => {
+    if (taxSlots.length === 0) {
+      return ;
+    }
+    startTime = Math.min( taxSlots[0].start, startTime )
+    const taxSlotsCnt = taxSlots.length;
+    endTime = Math.max( taxSlots[ taxSlotsCnt - 1 ].end, endTime );
+  });
+
+  let time = startTime;
+  while(time < endTime) {
+    let adjacentSlot = checkAdjacentSlot(adjasentTaxonomies, time, 0);
+    adjacentSlot.start = time;
+    adjacentSlot.duration = adjacentSlot.end - time;
+    if ( enhanceSlotFn ) {
+      adjacentSlot = enhanceSlotFn( adjacentSlot );
+    }
+    slots.push(adjacentSlot);
+    time = adjacentSlot.end;
+  }
+
+  return slots;
+}
+
+/** Check do we have slots for taxonomy from adjacent taxononmy.
+ *  We start from taxonomy with order = 1 and
+ *  if it has available slot - we add taxonomy duration and check next taxonomy slots
+ *
+ * @param {Array} adjasentTaxonomies
+ * @param {Number} time
+ * @param {Number} level
+ * @return {Slot}
+ */
+function checkAdjacentSlot( adjasentTaxonomies, time, level ) {
+  let slot;
+  adjasentTaxonomies[level].slots.forEach((resSlots) => {
+    if (slot) {
+      return false;
+    }
+    slot = resSlots.find(s => s.start === time && s.available);
+  });
+
+  if (slot) {
+    if (adjasentTaxonomies.length === (level + 1)) {
+      return slot;
+    } else {
+      return checkAdjacentSlot(adjasentTaxonomies, slot.end, level + 1);
+    }
+  }
+
+
+  // if slot for some taxonomy was disabled we should skip duration of first taxonomy
+  let startTime = level === 0 ? time : time - adjasentTaxonomies[level-1].slotDuration;
+  let endTime = level === 0 ? time + adjasentTaxonomies[ 0 ].slotDuration : time;
+  return {
+    start: startTime,
+    end: endTime,
+    available: false,
+    duration: adjasentTaxonomies[ 0 ].slotDuration,
+  };
 }

@@ -1585,6 +1585,149 @@ var taxonomies = Object.freeze({
   }
 
   /**
+   * Принимает на вход объект-хранилище слотов CRACResourcesAndRoomsSlot, биизнес данные, работника, услугу
+   * и возвращает готовый набор слотов.
+   *
+   * @param {CRACResourcesAndRoomsSlot} cracDay
+   * @param business
+   * @param {string} resourceId
+   * @param {Number} slotSize
+   * @param enhanceSlotFn
+   * @param resourceList
+   * @param taxonomy
+   * @return {Object|Array|*|void}
+   */
+  function getSlotsFromBusinessAndCRACWithAdjacent(cracDay, business, resourceId, slotSize, enhanceSlotFn, resourceList, taxonomy) {
+    var useAdjacentTaxonomies = !!business.backoffice_configuration.useAdjacentTaxonomies;
+    if (taxonomy.adjacentTaxonomies && taxonomy.adjacentTaxonomies.length) {
+      taxonomy.adjacentTaxonomies.sort(function (a, b) {
+        return a.order > b.order ? 1 : -1;
+      });
+    }
+    var adjasentTaxonomies = _$1.cloneDeep(taxonomy.adjacentTaxonomies) || [];
+    if (!useAdjacentTaxonomies || adjasentTaxonomies.length === 0) {
+      var cracRes = _$1.find(cracDay.resources, { id: resourceId });
+      var slotSizeRes = cracRes.durations[0] || slotSize;
+
+      return getSlotsFromBusinessAndCRACWithDuration(cracDay, business, resourceId, slotSizeRes, enhanceSlotFn);
+    }
+
+    adjasentTaxonomies.forEach(function (tax) {
+      if (!tax.slots) {
+        tax.slots = [];
+      }
+
+      if (!tax.isAnyAvailable) {
+        var taxSlots = getSlotsFromBusinessAndCRACWithDuration(cracDay, business, resourceId, tax.slotDuration);
+        tax.slots.push(taxSlots);
+      } else {
+        var taxResourceList = getResourceListByTaxID(tax.taxonomyID, resourceList);
+        taxResourceList.forEach(function (r) {
+          var taxSlots = getSlotsFromBusinessAndCRACWithDuration(cracDay, business, r, tax.slotDuration);
+          tax.slots.push(taxSlots);
+        });
+      }
+    });
+
+    return combineAdjacentSlots(adjasentTaxonomies, enhanceSlotFn && enhanceSlotFn.bind(cracDay));
+  }
+
+  /**
+   * Filtering resourceList by taxonomy
+   *
+   * @param {String} taxonomyId
+   * @param {Array[Resource]} resourceList
+   */
+  function getResourceListByTaxID(taxonomyId, resourceList) {
+    var result = [];
+    resourceList.forEach(function (res) {
+      if (res && res.taxonomies && res.taxonomies.indexOf(taxonomyId) >= 0) {
+        result.push(res.id);
+      }
+    });
+
+    return result;
+  }
+
+  /**
+   * combine slots for adjacent taxononmy
+   * by slots of simple taxonomies in adjacentTaxonomy
+   *
+   * @param {*} resTaxData
+   * @param {*} enhanceSlotFn
+   * @returns {Array[Slot]} slots
+   */
+  function combineAdjacentSlots(adjasentTaxonomies, enhanceSlotFn) {
+    var slots = [];
+    if (!adjasentTaxonomies[0].slots || adjasentTaxonomies[0].slots.length === 0) {
+      return [];
+    }
+    var startTime = 1440;
+    var endTime = 0;
+    adjasentTaxonomies[0].slots.forEach(function (taxSlots) {
+      if (taxSlots.length === 0) {
+        return;
+      }
+      startTime = Math.min(taxSlots[0].start, startTime);
+      var taxSlotsCnt = taxSlots.length;
+      endTime = Math.max(taxSlots[taxSlotsCnt - 1].end, endTime);
+    });
+
+    var time = startTime;
+    while (time < endTime) {
+      var adjacentSlot = checkAdjacentSlot(adjasentTaxonomies, time, 0);
+      adjacentSlot.start = time;
+      adjacentSlot.duration = adjacentSlot.end - time;
+      if (enhanceSlotFn) {
+        adjacentSlot = enhanceSlotFn(adjacentSlot);
+      }
+      slots.push(adjacentSlot);
+      time = adjacentSlot.end;
+    }
+
+    return slots;
+  }
+
+  /** Check do we have slots for taxonomy from adjacent taxononmy.
+   *  We start from taxonomy with order = 1 and
+   *  if it has available slot - we add taxonomy duration and check next taxonomy slots
+   *
+   * @param {Array} adjasentTaxonomies
+   * @param {Number} time
+   * @param {Number} level
+   * @return {Slot}
+   */
+  function checkAdjacentSlot(adjasentTaxonomies, time, level) {
+    var slot = void 0;
+    adjasentTaxonomies[level].slots.forEach(function (resSlots) {
+      if (slot) {
+        return false;
+      }
+      slot = resSlots.find(function (s) {
+        return s.start === time && s.available;
+      });
+    });
+
+    if (slot) {
+      if (adjasentTaxonomies.length === level + 1) {
+        return slot;
+      } else {
+        return checkAdjacentSlot(adjasentTaxonomies, slot.end, level + 1);
+      }
+    }
+
+    // if slot for some taxonomy was disabled we should skip duration of first taxonomy
+    var startTime = level === 0 ? time : time - adjasentTaxonomies[level - 1].slotDuration;
+    var endTime = level === 0 ? time + adjasentTaxonomies[0].slotDuration : time;
+    return {
+      start: startTime,
+      end: endTime,
+      available: false,
+      duration: adjasentTaxonomies[0].slotDuration
+    };
+  }
+
+  /**
    *
    * Do not supported for GT
    *
@@ -2691,7 +2834,8 @@ var Discounts = Object.freeze({
   	ScheduleCRACDaySlots: ScheduleCRACDaySlots,
   	getSlotsFromBusinessAndCRACMultiServices: getSlotsFromBusinessAndCRACMultiServices,
   	getSlotsFromBusinessAndCRAC: getSlotsFromBusinessAndCRAC,
-  	getSlotsFromBusinessAndCRACWithDuration: getSlotsFromBusinessAndCRACWithDuration
+  	getSlotsFromBusinessAndCRACWithDuration: getSlotsFromBusinessAndCRACWithDuration,
+  	getSlotsFromBusinessAndCRACWithAdjacent: getSlotsFromBusinessAndCRACWithAdjacent
   });
 
   function roundNumberUsingRule(input, businessData, noCommas) {
