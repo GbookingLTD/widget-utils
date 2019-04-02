@@ -379,7 +379,7 @@ var BusySlots = Object.freeze({
   var TAXONOMY_COMMON = 'COMMON';
 
   /**
-   * 
+   *
    * @param {Array<{id, additionalDurations, duration}>} taxonomy
    * @param {Array<{taxonomyLevels}>} resource
    * @return {*}
@@ -399,9 +399,9 @@ var BusySlots = Object.freeze({
 
   /**
    * Возвращает минимальную длительность из всех услуг.
-   * 
+   *
    * Необходимо, например, для получения ближайшего доступного для записи по услуге(-ам) дня.
-   * 
+   *
    * @param taxonomies
    * @param resources
    */
@@ -975,11 +975,11 @@ var taxonomies = Object.freeze({
   }
 
   /**
-   * Находит позицию первой 1 в векторе. 
+   * Находит позицию первой 1 в векторе.
    * Направление битов - слева направо (от старших к младшим разрядам), поэтому возможно использовать clz внутри числа.
-   * 
+   *
    * Если не найдено 1 - возвращаем отрицательное число.
-   * 
+   *
    * @param {{i:number, b:number}} p
    * @param vector
    * @return {*}
@@ -1004,9 +1004,9 @@ var taxonomies = Object.freeze({
   }
 
   /**
-   * Производит поиск 0 бита в обратном направлении. 
+   * Производит поиск 0 бита в обратном направлении.
    * Возвращает количество бит, на которое нужно было сместиться назад.
-   * 
+   *
    * @param vector crac-vector
    * @param p      позиция на векторе, с которой начинается поиск
    * @param count  количество бит, в которых производится поиск
@@ -1037,18 +1037,18 @@ var taxonomies = Object.freeze({
 
   /**
    * Маски левых (старших) единиц от 0 до 32-х (33 элемента в массиве).
-   * 
+   *
    * 0-й элемент соответствует нулю единиц слева, начиная от 32-й позиции.
    * 1-й элемент соответствует одной единице слева на 32-й позиции и тд. до 32-х.
    * 32-й элемент соответствует 32-м единицам от 32-й до крайней правой позиции.
-   * 
+   *
    * @type {{}}
    */
   var mask_left1 = [0, 2147483648, 3221225472, 3758096384, 4026531840, 4160749568, 4227858432, 4261412864, 4278190080, 4286578688, 4290772992, 4292870144, 4293918720, 4294443008, 4294705152, 4294836224, 4294901760, 4294934528, 4294950912, 4294959104, 4294963200, 4294965248, 4294966272, 4294966784, 4294967040, 4294967168, 4294967232, 4294967264, 4294967280, 4294967288, 4294967292, 4294967294, 4294967295];
 
   /**
    * Маски правых (младших) единиц от 0 до 32-х (33 элемента в массиве).
-   * 
+   *
    * @type {{}}
    */
   var mask_right1 = [0, 1, 3, 7, 15, 31, 63, 127, 255, 511, 1023, 2047, 4095, 8191, 16383, 32767, 65535, 131071, 262143, 524287, 1048575, 2097151, 4194303, 8388607, 16777215, 33554431, 67108863, 134217727, 268435455, 536870911, 1073741823, 2147483647, 4294967295];
@@ -1067,7 +1067,7 @@ var taxonomies = Object.freeze({
 
   /**
    * Заполнение результирующего вектора 1.
-   * 
+   *
    * @param bitset crac-вектор
    * @param i    начальное смещение элементов массива
    * @param b    начальное смещение в битах в элементе массива
@@ -1087,7 +1087,7 @@ var taxonomies = Object.freeze({
 
   /**
    * Checking slot availability
-   * 
+   *
    * @param bitset CRAC bitset
    * @param start start time in minutes
    * @param end end time in minutes (not inclusive)
@@ -1116,20 +1116,20 @@ var taxonomies = Object.freeze({
   }
 
   /**
-   * Возвращаем вектор, в котором 1 означает возможность записи на это время с учётом 
+   * Возвращаем вектор, в котором 1 означает возможность записи на это время с учётом
    * переданной длительности.
-   * 
-   * Переходим на первый свободный бит. Очевидно, что все биты до него заняты. 
-   * Находим первый занятый бит, идущий за свободным. 
+   *
+   * Переходим на первый свободный бит. Очевидно, что все биты до него заняты.
+   * Находим первый занятый бит, идущий за свободным.
    * Все биты, которые отстоят от этого занятого на расстояние duration будут свободны.
    *
    * Операция "найти первый свободный бит" оптимизирована с помощью операции Math.clz32.
    * Операции заполнения битов используют битовые маски.
-   * 
+   *
    * Функция имеет сложность O(n), n - количество элементов в массиве (не бит, в отличие от простого итерирования по CRAC-вектору).
-   * 
+   *
    * @link https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/clz32
-   * 
+   *
    * @param bitset
    * @param offset смещение в crac-векторе
    * @param sz
@@ -1149,7 +1149,7 @@ var taxonomies = Object.freeze({
       // Если достигнут конец входного вектора, то возвращаем результирующий вектор.
       if (_find1(p, bitset) < 0) return r;
 
-      // Все биты до него заняты. 
+      // Все биты до него заняты.
       // Вектор r и так заполнен 0, поэтому заполнения 0 не требуется.
 
       // Находим первый 0 ("занятый" бит), начиная с текущей позиции.
@@ -1781,7 +1781,7 @@ var taxonomies = Object.freeze({
       if (slot) {
         return false;
       }
-      if (!treshold && gcd == adjasentTaxonomies[level].slotDuration) {
+      if ( !treshold && ( !gcd || gcd == adjasentTaxonomies[ level ].slotDuration ) ) {
         slot = resSlots.find(function (s) {
           return s.start === time && s.available;
         });
@@ -2031,11 +2031,11 @@ var Booking = Object.freeze({
 
   /**
    * Return vector:true mean the resource is free for total duration of all taxonomies and rooms are available for these taxonomies
-   * 
+   *
    * Объединяем вектор возможности для записи работника со всеми векторами возможности для записи комнат.
    * Метод возвращает вектор, в котором 1 означает, что в данное время можно совершить запись.
    * Здесь используется жадный алгоритм обхода расписания.
-   * 
+   *
    * @param {Array} workerBitset
    * @param {string} workerId
    * @param {Array} roomsBitSets
@@ -2085,7 +2085,7 @@ var Booking = Object.freeze({
    * Check if series of taxonomies can be executed by specific worker at specific bit.
    *
    * Получаем вектор возможности записи для переданной комбинации услуг.
-   * 
+   *
    * @param {Object} serviceRoomVectors вектора возможности записи на работника для комбинации таксономий
    * @param {Array} taxonomyCombo
    * @param {String} resourceId
@@ -2130,7 +2130,7 @@ var Booking = Object.freeze({
 
   /**
    * Execute the capacity of each taxonomy from request Crac.GetRoomsFromTaxonomies
-   * 
+   *
    * @param {Object} taxonomyTreeCapacity
    * @param {Object} taxonomiesRooms
    */
@@ -2314,7 +2314,7 @@ var Booking = Object.freeze({
   }
 
   /**
-   * "Нарезает" слоты из определённого промежуточного формата (busySlots, crac, любой другой) 
+   * "Нарезает" слоты из определённого промежуточного формата (busySlots, crac, любой другой)
    * в формат представления их на UI.
    */
 
@@ -3577,7 +3577,7 @@ var langUtils = Object.freeze({
 
   /**
    * General algorithm for workers sorting.
-   * 
+   *
    * @param {Array<{id, order}>} workers
    * @param {WeightIndex} index
    * @return {*}

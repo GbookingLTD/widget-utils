@@ -452,7 +452,7 @@ function checkAdjacentSlot( adjasentTaxonomies, prevSlot, level, gcd, treshold )
     if ( slot ) {
       return false;
     }
-    if ( !treshold && gcd == adjasentTaxonomies[ level ].slotDuration ) {
+    if ( !treshold && ( !gcd || gcd == adjasentTaxonomies[ level ].slotDuration ) ) {
       slot = resSlots.find( function ( s ) {
         return s.start === time && s.available;
       } );
