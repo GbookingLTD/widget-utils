@@ -675,7 +675,7 @@ var taxonomies = Object.freeze({
   }();
 
   /**
-   * Контейнер для данных расписания одного дня. 
+   * Контейнер для данных расписания одного дня.
    * Предоставляет интерфейс к данным такого расписания.
    * Данный класс служит моделью для визуального представления (или ответа на запрос).
    */
@@ -693,7 +693,7 @@ var taxonomies = Object.freeze({
       value: function isDayAvailable() {}
 
       /**
-       * 
+       *
        * @return {Array<{start: {number}, end: {number}, available: {boolean}}>}
        */
 
@@ -712,7 +712,7 @@ var taxonomies = Object.freeze({
     inherits(ScheduleSlotsDay, _ScheduleDay);
 
     /**
-     * 
+     *
      * @param {Array<{start: {number}, end: {number}, available: {boolean}}>} slots
      * @return {Object|Array|*|void}
      */
@@ -806,6 +806,25 @@ var taxonomies = Object.freeze({
     }
 
     return lastPosition < 0 ? [] : slots.slice(0, lastPosition + 1);
+  }
+
+  /**
+   * Calculate GCD - greatest common divisor
+   * @param {Array} slot sizes
+   * @returns {Number} GCD
+   */
+  function GCD(A) {
+    var n = A.length,
+        x = Math.abs(A[0]);
+    for (var i = 1; i < n; i++) {
+      var y = Math.abs(A[i]);
+      while (x && y) {
+        x > y ? x %= y : y %= x;
+      }
+      x += y;
+    }
+
+    return x;
   }
 
   var minutesInDay = 1440;
@@ -1585,8 +1604,9 @@ var taxonomies = Object.freeze({
   }
 
   /**
-   * Принимает на вход объект-хранилище слотов CRACResourcesAndRoomsSlot, биизнес данные, работника, услугу
-   * и возвращает готовый набор слотов.
+   * Принимает на вход объект-хранилище слотов CRACResourcesAndRoomsSlot, биизнес данные, работника, комплексную услугу,
+   * список работников выполняющих некоторые из составляющих комплексную услуг
+   *
    *
    * @param {CRACResourcesAndRoomsSlot} cracDay
    * @param business
@@ -1599,6 +1619,9 @@ var taxonomies = Object.freeze({
    */
   function getSlotsFromBusinessAndCRACWithAdjacent(cracDay, business, resourceId, slotSize, enhanceSlotFn, resourceList, taxonomy) {
     var useAdjacentTaxonomies = !!business.backoffice_configuration.useAdjacentTaxonomies;
+    var useATSlotSplitting = !!business.backoffice_configuration.useAdjacentTaxonomiesSlotSplitting;
+    var ATTreshold = business.backoffice_configuration.adjacentTaxonomiesTreshold || 0;
+    var gcd = 0;
     if (taxonomy.adjacentTaxonomies && taxonomy.adjacentTaxonomies.length) {
       taxonomy.adjacentTaxonomies.sort(function (a, b) {
         return a.order > b.order ? 1 : -1;
@@ -1611,25 +1634,30 @@ var taxonomies = Object.freeze({
 
       return getSlotsFromBusinessAndCRACWithDuration(cracDay, business, resourceId, slotSizeRes, enhanceSlotFn);
     }
-
+    if (useATSlotSplitting) {
+      gcd = GCD(adjasentTaxonomies.map(function (t) {
+        return +t.slotDuration;
+      }));
+    }
     adjasentTaxonomies.forEach(function (tax) {
       if (!tax.slots) {
         tax.slots = [];
       }
+      var slotSizeTax = gcd || tax.slotDuration;
 
       if (!tax.isAnyAvailable) {
-        var taxSlots = getSlotsFromBusinessAndCRACWithDuration(cracDay, business, resourceId, tax.slotDuration);
+        var taxSlots = getSlotsFromBusinessAndCRACWithDuration(cracDay, business, resourceId, slotSizeTax);
         tax.slots.push(taxSlots);
       } else {
         var taxResourceList = getResourceListByTaxID(tax.taxonomyID, resourceList);
         taxResourceList.forEach(function (r) {
-          var taxSlots = getSlotsFromBusinessAndCRACWithDuration(cracDay, business, r, tax.slotDuration);
+          var taxSlots = getSlotsFromBusinessAndCRACWithDuration(cracDay, business, r, slotSizeTax);
           tax.slots.push(taxSlots);
         });
       }
     });
 
-    return combineAdjacentSlots(adjasentTaxonomies, enhanceSlotFn && enhanceSlotFn.bind(cracDay));
+    return combineAdjacentSlots(adjasentTaxonomies, enhanceSlotFn && enhanceSlotFn.bind(cracDay), gcd, ATTreshold);
   }
 
   /**
@@ -1655,9 +1683,11 @@ var taxonomies = Object.freeze({
    *
    * @param {*} resTaxData
    * @param {*} enhanceSlotFn
+   * @param {Number} gcd
+   * @param {Number} treshold
    * @returns {Array[Slot]} slots
    */
-  function combineAdjacentSlots(adjasentTaxonomies, enhanceSlotFn) {
+  function combineAdjacentSlots(adjasentTaxonomies, enhanceSlotFn, gcd, treshold) {
     var slots = [];
     if (!adjasentTaxonomies[0].slots || adjasentTaxonomies[0].slots.length === 0) {
       return [];
@@ -1675,7 +1705,7 @@ var taxonomies = Object.freeze({
 
     var time = startTime;
     while (time < endTime) {
-      var adjacentSlot = checkAdjacentSlot(adjasentTaxonomies, time, 0);
+      var adjacentSlot = checkAdjacentSlot(adjasentTaxonomies, { end: time }, 0, gcd, treshold);
       adjacentSlot.start = time;
       adjacentSlot.duration = adjacentSlot.end - time;
       if (enhanceSlotFn) {
@@ -1687,32 +1717,86 @@ var taxonomies = Object.freeze({
 
     return slots;
   }
+  /**
+   * Searching slot with needed duration in slots
+   * by finding chain of slots, that create duration that we need.
+   *
+   * If treshold is bigger then duration we can start start chain
+   * from the scratch several times
+   * @param {*} slots
+   * @param {*} adjasentTaxonomies
+   * @param {*} level
+   * @param {*} time
+   * @param {*} gcd
+   * @param {*} treshold
+   * @returns {} slot | false
+   */
+  function findAvailableSlot(slots, adjasentTaxonomies, level, time, gcd, treshold) {
+    var duration = gcd || adjasentTaxonomies[level].slotDuration;
+    var slotsCnt = Math.round(adjasentTaxonomies[level].slotDuration / gcd);
+    var start_slot = time;
+    var end_slot = start_slot + treshold + duration;
+    var prevSlot;
+    var slotsChain = slots.reduce(function (ret, s) {
+      if ((s.start <= start_slot && s.end > start_slot || s.start < end_slot && s.end >= end_slot || s.start >= start_slot && s.end <= end_slot) && s.available && (!prevSlot || prevSlot.end == s.start)) {
+        prevSlot = s;
+        ret.push(s);
+      } else if (ret.length < slotsCnt) {
+        ret = [];
+        prevSlot = undefined;
+      }
 
+      return ret;
+    }, []);
+
+    if (slotsChain.length < slotsCnt) {
+      return false;
+    }
+
+    slotsChain = slotsChain.splice(0, slotsCnt);
+
+    return {
+      start: slotsChain[0].start,
+      end: slotsChain[slotsCnt - 1].end,
+      available: true,
+      duration: adjasentTaxonomies[level].slotDuration
+    };
+  }
   /** Check do we have slots for taxonomy from adjacent taxononmy.
    *  We start from taxonomy with order = 1 and
    *  if it has available slot - we add taxonomy duration and check next taxonomy slots
    *
    * @param {Array} adjasentTaxonomies
-   * @param {Number} time
+   * @param {Slot} prevSlot
    * @param {Number} level
+   * @param {Number} gcd
+   * @param {Number} treshold
    * @return {Slot}
    */
-  function checkAdjacentSlot(adjasentTaxonomies, time, level) {
+  function checkAdjacentSlot(adjasentTaxonomies, prevSlot, level, gcd, treshold) {
+    var time = prevSlot.end;
+    var adjasentStart = prevSlot.adjasentStart || [];
     var slot = void 0;
     adjasentTaxonomies[level].slots.forEach(function (resSlots) {
       if (slot) {
         return false;
       }
-      slot = resSlots.find(function (s) {
-        return s.start === time && s.available;
-      });
+      if (!treshold && gcd == adjasentTaxonomies[level].slotDuration) {
+        slot = resSlots.find(function (s) {
+          return s.start === time && s.available;
+        });
+      } else {
+        slot = findAvailableSlot(resSlots, adjasentTaxonomies, level, time, gcd, treshold);
+      }
     });
 
     if (slot) {
+      slot.adjasentStart = adjasentStart || [];
+      slot.adjasentStart.push(slot.start);
       if (adjasentTaxonomies.length === level + 1) {
         return slot;
       } else {
-        return checkAdjacentSlot(adjasentTaxonomies, slot.end, level + 1);
+        return checkAdjacentSlot(adjasentTaxonomies, slot, level + 1, gcd, treshold);
       }
     }
 
@@ -2830,6 +2914,7 @@ var Discounts = Object.freeze({
   	cutSlotsWithoutBusy: cutSlotsWithoutBusy,
   	cutSlotsWithoutStartBusy: cutSlotsWithoutStartBusy,
   	cutSlotsWithoutStartFinishBusy: cutSlotsWithoutStartFinishBusy,
+  	GCD: GCD,
   	ScheduleCracSlotsIterator: ScheduleCracSlotsIterator,
   	ScheduleCRACDaySlots: ScheduleCRACDaySlots,
   	getSlotsFromBusinessAndCRACMultiServices: getSlotsFromBusinessAndCRACMultiServices,

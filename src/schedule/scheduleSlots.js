@@ -13,7 +13,7 @@ export class ScheduleSlotsIterator {
 }
 
 /**
- * Контейнер для данных расписания одного дня. 
+ * Контейнер для данных расписания одного дня.
  * Предоставляет интерфейс к данным такого расписания.
  * Данный класс служит моделью для визуального представления (или ответа на запрос).
  */
@@ -24,7 +24,7 @@ export class ScheduleDay {
   isDayAvailable() {}
 
   /**
-   * 
+   *
    * @return {Array<{start: {number}, end: {number}, available: {boolean}}>}
    */
   getSlots() {}
@@ -36,7 +36,7 @@ export class ScheduleDay {
  */
 export class ScheduleSlotsDay extends ScheduleDay {
   /**
-   * 
+   *
    * @param {Array<{start: {number}, end: {number}, available: {boolean}}>} slots
    * @return {Object|Array|*|void}
    */
@@ -44,11 +44,11 @@ export class ScheduleSlotsDay extends ScheduleDay {
     super();
     this.slots = slots;
   }
-  
+
   isDayAvailable() {
     return this.slots.length > 0;
   }
-  
+
   getSlots() {
     return this.slots;
   }
@@ -92,7 +92,7 @@ export function cutSlotsWithoutStartBusy(iterator) {
   // skip unavailable slots from start of day
   while ((slot = iterator.nextSlot()) && !slot.available) {}
   if (!slot) return slots;
-  
+
   slots.push(slot);
   while ((slot = iterator.nextSlot())) {
     slots.push(slot);
@@ -118,4 +118,23 @@ export function cutSlotsWithoutStartFinishBusy(iterator) {
   }
 
   return lastPosition < 0 ? [] : slots.slice(0, lastPosition + 1);
+}
+
+/**
+ * Calculate GCD - greatest common divisor
+ * @param {Array} slot sizes
+ * @returns {Number} GCD
+ */
+export function GCD( A ) {
+  var n = A.length,
+    x = Math.abs( A[ 0 ] );
+  for ( var i = 1; i < n; i++ ) {
+    var y = Math.abs( A[ i ] );
+    while ( x && y ) {
+      x > y ? x %= y : y %= x;
+    }
+    x += y;
+  }
+
+  return x;
 }
