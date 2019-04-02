@@ -1705,7 +1705,7 @@ var taxonomies = Object.freeze({
 
     var time = startTime;
     while (time < endTime) {
-      var adjacentSlot = checkAdjacentSlot(adjasentTaxonomies, time, 0, gcd, treshold);
+      var adjacentSlot = checkAdjacentSlot(adjasentTaxonomies, { end: time }, 0, gcd, treshold);
       adjacentSlot.start = time;
       adjacentSlot.duration = adjacentSlot.end - time;
       if (enhanceSlotFn) {
@@ -1741,7 +1741,7 @@ var taxonomies = Object.freeze({
       if ((s.start <= start_slot && s.end > start_slot || s.start < end_slot && s.end >= end_slot || s.start >= start_slot && s.end <= end_slot) && s.available && (!prevSlot || prevSlot.end == s.start)) {
         prevSlot = s;
         ret.push(s);
-      } else if (res.length < slotsCnt) {
+      } else if (ret.length < slotsCnt) {
         ret = [];
         prevSlot = undefined;
       }
@@ -1767,19 +1767,21 @@ var taxonomies = Object.freeze({
    *  if it has available slot - we add taxonomy duration and check next taxonomy slots
    *
    * @param {Array} adjasentTaxonomies
-   * @param {Number} time
+   * @param {Slot} prevSlot
    * @param {Number} level
    * @param {Number} gcd
    * @param {Number} treshold
    * @return {Slot}
    */
-  function checkAdjacentSlot(adjasentTaxonomies, time, level, gcd, treshold) {
+  function checkAdjacentSlot(adjasentTaxonomies, prevSlot, level, gcd, treshold) {
+    var time = prevSlot.end;
+    var adjasentStart = prevSlot.adjasentStart || [];
     var slot = void 0;
     adjasentTaxonomies[level].slots.forEach(function (resSlots) {
       if (slot) {
         return false;
       }
-      if (!treshold && !gcd || gcd == adjasentTaxonomies[level].slotDuration) {
+      if (!treshold && gcd == adjasentTaxonomies[level].slotDuration) {
         slot = resSlots.find(function (s) {
           return s.start === time && s.available;
         });
@@ -1789,10 +1791,12 @@ var taxonomies = Object.freeze({
     });
 
     if (slot) {
+      slot.adjasentStart = adjasentStart || [];
+      slot.adjasentStart.push(slot.start);
       if (adjasentTaxonomies.length === level + 1) {
         return slot;
       } else {
-        return checkAdjacentSlot(adjasentTaxonomies, slot.end, level + 1);
+        return checkAdjacentSlot(adjasentTaxonomies, slot, level + 1, gcd, treshold);
       }
     }
 
