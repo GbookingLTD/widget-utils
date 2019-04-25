@@ -290,6 +290,7 @@ export function getSlotsFromBusinessAndCRACWithAdjacent(cracDay, business, resou
   let useATSlotSplitting = !!business.backoffice_configuration.useAdjacentTaxonomiesSlotSplitting;
   let ATTreshold = business.backoffice_configuration.adjacentTaxonomiesTreshold || 0;
   let gcd = 0;
+  let DIFF_SLOTS_VARIABLE = 10;
   if(taxonomy.adjacentTaxonomies && taxonomy.adjacentTaxonomies.length){
     taxonomy.adjacentTaxonomies.sort((a,b) => {
       return a.order > b.order ? 1 : -1;
@@ -304,6 +305,10 @@ export function getSlotsFromBusinessAndCRACWithAdjacent(cracDay, business, resou
   }
   if ( useATSlotSplitting ) {
     gcd = GCD( adjasentTaxonomies.map( t => +t.slotDuration ) );
+  }
+  //we need to remove possible step between first slots
+  if ( gcd > DIFF_SLOTS_VARIABLE && gcd % DIFF_SLOTS_VARIABLE === 0 ) {
+    gcd = DIFF_SLOTS_VARIABLE;
   }
   adjasentTaxonomies.forEach((tax) => {
     if (!tax.slots) {
