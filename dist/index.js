@@ -1622,7 +1622,7 @@ var taxonomies = Object.freeze({
     var useATSlotSplitting = !!business.backoffice_configuration.useAdjacentTaxonomiesSlotSplitting;
     var ATTreshold = business.backoffice_configuration.adjacentTaxonomiesTreshold || 0;
     var gcd = 0;
-    var DIFF_SLOTS_VARIABLE = 10;
+    var DIFF_SLOTS_VARIABLE = 5;
     if (taxonomy.adjacentTaxonomies && taxonomy.adjacentTaxonomies.length) {
       taxonomy.adjacentTaxonomies.sort(function (a, b) {
         return a.order > b.order ? 1 : -1;
@@ -1639,10 +1639,11 @@ var taxonomies = Object.freeze({
       gcd = GCD(adjasentTaxonomies.map(function (t) {
         return +t.slotDuration;
       }));
-    }
-    //we need to remove possible step between first slots
-    if (gcd > DIFF_SLOTS_VARIABLE && gcd % DIFF_SLOTS_VARIABLE === 0) {
-      gcd = DIFF_SLOTS_VARIABLE;
+      // we need to remove possible step between first slots,
+      // if start time is not a multiple
+      if (gcd > DIFF_SLOTS_VARIABLE && gcd % DIFF_SLOTS_VARIABLE === 0) {
+        gcd = DIFF_SLOTS_VARIABLE;
+      }
     }
     adjasentTaxonomies.forEach(function (tax) {
       if (!tax.slots) {
@@ -1720,7 +1721,9 @@ var taxonomies = Object.freeze({
       time = adjacentSlot.end;
     }
 
-    return slots;
+    return slots.filter(function (s) {
+      return s.available;
+    });
   }
   /**
    * Searching slot with needed duration in slots
