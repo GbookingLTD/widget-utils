@@ -1622,6 +1622,7 @@ var taxonomies = Object.freeze({
     var useATSlotSplitting = !!business.backoffice_configuration.useAdjacentTaxonomiesSlotSplitting;
     var ATTreshold = business.backoffice_configuration.adjacentTaxonomiesTreshold || 0;
     var gcd = 0;
+    var DIFF_SLOTS_VARIABLE = 5;
     if (taxonomy.adjacentTaxonomies && taxonomy.adjacentTaxonomies.length) {
       taxonomy.adjacentTaxonomies.sort(function (a, b) {
         return a.order > b.order ? 1 : -1;
@@ -1638,6 +1639,11 @@ var taxonomies = Object.freeze({
       gcd = GCD(adjasentTaxonomies.map(function (t) {
         return +t.slotDuration;
       }));
+      // we need to remove possible step between first slots,
+      // if start time is not a multiple
+      if (gcd > DIFF_SLOTS_VARIABLE && gcd % DIFF_SLOTS_VARIABLE === 0) {
+        gcd = DIFF_SLOTS_VARIABLE;
+      }
     }
     adjasentTaxonomies.forEach(function (tax) {
       if (!tax.slots) {
@@ -1715,7 +1721,9 @@ var taxonomies = Object.freeze({
       time = adjacentSlot.end;
     }
 
-    return slots;
+    return slots.filter(function (s) {
+      return s.available;
+    });
   }
   /**
    * Searching slot with needed duration in slots
@@ -1732,12 +1740,12 @@ var taxonomies = Object.freeze({
    * @returns {} slot | false
    */
   function findAvailableSlot(slots, adjasentTaxonomies, level, time, gcd, treshold) {
-    var duration = gcd || adjasentTaxonomies[level].slotDuration;
-    var slotsCnt = Math.round(adjasentTaxonomies[level].slotDuration / gcd);
+    var duration = adjasentTaxonomies[level].slotDuration;
+    var slotsCnt = Math.round(duration / gcd);
     var start_slot = time;
     var end_slot = start_slot + treshold + duration;
     var prevSlot;
-    var slotsChain = slots.reduce(function (ret, s) {
+    var slotsChain = (slots || []).reduce(function (ret, s) {
       if ((s.start <= start_slot && s.end > start_slot || s.start < end_slot && s.end >= end_slot || s.start >= start_slot && s.end <= end_slot) && s.available && (!prevSlot || prevSlot.end == s.start)) {
         prevSlot = s;
         ret.push(s);
@@ -1781,8 +1789,8 @@ var taxonomies = Object.freeze({
       if (slot) {
         return false;
       }
-      if (!treshold && gcd == adjasentTaxonomies[level].slotDuration) {
-        slot = resSlots.find(function (s) {
+      if (!treshold && (!gcd || gcd == adjasentTaxonomies[level].slotDuration)) {
+        slot = (resSlots || []).find(function (s) {
           return s.start === time && s.available;
         });
       } else {
