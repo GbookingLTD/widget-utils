@@ -378,7 +378,7 @@ function combineAdjacentSlots( adjasentTaxonomies, enhanceSlotFn, gcd, treshold 
   let time = startTime;
   while ( time < endTime ) {
     let adjacentSlot = checkAdjacentSlot( adjasentTaxonomies, { end:time }, 0, gcd, treshold );
-    adjacentSlot.start = time;
+    adjacentSlot.start = adjacentSlot.available ? adjacentSlot.adjasentStart[ 0 ] : time;
     adjacentSlot.duration = adjacentSlot.end - time;
     if ( enhanceSlotFn ) {
       adjacentSlot = enhanceSlotFn( adjacentSlot );
