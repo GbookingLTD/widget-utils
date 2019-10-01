@@ -384,6 +384,7 @@ function combineAdjacentSlots( adjasentTaxonomies, enhanceSlotFn, gcd, treshold 
       adjacentSlot = enhanceSlotFn( adjacentSlot );
     }
     slots.push( adjacentSlot );
+     //TODO: we can add some option per taxonomy to cut slots by duration of first taxononmy
     time = adjacentSlot.end;
   }
 
@@ -405,16 +406,26 @@ function combineAdjacentSlots( adjasentTaxonomies, enhanceSlotFn, gcd, treshold 
  */
 function findAvailableSlot( slots, adjasentTaxonomies, level, time, gcd, treshold ) {
   var duration = adjasentTaxonomies[ level ].slotDuration;
-  var slotsCnt = Math.round( duration / gcd );
+  var slotsCnt = gcd === 0 ? 1 : Math.round(duration / gcd);
   var start_slot = time;
   var end_slot = start_slot + treshold + duration;
   var prevSlot;
+  var slotRangeCheck = function(s) {
+    if(!s.available){
+      return false;
+    }
+    if (slotsCnt === 1) {
+      return s.start >= start_slot && s.end<=end_slot;
+    }
+
+    return (s.start <= start_slot && s.end > start_slot)
+    || (s.start < end_slot && s.end >= end_slot)
+    || (s.start >= start_slot && s.end <= end_slot)
+
+  }
+
   var slotsChain = (slots || []).reduce( function ( ret, s ) {
-    if ( (
-        ( s.start <= start_slot && s.end > start_slot ) ||
-        ( s.start < end_slot && s.end >= end_slot ) ||
-        ( s.start >= start_slot && s.end <= end_slot )
-      ) && s.available &&
+    if ( slotRangeCheck(s) &&
       ( !prevSlot || prevSlot.end == s.start ) ) {
       prevSlot = s;
       ret.push( s );
