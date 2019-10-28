@@ -329,7 +329,7 @@ export function getSlotsFromBusinessAndCRACWithAdjacent(cracDay, business, resou
     }
   });
 
-  return combineAdjacentSlots( adjasentTaxonomies, enhanceSlotFn && enhanceSlotFn.bind(cracDay), gcd, ATTreshold );
+  return combineAdjacentSlots( adjasentTaxonomies, enhanceSlotFn && enhanceSlotFn.bind(cracDay), gcd, ATTreshold, taxonomy );
 }
 
 /**
@@ -355,11 +355,13 @@ function getResourceListByTaxID( taxonomyId, resourceList ) {
  *
  * @param {*} resTaxData
  * @param {*} enhanceSlotFn
- * @param {Number} gcd
- * @param {Number} treshold
+ * @param {Number} gcd - greather common delimeter
+ * @param {Number} treshold - possible time between slots
+ * @param {Taxonomy} taxonomy - original taxonomy
  * @returns {Array[Slot]} slots
  */
-function combineAdjacentSlots( adjasentTaxonomies, enhanceSlotFn, gcd, treshold ) {
+function combineAdjacentSlots( adjasentTaxonomies, enhanceSlotFn, gcd, treshold, taxonomy ) {
+  var sameTimeStart = taxonomy.adjacentSameTimeStart;
   const slots = [];
   if ( !adjasentTaxonomies[ 0 ].slots || adjasentTaxonomies[ 0 ].slots.length === 0 ) {
     return [];
@@ -375,17 +377,38 @@ function combineAdjacentSlots( adjasentTaxonomies, enhanceSlotFn, gcd, treshold 
     endTime = Math.max( taxSlots[ taxSlotsCnt - 1 ].end, endTime );
   } );
 
+  let step = gcd;
+  if(sameTimeStart && gcd === 0 ){
+    step = _.minBy(adjasentTaxonomies, t=>t.slotDuration);
+    if(taxonomy.duration < step){
+      step = taxonomy.duration;
+    }
+  }
+
   let time = startTime;
   while ( time < endTime ) {
-    let adjacentSlot = checkAdjacentSlot( adjasentTaxonomies, { end:time }, 0, gcd, treshold );
-    adjacentSlot.start = adjacentSlot.available ? adjacentSlot.adjasentStart[ 0 ] : time;
-    adjacentSlot.duration = adjacentSlot.end - time;
-    if ( enhanceSlotFn ) {
-      adjacentSlot = enhanceSlotFn( adjacentSlot );
+    if(sameTimeStart){
+      var adjacentSameTimeSlot = checkAdjacentSameTimeSlot(adjasentTaxonomies, time, step);
+      if(adjacentSameTimeSlot.available){
+        adjacentSameTimeSlot.start = time;
+        adjacentSameTimeSlot.duration = taxonomy.duration;
+        if ( enhanceSlotFn ) {
+          adjacentSameTimeSlot = enhanceSlotFn( adjacentSameTimeSlot );
+        }
+        slots.push( adjacentSameTimeSlot );
+      }
+      time = adjacentSameTimeSlot.available ? time + taxonomy.duration : time + step;
+    } else {
+      let adjacentSlot = checkAdjacentSlot( adjasentTaxonomies, { end:time }, 0, gcd, treshold );
+      adjacentSlot.start = adjacentSlot.available ? adjacentSlot.adjasentStart[ 0 ] : time;
+      adjacentSlot.duration = adjacentSlot.end - time;
+      if ( enhanceSlotFn ) {
+        adjacentSlot = enhanceSlotFn( adjacentSlot );
+      }
+      slots.push( adjacentSlot );
+      //TODO: we can add some option per taxonomy to cut slots by duration of first taxononmy
+      time = adjacentSlot.end;
     }
-    slots.push( adjacentSlot );
-     //TODO: we can add some option per taxonomy to cut slots by duration of first taxononmy
-    time = adjacentSlot.end;
   }
 
   return slots.filter( function ( s ) { return s.available });
@@ -498,4 +521,26 @@ function checkAdjacentSlot( adjasentTaxonomies, prevSlot, level, gcd, treshold )
     available: false,
     duration: adjasentTaxonomies[ 0 ].slotDuration,
   };
+}
+
+/**
+ *
+ * @param {*} adjasentTaxonomies
+ * @param {*} time
+ * @param {Number} step
+ */
+function checkAdjacentSameTimeSlot ( adjasentTaxonomies, time, step ){
+  const slotAvailable = _.every(adjasentTaxonomies, tax =>
+    _.some(tax.slots, s =>
+      _.some(s, slot => slot.start === time && slot.available)
+    )
+  );
+  return {
+    start: time,
+    end: time+step,
+    duration: step,
+    available: slotAvailable,
+    adjasentStart: adjasentTaxonomies.map(t=>time)
+  };
+
 }
