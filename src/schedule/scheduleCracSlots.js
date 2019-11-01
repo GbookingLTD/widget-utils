@@ -388,7 +388,7 @@ function combineAdjacentSlots( adjasentTaxonomies, enhanceSlotFn, gcd, treshold,
   let time = startTime;
   while ( time < endTime ) {
     if(sameTimeStart){
-      var adjacentSameTimeSlot = checkAdjacentSameTimeSlot(adjasentTaxonomies, time, step);
+      var adjacentSameTimeSlot = checkAdjacentSameTimeSlot(adjasentTaxonomies, time, step, gcd);
       if(adjacentSameTimeSlot.available){
         adjacentSameTimeSlot.start = time;
         adjacentSameTimeSlot.duration = taxonomy.duration;
@@ -529,18 +529,22 @@ function checkAdjacentSlot( adjasentTaxonomies, prevSlot, level, gcd, treshold )
  * @param {*} time
  * @param {Number} step
  */
-function checkAdjacentSameTimeSlot ( adjasentTaxonomies, time, step ){
-  const slotAvailable = _.every(adjasentTaxonomies, tax =>
-    _.some(tax.slots, s =>
-      _.some(s, slot => slot.start === time && slot.available)
-    )
-  );
+function checkAdjacentSameTimeSlot(adjasentTaxonomies, time, step, gcd) {
+  let available = true;
+  adjasentTaxonomies.forEach((tax, index) => {
+    if (!available) {
+      return;
+    }
+    available = _.some(
+      tax.slots,
+      s => !!findAvailableSlot(s, adjasentTaxonomies, index, time, gcd, 0)
+    );
+  });
   return {
     start: time,
-    end: time+step,
+    end: time + step,
     duration: step,
-    available: slotAvailable,
-    adjasentStart: adjasentTaxonomies.map(t=>time)
+    available: !!available,
+    adjasentStart: adjasentTaxonomies.map(t => time)
   };
-
 }

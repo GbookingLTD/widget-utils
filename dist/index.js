@@ -1724,7 +1724,7 @@ var taxonomies = Object.freeze({
     var time = startTime;
     while (time < endTime) {
       if (sameTimeStart) {
-        var adjacentSameTimeSlot = checkAdjacentSameTimeSlot(adjasentTaxonomies, time, step);
+        var adjacentSameTimeSlot = checkAdjacentSameTimeSlot(adjasentTaxonomies, time, step, gcd);
         if (adjacentSameTimeSlot.available) {
           adjacentSameTimeSlot.start = time;
           adjacentSameTimeSlot.duration = taxonomy.duration;
@@ -1862,19 +1862,21 @@ var taxonomies = Object.freeze({
    * @param {*} time
    * @param {Number} step
    */
-  function checkAdjacentSameTimeSlot(adjasentTaxonomies, time, step) {
-    var slotAvailable = _$1.every(adjasentTaxonomies, function (tax) {
-      return _$1.some(tax.slots, function (s) {
-        return _$1.some(s, function (slot) {
-          return slot.start === time && slot.available;
-        });
+  function checkAdjacentSameTimeSlot(adjasentTaxonomies, time, step, gcd) {
+    var available = true;
+    adjasentTaxonomies.forEach(function (tax, index) {
+      if (!available) {
+        return;
+      }
+      available = _$1.some(tax.slots, function (s) {
+        return !!findAvailableSlot(s, adjasentTaxonomies, index, time, gcd, 0);
       });
     });
     return {
       start: time,
       end: time + step,
       duration: step,
-      available: slotAvailable,
+      available: !!available,
       adjasentStart: adjasentTaxonomies.map(function (t) {
         return time;
       })
