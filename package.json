@@ -1,6 +1,6 @@
 {
   "name": "widget-utils",
-  "version": "0.8.58",
+  "version": "0.8.61",
   "scripts": {
     "test": "npm run build && node_modules/.bin/mocha test/**/*",
     "dev": "./node_modules/.bin/gulp dev",
@@ -29,7 +29,7 @@
     "should": "^13.2.3"
   },
   "dependencies": {
-    "crac-utils": "http://git.dev.gbooking.ru/gbooking/crac-utils/repository/archive.tar.gz?ref=v1.3.10",
+    "crac-utils": "http://git.dev.gbooking.ru/gbooking/crac-utils/repository/archive.tar.gz?ref=v1.3.11",
     "gulp-bump": "^3.1.1",
     "supports-color": "^5.4.0"
   }
