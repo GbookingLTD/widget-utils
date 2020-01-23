@@ -957,7 +957,7 @@ var taxonomies = Object.freeze({
           }
         }
 
-        if (endBoundIndex) break;
+        if (endBoundIndex || endBoundIndex === 0) break;
       }
     }
 
@@ -4494,7 +4494,7 @@ var Crac = Object.freeze({
   });
 
   // Remove this function after migration
-  function calcCRACSlotIntermediate$1(slot, vectorSlotSize) {
+  function calcCRACSlotIntermediate(slot, vectorSlotSize) {
     return slot.resources.reduce(function (ret, res) {
       var bitset = res.taxonomyBitSet ? setAnd$1(cracValueToBits(res.bitset), cracValueToBits(res.taxonomyBitSet)) : cracValueToBits(res.bitset);
       return setUnion$1(ret, bitset);
@@ -4506,7 +4506,7 @@ var Crac = Object.freeze({
 
 
   var CracUtils = Object.freeze({
-    calcCRACSlotIntermediate: calcCRACSlotIntermediate$1
+    calcCRACSlotIntermediate: calcCRACSlotIntermediate
   });
 
   var index = {
