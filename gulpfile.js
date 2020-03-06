@@ -36,11 +36,6 @@ gulp.task('compile', function() {
   return mergeStream(...compilationTargets.map(target =>
     rollupStream({
       input: 'src/index.js',
-      globals: {
-        'lodash': '_',
-        'moment-timezone': 'moment',
-        'moment-range': 'momentRange',
-      },
       external: ['lodash', 'moment-range', 'moment-timezone'],
       sourceMap: false,
       plugins: [
