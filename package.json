@@ -10,6 +10,7 @@
   },
   "main": "dist/index.js",
   "devDependencies": {
+    "@rollup/plugin-node-resolve": "^7.1.1",
     "@rollup/stream": "^0.1.0",
     "babel-cli": "^6.26.0",
     "babel-preset-es2015-rollup": "3.0.0",
