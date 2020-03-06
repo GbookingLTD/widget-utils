@@ -19,9 +19,7 @@ const compilationTargets = [
   {
     outputPath: 'dist/index.js',
     rollupOptions: {
-      format: 'umd',
-      moduleName: 'WidgetUtils',
-      output: { name: 'WidgetUtils' },
+      output: { format: 'cjs' },
     },
   },
 ];
