@@ -2,7 +2,7 @@
 
 import _ from 'lodash';
 import moment from 'moment-timezone';
-import {newFreeBitset, prepareBitset, getCracVectorSlotSize, getFirstLastMinutes, setAnd} from '../../bower_components/crac-utils/src';
+import {newFreeBitset, prepareBitset, getCracVectorSlotSize, getFirstLastMinutes, setAnd} from 'crac-utils/src';
 
 function getDayBoundsFromCracSlot(date, bitset) {
   let cracSlotSize = getCracVectorSlotSize(bitset);

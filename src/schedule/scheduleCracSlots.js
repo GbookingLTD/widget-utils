@@ -14,7 +14,7 @@ import {
   GCD,
 } from "./scheduleSlots";
 import {getCracVectorSlotSize, _findBack0, getFirstLastMinutes,
-  isSlotAvailable} from '../../bower_components/crac-utils/src';
+  isSlotAvailable} from 'crac-utils/src';
 import {CRACResourcesAndRoomsSlot} from "./CRACResponse";
 
 const ANY = 'ANY';
