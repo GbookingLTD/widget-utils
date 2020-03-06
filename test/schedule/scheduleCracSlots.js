@@ -1,11 +1,11 @@
 "use strict";
 
 const should = require('should');
-const {Schedule} = require('../../dist/index');
+const {Schedule} = require('../index');
 const {busyBitSets, newBusyBitset, prepareBitset} =
-  require('../../bower_components/crac-utils/dist/cjs/vector');
+  require('crac-utils/dist/cjs/vector');
 const {mask_left1} =
-  require('../../bower_components/crac-utils/dist/cjs/utils');
+  require('crac-utils/dist/cjs/utils');
 
 const cracVectorOrder = 'reverse';
 

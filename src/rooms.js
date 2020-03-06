@@ -1,7 +1,7 @@
 "use strict";
 
 import _ from 'lodash';
-import {buildBookingCRACVector, newBusyBitset, setUnion} from "../bower_components/crac-utils/src";
+import {buildBookingCRACVector, newBusyBitset, setUnion} from "crac-utils/src";
 
 /**
  * Return vector:true mean the resource is free for total duration of all taxonomies and rooms are available for these taxonomies
