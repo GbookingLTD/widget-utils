@@ -9,6 +9,7 @@ var $ = require('gulp-load-plugins')({
   pattern: ['gulp-*', 'del']
 });
 
+var rollupPluginNodeResolve = require('@rollup/plugin-node-resolve');
 var rollupStream = require('@rollup/stream');
 var rollupIncludePaths = require('rollup-plugin-includepaths');
 var babel = require('rollup-plugin-babel');
@@ -26,11 +27,12 @@ gulp.task('compile', function() {
         'moment-timezone': 'moment',
         'moment-range': 'momentRange',
       },
-      //external: ['moment-timezone'],
+      external: ['lodash', 'moment-range', 'moment-timezone'],
       sourceMap: false,
       format: 'umd',
       moduleName: 'WidgetUtils',
       plugins: [
+        rollupPluginNodeResolve(),
         babel({
           "babelrc": false,
           "presets": ["es2015-rollup"],
