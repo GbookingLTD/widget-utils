@@ -11,12 +11,7 @@ var $ = require('gulp-load-plugins')({
 
 var rollupPluginNodeResolve = require('@rollup/plugin-node-resolve');
 var rollupStream = require('@rollup/stream');
-var rollupIncludePaths = require('rollup-plugin-includepaths');
 var babel = require('rollup-plugin-babel');
-
-var includePathOptions = {
-    paths: ['src/']
-};
 
 gulp.task('compile', function() {
   return rollupStream({
@@ -37,7 +32,6 @@ gulp.task('compile', function() {
           "babelrc": false,
           "presets": ["es2015-rollup"],
         }),
-        rollupIncludePaths(includePathOptions)
       ]
     })
     .pipe(source('index.js'))

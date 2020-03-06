@@ -27,7 +27,6 @@
     "moment-range": "^3.0.3",
     "rollup": "^1.32.1",
     "rollup-plugin-babel": "2.7.1",
-    "rollup-plugin-includepaths": "0.1.5",
     "should": "^13.2.3",
     "vinyl-buffer": "^1.0.1",
     "vinyl-source-stream": "^2.0.0"
