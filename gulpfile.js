@@ -32,6 +32,10 @@ const compilationTargets = [
   },
 ];
 
+// How to setup caching with "@rollup/stream":
+// https://github.com/rollup/stream/tree/34bda6c45f1254cc470ea5510ae7fbbc092a023e#caching
+const compilationCache = new Map();
+
 gulp.task('compile', function() {
   return mergeStream(...compilationTargets.map(target =>
     rollupStream({
@@ -45,7 +49,11 @@ gulp.task('compile', function() {
           "presets": ["es2015-rollup"],
         }),
       ],
+      cache: compilationCache.get(target),
       ...target.rollupOptions,
+    })
+    .on('bundle', bundle => {
+      compilationCache.set(target, bundle);
     })
     .pipe(source(path.basename(target.outputPath)))
     .pipe(buffer())
