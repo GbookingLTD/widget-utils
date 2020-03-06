@@ -10,6 +10,7 @@
   },
   "main": "dist/index.js",
   "module": "dist/es/index.js",
+  "sideEffects": false,
   "devDependencies": {
     "@rollup/plugin-node-resolve": "^7.1.1",
     "@rollup/stream": "^0.1.0",
