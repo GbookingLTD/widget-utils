@@ -124,7 +124,7 @@ export class ScheduleBusySlotsCutterV1 extends ScheduleBusySlotsCutter {
         if (self.multiServices && self.multiServices.length) {
           let tempSlot;
           self.multiServices.forEach(function (service) {
-            var foundService = _(self.businessData.business.taxonomies).find({id: '' + service.id});
+            var foundService = _.find(self.businessData.business.taxonomies, {id: '' + service.id});
             tempSlot = getServiceDiscountsAndExceptions(self.businessData, foundService, actualSlot);
             if (!tempSlot || (!slot.discount && tempSlot.discount) || (tempSlot.discount && slot.discount && tempSlot.discount > slot.discount)) {
               slot = tempSlot;
@@ -146,7 +146,7 @@ export class ScheduleBusySlotsCutterV1 extends ScheduleBusySlotsCutter {
         if (multiServices && multiServices.length) {
           let tempSlot;
           multiServices.forEach(function (service) {
-            var foundService = _(self.businessData.business.taxonomies).find({id: '' + service.id});
+            var foundService = _.find(self.businessData.business.taxonomies, {id: '' + service.id});
             tempSlot = getServiceDiscountsAndExceptions(self.businessData, foundService, actualSlot);
             if (!tempSlot || (!slot.discount && tempSlot.discount) || (tempSlot.discount && slot.discount && tempSlot.discount > slot.discount)) {
               slot = tempSlot;

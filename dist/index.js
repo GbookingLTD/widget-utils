@@ -2,7 +2,7 @@
 
 function _interopDefault (ex) { return (ex && (typeof ex === 'object') && 'default' in ex) ? ex['default'] : ex; }
 
-var _$1 = _interopDefault(require('lodash'));
+var _$1 = require('lodash');
 var moment$3 = _interopDefault(require('moment-timezone'));
 var momentRange = require('moment-range');
 
@@ -346,12 +346,12 @@ function isDateForbidden(widgetConfiguration, date, ignoreStartDate) {
  * @param busySlots
  */
 function alignmentBusySlotsByTaxonomyDuration(startDate, taxonomyDuration, slotSize, busySlots) {
-  _$1(busySlots).each(function (busySlot) {
+  _$1.each(busySlots, function (busySlot) {
     busySlot.duration = taxonomyDuration;
   });
 
   var duration = slotSize || taxonomyDuration;
-  _$1(busySlots).each(function (busySlot) {
+  _$1.each(busySlots, function (busySlot) {
     var busyTimeMin = moment.utc(busySlot.time).diff(moment.utc(startDate), 'minute');
     var alignBusyTimeMin = Math.floor(busyTimeMin / duration) * duration;
     if (busyTimeMin !== alignBusyTimeMin) {
@@ -1790,7 +1790,7 @@ function calendarBookingTime(businessData, busySlots, slotSize, day, isGT) {
   if (isGT) {
     return calendarBookingTimeGT(businessData, busySlots, slotSize, day);
   }
-  var slotDay = _$1(busySlots.days).find(function (d) {
+  var slotDay = _$1.find(busySlots.days, function (d) {
     return moment$3(d.date).isSame(day.date, 'day');
   });
   if (slotDay) {
@@ -1818,7 +1818,7 @@ function calendarBookingTime(businessData, busySlots, slotSize, day, isGT) {
 
 function calendarBookingTimeGT(businessData, slots, slotSize, day) {
 
-  var slotDay = _$1(slots.days).find(function (d) {
+  var slotDay = _$1.find(slots.days, function (d) {
     return moment$3(d.date).isSame(day.date, 'day');
   });
   var selectedSlot = undefined;
@@ -1850,7 +1850,7 @@ function calendarBookingTimeCRAC(cracDays, businessData, taxonomy, day) {
     return;
   }
 
-  var cracDay = _$1(cracDays).find(function (d) {
+  var cracDay = _$1.find(cracDays, function (d) {
     return moment$3(d.date).isSame(day.date, 'day');
   });
   if (cracDay) {
@@ -2310,7 +2310,7 @@ var ScheduleBusySlotsCutter = function (_ScheduleSlotsCutter) {
       if (serviceId.toLowerCase() === 'multiservicebooking') {
         taxonomy = multiServices[0];
       } else {
-        taxonomy = _(businessData.business.taxonomies).find({ id: '' + serviceId });
+        taxonomy = _.find(businessData.business.taxonomies, { id: '' + serviceId });
       }
 
       this.taxDuration = getServiceDuration(taxonomy, worker);
@@ -2667,7 +2667,7 @@ var ScheduleBusySlotsCutterV1 = function (_ScheduleBusySlotsCut) {
             (function () {
               var tempSlot = void 0;
               self.multiServices.forEach(function (service) {
-                var foundService = _(self.businessData.business.taxonomies).find({ id: '' + service.id });
+                var foundService = _.find(self.businessData.business.taxonomies, { id: '' + service.id });
                 tempSlot = getServiceDiscountsAndExceptions(self.businessData, foundService, actualSlot);
                 if (!tempSlot || !slot.discount && tempSlot.discount || tempSlot.discount && slot.discount && tempSlot.discount > slot.discount) {
                   slot = tempSlot;
@@ -2688,7 +2688,7 @@ var ScheduleBusySlotsCutterV1 = function (_ScheduleBusySlotsCut) {
             (function () {
               var tempSlot = void 0;
               multiServices.forEach(function (service) {
-                var foundService = _(self.businessData.business.taxonomies).find({ id: '' + service.id });
+                var foundService = _.find(self.businessData.business.taxonomies, { id: '' + service.id });
                 tempSlot = getServiceDiscountsAndExceptions(self.businessData, foundService, actualSlot);
                 if (!tempSlot || !slot.discount && tempSlot.discount || tempSlot.discount && slot.discount && tempSlot.discount > slot.discount) {
                   slot = tempSlot;
@@ -3493,7 +3493,7 @@ var WorkloadWeightIndex = function (_WeightIndex) {
       }
 
       var index = 0;
-      return _$1(weights).sortBy(sortCriteria).reduce(function (ret, item) {
+      return _$1.sortBy(weights, sortCriteria).reduce(function (ret, item) {
         item.index = ++index;
         item.value = item.weight;
         ret[item.resource] = item;
@@ -3524,7 +3524,7 @@ var MostFreeWeightIndex = function (_WeightIndex2) {
       };
 
       var index = 0;
-      return _$1(freeDates).sortBy(sortCriteria).reduce(function (ret, item) {
+      return _$1.sortBy(freeDates, sortCriteria).reduce(function (ret, item) {
         item.index = ++index;
         item.value = item.date;
         ret[item.resource] = item;

@@ -1,6 +1,6 @@
 "use strict";
 
-import _ from 'lodash';
+import * as _ from 'lodash';
 import moment from 'moment-timezone';
 import {getRoomCapacityByService, getServiceRoomVector, getWorkerBookingVector} from "../rooms";
 import {newBusyBitset, newFreeBitset, prepareBitset, setUnion} from "crac-utils/src";

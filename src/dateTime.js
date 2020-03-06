@@ -1,4 +1,4 @@
-import _ from 'lodash';
+import * as _ from 'lodash';
 import moment from 'moment-timezone';
 
 export function setBusinessDateTZ(businessData, date) {

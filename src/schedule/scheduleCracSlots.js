@@ -1,6 +1,6 @@
 "use strict";
 
-import _ from 'lodash';
+import * as _ from 'lodash';
 import {isDateForbidden} from "../busySlots"
 import moment from 'moment-timezone';
 import {getBusinessDateLikeUTC} from "../dateTime";

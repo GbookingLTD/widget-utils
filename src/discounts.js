@@ -1,4 +1,4 @@
-import _ from 'lodash';
+import * as _ from 'lodash';
 import Moment from 'moment-timezone';
 import { extendMoment } from 'moment-range';
 

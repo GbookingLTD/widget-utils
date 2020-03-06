@@ -1,6 +1,6 @@
 "use strict";
 
-import _ from 'lodash';
+import * as _ from 'lodash';
 import {buildBookingCRACVector, newBusyBitset, setUnion} from "crac-utils/src";
 
 /**
