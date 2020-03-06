@@ -9,6 +9,7 @@
     "_startMinutes": "npm run build"
   },
   "main": "dist/index.js",
+  "module": "dist/es/index.js",
   "devDependencies": {
     "@rollup/plugin-node-resolve": "^7.1.1",
     "@rollup/stream": "^0.1.0",
