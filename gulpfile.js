@@ -2,6 +2,8 @@
 
 var gulp = require('gulp');
 var bump = require('gulp-bump');
+var mergeStream = require('merge-stream');
+var path = require('path');
 var buffer = require('vinyl-buffer');
 var source = require('vinyl-source-stream');
 
@@ -13,10 +15,21 @@ var rollupPluginNodeResolve = require('@rollup/plugin-node-resolve');
 var rollupStream = require('@rollup/stream');
 var babel = require('rollup-plugin-babel');
 
-gulp.task('compile', function() {
-  return rollupStream({
-      input: 'src/index.js',
+const compilationTargets = [
+  {
+    outputPath: 'dist/index.js',
+    rollupOptions: {
+      format: 'umd',
+      moduleName: 'WidgetUtils',
       output: { name: 'WidgetUtils' },
+    },
+  },
+];
+
+gulp.task('compile', function() {
+  return mergeStream(...compilationTargets.map(target =>
+    rollupStream({
+      input: 'src/index.js',
       globals: {
         'lodash': '_',
         'moment-timezone': 'moment',
@@ -24,21 +37,21 @@ gulp.task('compile', function() {
       },
       external: ['lodash', 'moment-range', 'moment-timezone'],
       sourceMap: false,
-      format: 'umd',
-      moduleName: 'WidgetUtils',
       plugins: [
         rollupPluginNodeResolve(),
         babel({
           "babelrc": false,
           "presets": ["es2015-rollup"],
         }),
-      ]
+      ],
+      ...target.rollupOptions,
     })
-    .pipe(source('index.js'))
+    .pipe(source(path.basename(target.outputPath)))
     .pipe(buffer())
     .on('error', $.util.log)
     //.pipe($.sourcemaps.write('.'))
-    .pipe(gulp.dest('dist'));
+    .pipe(gulp.dest(path.dirname(target.outputPath)))
+  ));
 });
 
 gulp.task('watch', function() {
