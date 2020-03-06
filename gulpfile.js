@@ -2,21 +2,25 @@
 
 var gulp = require('gulp');
 var bump = require('gulp-bump');
+var buffer = require('vinyl-buffer');
+var source = require('vinyl-source-stream');
 
 var $ = require('gulp-load-plugins')({
   pattern: ['gulp-*', 'del']
 });
 
+var rollupStream = require('@rollup/stream');
 var rollupIncludePaths = require('rollup-plugin-includepaths');
 var babel = require('rollup-plugin-babel');
 
 var includePathOptions = {
-    paths: ['../../bower_components/crac-utils/src/vector', 'src/']
+    paths: ['src/']
 };
 
 gulp.task('compile', function() {
-  return gulp.src('src/index.js', {read: false})
-    .pipe($.rollup({
+  return rollupStream({
+      input: 'src/index.js',
+      output: { name: 'WidgetUtils' },
       globals: {
         'lodash': '_',
         'moment-timezone': 'moment',
@@ -33,7 +37,9 @@ gulp.task('compile', function() {
         }),
         rollupIncludePaths(includePathOptions)
       ]
-    }))
+    })
+    .pipe(source('index.js'))
+    .pipe(buffer())
     .on('error', $.util.log)
     //.pipe($.sourcemaps.write('.'))
     .pipe(gulp.dest('dist'));

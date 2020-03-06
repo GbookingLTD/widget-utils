@@ -10,13 +10,13 @@
   },
   "main": "dist/index.js",
   "devDependencies": {
+    "@rollup/stream": "^0.1.0",
     "babel-cli": "^6.26.0",
     "babel-preset-es2015-rollup": "3.0.0",
     "del": "2.2.0",
     "gulp": "3.9.1",
     "gulp-babel": "6.1.2",
     "gulp-load-plugins": "1.2.2",
-    "gulp-rollup": "1.9.0",
     "gulp-sourcemaps": "1.6.0",
     "gulp-util": "3.0.7",
     "gulp-watch": "4.3.11",
@@ -24,9 +24,12 @@
     "moment": "^2.22.2",
     "moment-timezone": "^0.5.21",
     "moment-range": "^3.0.3",
+    "rollup": "^1.32.1",
     "rollup-plugin-babel": "2.7.1",
     "rollup-plugin-includepaths": "0.1.5",
-    "should": "^13.2.3"
+    "should": "^13.2.3",
+    "vinyl-buffer": "^1.0.1",
+    "vinyl-source-stream": "^2.0.0"
   },
   "dependencies": {
     "crac-utils": "http://git.dev.gbooking.ru/gbooking/crac-utils/repository/archive.tar.gz?ref=v1.3.11",
