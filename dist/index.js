@@ -1,8 +1,8 @@
 (function (global, factory) {
-  typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory(require('lodash'), require('moment-timezone'), require('moment-range'), require('crac-utils/src')) :
-  typeof define === 'function' && define.amd ? define(['lodash', 'moment-timezone', 'moment-range', 'crac-utils/src'], factory) :
-  (global = global || self, global.WidgetUtils = factory(global._, global.moment, global.momentRange, global.src));
-}(this, (function (_$1, moment$3, momentRange, src) { 'use strict';
+  typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory(require('lodash'), require('moment-timezone'), require('moment-range')) :
+  typeof define === 'function' && define.amd ? define(['lodash', 'moment-timezone', 'moment-range'], factory) :
+  (global = global || self, global.WidgetUtils = factory(global._, global.moment, global.momentRange));
+}(this, (function (_$1, moment$3, momentRange) { 'use strict';
 
   _$1 = _$1 && Object.prototype.hasOwnProperty.call(_$1, 'default') ? _$1['default'] : _$1;
   moment$3 = moment$3 && Object.prototype.hasOwnProperty.call(moment$3, 'default') ? moment$3['default'] : moment$3;
@@ -717,6 +717,349 @@
     return x;
   }
 
+  var minutesInDay = 1440;
+  var defaultVectorSlotSize = 5;
+
+  var busyBitSets = {
+    5: [0, 0, 0, 0, 0, 0, 0, 0, 0],
+    1: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+  };
+
+  var freeBitSets = {
+    5: busyBitSets[5].map(function (num) {
+      return ~num >>> 0;
+    }),
+    1: busyBitSets[1].map(function (num) {
+      return ~num >>> 0;
+    })
+  };
+
+  function getCracVectorSlotSize(bitset) {
+    if (typeof bitset === 'string') return bitset.length > 1000 ? 1 : 5;
+    return bitset.length > 9 ? 1 : 5;
+  }
+
+  /**
+   * Convert string bitset into int32 array
+   * @param str bitset in string representation
+   * @param vectorSlotSize CRAC bitset slot size
+   * @returns {Array} int32 bitset
+   */
+  function bitsetStrToInt32Array(str, vectorSlotSize) {
+    str = str.replace(/\./g, '');
+    vectorSlotSize = vectorSlotSize || defaultVectorSlotSize;
+    var numberOfTimeUnits = Math.ceil(minutesInDay / vectorSlotSize);
+    if (str.length !== numberOfTimeUnits) throw Error('string bitset should contain ' + numberOfTimeUnits + ' chars');
+    var int32Count = numberOfTimeUnits >> 5;
+    var i = void 0,
+        bi = void 0,
+        bs = [];
+    // fill bitset array
+    for (i = 0; i < int32Count; ++i) {
+      bs[i] = 0;
+    }
+    for (i = str.length - 1; i >= 0; i--) {
+      // i  - char index: from numberOfTimeUnits - 1 to 0
+      // bi - byte index: from 0 to 8
+      bi = numberOfTimeUnits - 1 - i >> 5;
+      bs[bi] = (bs[bi] << 1 | str[i] === "1") >>> 0;
+    }
+    return bs;
+  }
+
+  function prepareBitset(bitset, vectorSlotSize) {
+    return typeof bitset === "string" ? bitsetStrToInt32Array(bitset, vectorSlotSize) : bitset;
+  }
+
+  function newBusyBitset(vectorSlotSize) {
+    return busyBitSets[vectorSlotSize].slice();
+  }
+
+  function newFreeBitset(vectorSlotSize) {
+    return freeBitSets[vectorSlotSize].slice();
+  }
+
+  /**
+   * And operation by bit between 2 sets
+   *
+   * @param {Array<Number>} setA
+   * @param {Array<Number>} setB
+   */
+  function setAnd(setA, setB) {
+    var unifiedSet = [];
+    for (var i = 0; i < setA.length; i++) {
+      unifiedSet[i] = (setA[i] & setB[i]) >>> 0;
+    }
+    return unifiedSet;
+  }
+
+  /**
+   * OR operation by bit between 2 sets
+   *
+   * @param {Array<Number>} setA
+   * @param {Array<Number>} setB
+   */
+  function setUnion(setA, setB) {
+    var unifiedSet = [];
+    for (var i = 0; i < setA.length; i++) {
+      unifiedSet[i] = (setA[i] | setB[i]) >>> 0;
+    }
+    return unifiedSet;
+  }
+
+  var INT32_SIZE = 32;
+
+  function minutesFromBitset(bucket, slotIndex, vectorSlotSize) {
+    return ((bucket << 5) + slotIndex) * vectorSlotSize;
+  }
+
+  /**
+   * Calculate start and end time
+   *
+   * @param bitset CRAC bitset
+   * @param vectorSlotSize CRAC bitset slot size
+   * @returns {{start: *, end: *}}
+   */
+  function getFirstLastMinutes(bitset, vectorSlotSize) {
+    var startBoundMinutes = void 0,
+        endBoundMinutes = void 0;
+    var startBoundBucket = void 0,
+        startBoundIndex = void 0,
+        endBoundBucket = void 0,
+        endBoundIndex = void 0;
+    for (var i = 0; i < bitset.length; ++i) {
+      var b = Math.clz32(bitset[i]);
+      if (b < INT32_SIZE) {
+        startBoundBucket = i;
+        startBoundIndex = b;
+        break;
+      }
+    }
+
+    for (var _i = bitset.length - 1; _i >= startBoundBucket; --_i) {
+      if (bitset[_i]) {
+        for (var _b = INT32_SIZE - 1; _b >= 0; --_b) {
+          var bit = bitset[_i] & 1 << INT32_SIZE - _b - 1;
+          if (bit) {
+            endBoundBucket = _i;
+            endBoundIndex = _b;
+            break;
+          }
+        }
+
+        if (endBoundIndex || endBoundIndex === 0) break;
+      }
+    }
+
+    if (typeof startBoundIndex !== 'undefined') {
+      startBoundMinutes = minutesFromBitset(startBoundBucket, startBoundIndex, vectorSlotSize);
+    }
+    if (typeof endBoundIndex !== 'undefined') {
+      endBoundMinutes = minutesFromBitset(endBoundBucket, endBoundIndex + 1, vectorSlotSize);
+    }
+
+    return {
+      start: startBoundMinutes,
+      end: endBoundMinutes
+    };
+  }
+
+  /**
+   * Находит позицию первой 1 в векторе. 
+   * Направление битов - слева направо (от старших к младшим разрядам), поэтому возможно использовать clz внутри числа.
+   * 
+   * Если не найдено 1 - возвращаем отрицательное число.
+   * 
+   * @param {{i:number, b:number}} p
+   * @param vector
+   * @return {*}
+   * @private
+   */
+  function _find1(p, vector) {
+    while (p.i < vector.length) {
+      p.b = Math.clz32(vector[p.i] << p.b) + p.b;
+      // все 0 - проверяем следующее число
+      if (p.b >= 32) {
+        p.b = 0;
+        ++p.i;
+        continue;
+      }
+
+      // найдена 1 - возвращаем результат
+      return 0;
+    }
+
+    // весь вектор заполнен 0, возвращаем отрицательное число
+    return -1;
+  }
+
+  /**
+   * Производит поиск 0 бита в обратном направлении. 
+   * Возвращает количество бит, на которое нужно было сместиться назад.
+   * 
+   * @param vector crac-vector
+   * @param p      позиция на векторе, с которой начинается поиск
+   * @param count  количество бит, в которых производится поиск
+   * @return {number}
+   * @private
+   */
+  function _findBack0(vector, p, count) {
+    var offset = 0;
+    while (p.i >= 0) {
+      // найден 0 бит - возвращаем результат
+      var bit = vector[p.i] >>> INT32_SIZE - p.b - 1 & 1;
+      if (bit === 0) {
+        return offset;
+      }
+
+      ++offset;
+      if (count-- < 0) return -1;
+
+      --p.b;
+      if (p.b < 0) {
+        p.b = 31;
+        --p.i;
+      }
+    }
+
+    return -1;
+  }
+
+  /**
+   * Маски левых (старших) единиц от 0 до 32-х (33 элемента в массиве).
+   * 
+   * 0-й элемент соответствует нулю единиц слева, начиная от 32-й позиции.
+   * 1-й элемент соответствует одной единице слева на 32-й позиции и тд. до 32-х.
+   * 32-й элемент соответствует 32-м единицам от 32-й до крайней правой позиции.
+   * 
+   * @type {{}}
+   */
+  var mask_left1 = [0, 2147483648, 3221225472, 3758096384, 4026531840, 4160749568, 4227858432, 4261412864, 4278190080, 4286578688, 4290772992, 4292870144, 4293918720, 4294443008, 4294705152, 4294836224, 4294901760, 4294934528, 4294950912, 4294959104, 4294963200, 4294965248, 4294966272, 4294966784, 4294967040, 4294967168, 4294967232, 4294967264, 4294967280, 4294967288, 4294967292, 4294967294, 4294967295];
+
+  /**
+   * Маски правых (младших) единиц от 0 до 32-х (33 элемента в массиве).
+   * 
+   * @type {{}}
+   */
+  var mask_right1 = [0, 1, 3, 7, 15, 31, 63, 127, 255, 511, 1023, 2047, 4095, 8191, 16383, 32767, 65535, 131071, 262143, 524287, 1048575, 2097151, 4194303, 8388607, 16777215, 33554431, 67108863, 134217727, 268435455, 536870911, 1073741823, 2147483647, 4294967295];
+
+  /*
+  (() => {
+  let m = new Array(33);
+  m[0] = 0;
+  for (let i = 0; i < 32; ++i) {
+    // m[32 - i] = (0xffffffff << i) >>> 0; // for mask_left1
+    m[32 - i] = 0xffffffff >>> i; // for mask_right1
+  }
+  return m;
+  })()
+  */
+
+  /**
+   * Заполнение результирующего вектора 1.
+   * 
+   * @param bitset crac-вектор
+   * @param i    начальное смещение элементов массива
+   * @param b    начальное смещение в битах в элементе массива
+   * @param count количество бит, которое необходимо заполнить
+   * @private
+   */
+  function _fill1(bitset, i, b, count) {
+    var left_bound = b;
+    var right_bound = Math.min(count + b, INT32_SIZE);
+    for (; i < bitset.length && count > 0; ++i) {
+      bitset[i] = (bitset[i] | mask_left1[right_bound] & mask_right1[INT32_SIZE - left_bound]) >>> 0;
+      count -= right_bound - left_bound;
+      left_bound = 0;
+      right_bound = count >= INT32_SIZE ? INT32_SIZE : count;
+    }
+  }
+
+  /**
+   * Checking slot availability
+   * 
+   * @param bitset CRAC bitset
+   * @param start start time in minutes
+   * @param end end time in minutes (not inclusive)
+   * @param vectorSlotSize CRAC bitset slot size
+   * @returns {boolean} availability
+   */
+  function isSlotAvailable(bitset, start, end, vectorSlotSize) {
+    var cracSlotIndex = Math.floor(start / vectorSlotSize),
+        i = cracSlotIndex >> 5,
+        b = cracSlotIndex % INT32_SIZE,
+        count = Math.ceil((end - start) / vectorSlotSize);
+
+    if (count === 0) return false;
+
+    var left_bound = b;
+    var right_bound = Math.min(count + b, INT32_SIZE);
+    for (; i < bitset.length && count > 0; ++i) {
+      var slot_mask = (mask_left1[right_bound] & mask_right1[INT32_SIZE - left_bound]) >>> 0;
+      if (((bitset[i] | slot_mask) ^ bitset[i]) >>> 0) return false;
+      count -= right_bound - left_bound;
+      left_bound = 0;
+      right_bound = count >= INT32_SIZE ? INT32_SIZE : count;
+    }
+
+    return true;
+  }
+
+  /**
+   * Возвращаем вектор, в котором 1 означает возможность записи на это время с учётом 
+   * переданной длительности.
+   * 
+   * Переходим на первый свободный бит. Очевидно, что все биты до него заняты. 
+   * Находим первый занятый бит, идущий за свободным. 
+   * Все биты, которые отстоят от этого занятого на расстояние duration будут свободны.
+   *
+   * Операция "найти первый свободный бит" оптимизирована с помощью операции Math.clz32.
+   * Операции заполнения битов используют битовые маски.
+   * 
+   * Функция имеет сложность O(n), n - количество элементов в массиве (не бит, в отличие от простого итерирования по CRAC-вектору).
+   * 
+   * @link https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/clz32
+   * 
+   * @param bitset
+   * @param offset смещение в crac-векторе
+   * @param sz
+   * @param vectorSlotSize
+   */
+  function buildBookingCRACVector(bitset, offset, sz, vectorSlotSize) {
+    var r = newBusyBitset(vectorSlotSize);
+    var p = {};
+    p.i = Math.floor(offset / INT32_SIZE);
+    p.b = offset % INT32_SIZE;
+
+    var inverseBitset = bitset.map(function (n) {
+      return ~n >>> 0;
+    });
+    while (p.i < bitset.length) {
+      // Находим первую 1 ("свободный" бит).
+      // Если достигнут конец входного вектора, то возвращаем результирующий вектор.
+      if (_find1(p, bitset) < 0) return r;
+
+      // Все биты до него заняты. 
+      // Вектор r и так заполнен 0, поэтому заполнения 0 не требуется.
+
+      // Находим первый 0 ("занятый" бит), начиная с текущей позиции.
+      // Если "занятый" бит не был найден, то берём весь оставшийся вектор.
+      var pp = { i: p.i, b: p.b };
+      _find1(p, inverseBitset);
+
+      // Находим количество бит, которое нужно заполнить
+      var prevPos = pp.i * INT32_SIZE + pp.b;
+      var pos = p.i * INT32_SIZE + p.b;
+      var fillCount = pos - prevPos - sz + 1;
+      if (fillCount > 0) {
+        // Заполняем результирующий вектор 1
+        _fill1(r, pp.i, pp.b, fillCount);
+      }
+    }
+
+    return r;
+  }
+
   var assert = console.assert ? console.assert.bind(console) : function () {};
 
   var CRACResourcesAndRoomsSlot = function () {
@@ -760,11 +1103,11 @@
             var resource = {
               id: res.resourceId,
               durations: res.durations || [],
-              bitset: src.prepareBitset(res.bitset, src.getCracVectorSlotSize(res.bitset))
+              bitset: prepareBitset(res.bitset, getCracVectorSlotSize(res.bitset))
             };
 
             try {
-              resource.taxonomyBitSet = src.prepareBitset(res.taxonomyBitSet, src.getCracVectorSlotSize(res.taxonomyBitSet));
+              resource.taxonomyBitSet = prepareBitset(res.taxonomyBitSet, getCracVectorSlotSize(res.taxonomyBitSet));
             } catch (e) {}
 
             this.resources.push(resource);
@@ -794,16 +1137,16 @@
         var resourceData = this.resources.find(function (r) {
           return r.id === resourceID;
         });
-        if (resourceData) return resourceData.taxonomyBitSet ? src.setUnion(resourceData.bitset, resourceData.taxonomyBitSet) : resourceData.bitset;
+        if (resourceData) return resourceData.taxonomyBitSet ? setUnion(resourceData.bitset, resourceData.taxonomyBitSet) : resourceData.bitset;
         return null;
       }
     }, {
       key: 'getResourceUnionBitset',
       value: function getResourceUnionBitset() {
         return this.resources.reduce(function (ret, res) {
-          var bitset = res.taxonomyBitSet ? src.setUnion(res.bitset, res.taxonomyBitSet) : res.bitset;
-          return src.setUnion(ret, bitset);
-        }, src.newBusyBitset());
+          var bitset = res.taxonomyBitSet ? setUnion(res.bitset, res.taxonomyBitSet) : res.bitset;
+          return setUnion(ret, bitset);
+        }, newBusyBitset());
       }
     }]);
     return CRACResourcesAndRoomsSlot;
@@ -925,7 +1268,7 @@
     createClass(ScheduleCracSlotsIterator, [{
       key: "_initializeDayBounds",
       value: function _initializeDayBounds() {
-        var bounds = src.getFirstLastMinutes(this.bitset, this.vectorSlotSize);
+        var bounds = getFirstLastMinutes(this.bitset, this.vectorSlotSize);
         this.dayBounds = { start: bounds.start || 0, end: bounds.end || 0 };
       }
 
@@ -953,7 +1296,7 @@
           return { start: -1, duration: false };
         }
 
-        var available = src.isSlotAvailable(this.bitset, start, start + this.duration, this.vectorSlotSize);
+        var available = isSlotAvailable(this.bitset, start, start + this.duration, this.vectorSlotSize);
 
         if (!available) {
           // Необходимо проверить конечный бит - если это 1, то пройтись по вектору, найдя первый 0 бит.
@@ -962,10 +1305,10 @@
 
           var lastBitPosition = Math.floor((start + this.slotSize - 1) / this.vectorSlotSize);
           var p = { i: lastBitPosition >> 5, b: lastBitPosition % 32 };
-          var offset = src._findBack0(this.bitset, p, Math.floor(this.slotSize / this.vectorSlotSize));
+          var offset = _findBack0(this.bitset, p, Math.floor(this.slotSize / this.vectorSlotSize));
           if (offset > 0) {
             var checkStart = start + (this.slotSize - offset * this.vectorSlotSize);
-            available = src.isSlotAvailable(this.bitset, checkStart, checkStart + this.duration, this.vectorSlotSize);
+            available = isSlotAvailable(this.bitset, checkStart, checkStart + this.duration, this.vectorSlotSize);
             if (available) start = checkStart;
           }
         }
@@ -1072,7 +1415,7 @@
         var cracDay = this.cracDay;
         var bitset = ANY === resourceID ? cracDay.getResourceUnionBitset() : cracDay.getResourceBitset(resourceID);
         if (bitset) {
-          var vectorSlotSize = src.getCracVectorSlotSize(bitset);
+          var vectorSlotSize = getCracVectorSlotSize(bitset);
           var iterator = new ScheduleCracSlotsIterator(bitset, vectorSlotSize, duration, slotSize, enhanceSlotFn && enhanceSlotFn.bind(cracDay));
           // Если текущий день, то необходимо не учитывать слоты времени, которое уже истекло
           if (this.isThisDay()) {
@@ -1533,9 +1876,9 @@
   });
 
   function getDayBoundsFromCracSlot(date, bitset) {
-    var cracSlotSize = src.getCracVectorSlotSize(bitset);
-    bitset = src.prepareBitset(bitset, cracSlotSize);
-    var dayBounds = src.getFirstLastMinutes(bitset, cracSlotSize);
+    var cracSlotSize = getCracVectorSlotSize(bitset);
+    bitset = prepareBitset(bitset, cracSlotSize);
+    var dayBounds = getFirstLastMinutes(bitset, cracSlotSize);
     dayBounds.start_time = moment$3(date).add(dayBounds.start, 'minutes').toISOString();
     dayBounds.end_time = moment$3(date).add(dayBounds.end, 'minutes').toISOString();
     return dayBounds;
@@ -1544,10 +1887,10 @@
   // Generate crunch-capable data from CRAC.
   // Complexity: O(N), where N = 24hours / 5 minutes
   function cutSlotsFromCrac(cracSlot, date, startMinutes, endMinutes, scheduleStrategy, scheduleSlotSize) {
-    var cracSlotSize = src.getCracVectorSlotSize(cracSlot.bitset);
-    var bitset = src.prepareBitset(cracSlot.bitset, cracSlotSize);
-    var bitsetTaxonomy = cracSlot.taxonomyBitset ? src.prepareBitset(cracSlot.taxonomyBitset, cracSlotSize) : src.newFreeBitset();
-    bitset = src.setAnd(bitset, bitsetTaxonomy);
+    var cracSlotSize = getCracVectorSlotSize(cracSlot.bitset);
+    var bitset = prepareBitset(cracSlot.bitset, cracSlotSize);
+    var bitsetTaxonomy = cracSlot.taxonomyBitset ? prepareBitset(cracSlot.taxonomyBitset, cracSlotSize) : newFreeBitset();
+    bitset = setAnd(bitset, bitsetTaxonomy);
 
     var dayBounds = getDayBoundsFromCracSlot(date, bitset);
     var slots = cutSlots(date, bitset, cracSlotSize, scheduleSlotSize, scheduleStrategy);
@@ -1664,10 +2007,10 @@
    * @param {Number} cracVectorSlotSize
    */
   function getServiceRoomVector(workerBitset, workerId, roomsBitSets, totalDuration, serviceDuration, cracVectorSlotSize) {
-    var unionBookingVector = src.buildBookingCRACVector(workerBitset, cracVectorSlotSize, totalDuration);
+    var unionBookingVector = buildBookingCRACVector(workerBitset, cracVectorSlotSize, totalDuration);
     for (var j = 0; j < roomsBitSets.length; j++) {
-      var roomBookingVector = src.buildBookingCRACVector(roomsBitSets[j], cracVectorSlotSize, serviceDuration[workerId]);
-      unionBookingVector = src.setUnion(unionBookingVector, roomBookingVector);
+      var roomBookingVector = buildBookingCRACVector(roomsBitSets[j], cracVectorSlotSize, serviceDuration[workerId]);
+      unionBookingVector = setUnion(unionBookingVector, roomBookingVector);
     }
     return unionBookingVector;
   }
@@ -1739,10 +2082,10 @@
 
     // Для каждой комбинации таксономий получаем вектор возможности записи.
     // Объединяем эти вектора. Полученный вектор и будет искомым.
-    var unionBookingVector = src.newBusyBitset(cracVectorSlotSize);
+    var unionBookingVector = newBusyBitset(cracVectorSlotSize);
     for (var i = 0; i < combinations.length; i++) {
       var comboVector = buildTaxonomyComboBookingVector(serviceRoomVectors, combinations[i], resourceId, serviceDurationByWorker, cracVectorSlotSize);
-      unionBookingVector = src.setUnion(unionBookingVector, comboVector);
+      unionBookingVector = setUnion(unionBookingVector, comboVector);
     }
 
     return unionBookingVector;
@@ -1819,9 +2162,9 @@
     resources.forEach(function (r) {
       var cracResource = _$1.find(cracSlot.resources, { resourceId: r });
       if (cracResource) {
-        bitSets.resources[r] = src.prepareBitset(cracResource.bitset, SLOT_SIZE);
+        bitSets.resources[r] = prepareBitset(cracResource.bitset, SLOT_SIZE);
       } else {
-        bitSets.resources[r] = src.newBusyBitset(SLOT_SIZE);
+        bitSets.resources[r] = newBusyBitset(SLOT_SIZE);
       }
     });
 
@@ -1834,9 +2177,9 @@
         for (var i = 0; i < capacity; i++) {
           var cracRoom = _$1.find(cracSlot.rooms, { roomId: roomId + "_" + i });
           if (cracRoom) {
-            bitSets.rooms[roomId][i] = src.prepareBitset(cracRoom.bitset, SLOT_SIZE);
+            bitSets.rooms[roomId][i] = prepareBitset(cracRoom.bitset, SLOT_SIZE);
           } else {
-            bitSets.rooms[roomId][i] = src.newFreeBitset(SLOT_SIZE);
+            bitSets.rooms[roomId][i] = newFreeBitset(SLOT_SIZE);
           }
         }
       }
@@ -1908,7 +2251,7 @@
         });
       });
 
-      var anyAvailableVector = src.newBusyBitset(SLOT_SIZE);
+      var anyAvailableVector = newBusyBitset(SLOT_SIZE);
       resourceIDs.forEach(function (rId) {
         var workerBookingsVector = getWorkerBookingVector(serviceRoomVectors, rId, serviceDurationByWorker, taxonomyIDs, taxonomiesRooms, SLOT_SIZE);
         var resourceSlots = getGreedySlots(workerBookingsVector);
@@ -1916,7 +2259,7 @@
         if (resourceSlots.length > 0) {
           isAvailableResource[rId] = true;
         }
-        anyAvailableVector = src.setUnion(anyAvailableVector, workerBookingsVector);
+        anyAvailableVector = setUnion(anyAvailableVector, workerBookingsVector);
       });
 
       daySlots.slots = getGreedySlots(anyAvailableVector);
@@ -3823,7 +4166,7 @@
    * @param {*bitset} setA
    * @param {*bitset} setB
    */
-  function setAnd(setA, setB) {
+  function setAnd$1(setA, setB) {
     var unifiedSet = [];
     for (var i = 0; i < setA.length; i++) {
       unifiedSet[i] = setA[i] && setB[i];
@@ -3837,7 +4180,7 @@
    * @param {*bitset} setA
    * @param {*bitset} setB
    */
-  function setUnion(setA, setB) {
+  function setUnion$1(setA, setB) {
     var unifiedSet = [];
     for (var i = 0; i < setA.length; i++) {
       unifiedSet[i] = setA[i] || setB[i];
@@ -3897,7 +4240,7 @@
         if (resourceSlots.length > 0) {
           availableResoueceHash[rId] = true;
         }
-        anyAvailableVector = setUnion(anyAvailableVector, finalWorkersVector[rId]);
+        anyAvailableVector = setUnion$1(anyAvailableVector, finalWorkersVector[rId]);
       });
       daySlots.slots = calcResourceSlots(anyAvailableVector);
       daySlots.available = daySlots.slots.length > 0;
@@ -4030,8 +4373,8 @@
   var Crac = /*#__PURE__*/Object.freeze({
     __proto__: null,
     cracValueToBits: cracValueToBits,
-    setAnd: setAnd,
-    setUnion: setUnion,
+    setAnd: setAnd$1,
+    setUnion: setUnion$1,
     prepareSlots: prepareSlots$1,
     toBusySlots: toBusySlots$1,
     setSlotSize: setSlotSize$1
@@ -4040,8 +4383,8 @@
   // Remove this function after migration
   function calcCRACSlotIntermediate(slot, vectorSlotSize) {
     return slot.resources.reduce(function (ret, res) {
-      var bitset = res.taxonomyBitSet ? setAnd(cracValueToBits(res.bitset), cracValueToBits(res.taxonomyBitSet)) : cracValueToBits(res.bitset);
-      return setUnion(ret, bitset);
+      var bitset = res.taxonomyBitSet ? setAnd$1(cracValueToBits(res.bitset), cracValueToBits(res.taxonomyBitSet)) : cracValueToBits(res.bitset);
+      return setUnion$1(ret, bitset);
     }, '0'.repeat(vectorSlotSize === 5 ? 288 : 1440).split('').map(function () {
       return 0;
     }));
