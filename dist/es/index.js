@@ -1,4 +1,4 @@
-import _$1 from 'lodash';
+import { reduce, each, isUndefined, find, cloneDeep, minBy, some, map, filter, first, sortBy, intersection, all, max } from 'lodash';
 import moment$3 from 'moment-timezone';
 import { extendMoment } from 'moment-range';
 
@@ -35,14 +35,14 @@ function businessTimezoneUtcOffset(businessData) {
  * @param utcDate
  */
 function startBusinessTZDay(businessData, utcDate) {
-  var originalDateUnits = _$1.reduce(['year', 'month', 'date'], function (ret, unit) {
+  var originalDateUnits = reduce(['year', 'month', 'date'], function (ret, unit) {
     ret[unit] = utcDate.get(unit);
     return ret;
   }, {});
 
   setBusinessDateTZ(businessData, utcDate);
 
-  _$1.each(originalDateUnits, function (value, unit) {
+  each(originalDateUnits, function (value, unit) {
     utcDate.set(unit, value);
   });
 
@@ -199,7 +199,7 @@ function calculateDaySlotsV1(day, taxonomy, slotSize, busySlots, businessData) {
 function calculateDaySlotsV2(day, taxonomy, slotSize, busySlots) {
   var slots = [];
   day.slots.forEach(function (slot) {
-    if (!_$1.isUndefined(slot.busy) && slot.busy && _$1.isUndefined(slot.space_left)) {
+    if (!isUndefined(slot.busy) && slot.busy && isUndefined(slot.space_left)) {
       return;
     }
     var businessNow = moment.utc();
@@ -208,7 +208,7 @@ function calculateDaySlotsV2(day, taxonomy, slotSize, busySlots) {
     var slot_time = moment.utc(day.date).add(slot.time, 'm');
     var duration = slot.duration || slotSize;
     var spaceLeft;
-    if (!_$1.isUndefined(slot.space_left)) {
+    if (!isUndefined(slot.space_left)) {
       spaceLeft = slot.space_left;
       if (spaceLeft === 1 && busySlots.maxSlotCapacity > 0) {
         spaceLeft = busySlots.maxSlotCapacity;
@@ -293,7 +293,7 @@ function checkSlotInterval(dayBusySlots, date, defaultStep) {
 function isBusyDay(day, crunchv2, taxonomy, slotSize, busySlots, businessData) {
   var calculateDaySlots = crunchv2 ? calculateDaySlotsV2 : calculateDaySlotsV1;
   var slots = calculateDaySlots(day, taxonomy, slotSize, busySlots, businessData);
-  var hasFreeSlot = _$1.find(slots, { busy: false });
+  var hasFreeSlot = find(slots, { busy: false });
   return !hasFreeSlot;
 }
 
@@ -342,12 +342,12 @@ function isDateForbidden(widgetConfiguration, date, ignoreStartDate) {
  * @param busySlots
  */
 function alignmentBusySlotsByTaxonomyDuration(startDate, taxonomyDuration, slotSize, busySlots) {
-  _$1(busySlots).each(function (busySlot) {
+  each(busySlots, function (busySlot) {
     busySlot.duration = taxonomyDuration;
   });
 
   var duration = slotSize || taxonomyDuration;
-  _$1(busySlots).each(function (busySlot) {
+  each(busySlots, function (busySlot) {
     var busyTimeMin = moment.utc(busySlot.time).diff(moment.utc(startDate), 'minute');
     var alignBusyTimeMin = Math.floor(busyTimeMin / duration) * duration;
     if (busyTimeMin !== alignBusyTimeMin) {
@@ -1513,9 +1513,9 @@ function getSlotsFromBusinessAndCRACWithAdjacent(cracDay, business, resourceId, 
       return a.order > b.order ? 1 : -1;
     });
   }
-  var adjasentTaxonomies = _$1.cloneDeep(taxonomy.adjacentTaxonomies) || [];
+  var adjasentTaxonomies = cloneDeep(taxonomy.adjacentTaxonomies) || [];
   if (!useAdjacentTaxonomies || adjasentTaxonomies.length === 0) {
-    var cracRes = _$1.find(cracDay.resources, { id: resourceId });
+    var cracRes = find(cracDay.resources, { id: resourceId });
     var slotSizeRes = cracRes.durations[0] || slotSize;
 
     return getSlotsFromBusinessAndCRACWithDuration(cracDay, business, resourceId, slotSizeRes, enhanceSlotFn);
@@ -1598,7 +1598,7 @@ function combineAdjacentSlots(adjasentTaxonomies, enhanceSlotFn, gcd, treshold, 
 
   var step = gcd;
   if (sameTimeStart && gcd === 0) {
-    step = _$1.minBy(adjasentTaxonomies, function (t) {
+    step = minBy(adjasentTaxonomies, function (t) {
       return t.slotDuration;
     });
     if (taxonomy.duration < step) {
@@ -1753,7 +1753,7 @@ function checkAdjacentSameTimeSlot(adjasentTaxonomies, time, step, gcd) {
     if (!available) {
       return;
     }
-    available = _$1.some(tax.slots, function (s) {
+    available = some(tax.slots, function (s) {
       return !!findAvailableSlot(s, adjasentTaxonomies, index, time, gcd, 0);
     });
   });
@@ -1786,7 +1786,7 @@ function calendarBookingTime(businessData, busySlots, slotSize, day, isGT) {
   if (isGT) {
     return calendarBookingTimeGT(businessData, busySlots, slotSize, day);
   }
-  var slotDay = _$1(busySlots.days).find(function (d) {
+  var slotDay = find(busySlots.days, function (d) {
     return moment$3(d.date).isSame(day.date, 'day');
   });
   if (slotDay) {
@@ -1814,7 +1814,7 @@ function calendarBookingTime(businessData, busySlots, slotSize, day, isGT) {
 
 function calendarBookingTimeGT(businessData, slots, slotSize, day) {
 
-  var slotDay = _$1(slots.days).find(function (d) {
+  var slotDay = find(slots.days, function (d) {
     return moment$3(d.date).isSame(day.date, 'day');
   });
   var selectedSlot = undefined;
@@ -1846,12 +1846,12 @@ function calendarBookingTimeCRAC(cracDays, businessData, taxonomy, day) {
     return;
   }
 
-  var cracDay = _$1(cracDays).find(function (d) {
+  var cracDay = find(cracDays, function (d) {
     return moment$3(d.date).isSame(day.date, 'day');
   });
   if (cracDay) {
     for (var index in cracDay.resources) {
-      var businessResource = _$1.find(businessData.business.resources, { id: cracDay.resources[index].id });
+      var businessResource = find(businessData.business.resources, { id: cracDay.resources[index].id });
       if (!!businessResource) {
         var slots = getSlotsFromBusinessAndCRAC(cracDay, businessData.business, taxonomy, businessResource).filter(function (slot) {
           return slot.available;
@@ -1890,7 +1890,7 @@ function cutSlotsFromCrac(cracSlot, date, startMinutes, endMinutes, scheduleStra
   var dayBounds = getDayBoundsFromCracSlot(date, bitset);
   var slots = cutSlots(date, bitset, cracSlotSize, scheduleSlotSize, scheduleStrategy);
   return {
-    available: _$1.find(slots, { available: true }),
+    available: find(slots, { available: true }),
     busy: slots,
     start_time: dayBounds.start_time,
     end_time: dayBounds.end_time
@@ -1931,7 +1931,7 @@ function toBusySlots(cracSlots, business, taxonomyIDs) {
     taxonomyIDs: taxonomyIDs,
     daysOff: daysOff,
     excludedResources: excludedResources,
-    days: _$1.map(cracSlots, function (cracSlot) {
+    days: map(cracSlots, function (cracSlot) {
       var date = cracSlot.date;
 
       var dayBounds;
@@ -2095,7 +2095,7 @@ function getWorkerBookingVector(serviceRoomVectors, resourceId, serviceDurationB
 function getRoomCapacityByService(taxonomyTreeCapacity, taxonomiesRooms) {
   var capacity = {};
   taxonomiesRooms.forEach(function (t) {
-    var treeCapacity = _$1.find(taxonomyTreeCapacity, { parent_id: t.room });
+    var treeCapacity = find(taxonomyTreeCapacity, { parent_id: t.room });
     capacity[t.taxonomy] = treeCapacity && treeCapacity.capacity ? treeCapacity.capacity : 0;
   });
   return capacity;
@@ -2155,7 +2155,7 @@ function getBitSetsFromCracSlots(cracSlot, roomCapacityByService, taxonomies, re
   bitSets.resources = {};
   bitSets.rooms = {};
   resources.forEach(function (r) {
-    var cracResource = _$1.find(cracSlot.resources, { resourceId: r });
+    var cracResource = find(cracSlot.resources, { resourceId: r });
     if (cracResource) {
       bitSets.resources[r] = prepareBitset(cracResource.bitset, SLOT_SIZE);
     } else {
@@ -2165,12 +2165,12 @@ function getBitSetsFromCracSlots(cracSlot, roomCapacityByService, taxonomies, re
 
   taxonomies.forEach(function (tId) {
     var capacity = roomCapacityByService[tId];
-    var room = _$1.find(taxonomiesRooms, { taxonomy: tId });
+    var room = find(taxonomiesRooms, { taxonomy: tId });
     if (room && !bitSets.rooms[room.room]) {
       var roomId = room.room;
       bitSets.rooms[roomId] = [];
       for (var i = 0; i < capacity; i++) {
-        var cracRoom = _$1.find(cracSlot.rooms, { roomId: roomId + "_" + i });
+        var cracRoom = find(cracSlot.rooms, { roomId: roomId + "_" + i });
         if (cracRoom) {
           bitSets.rooms[roomId][i] = prepareBitset(cracRoom.bitset, SLOT_SIZE);
         } else {
@@ -2216,11 +2216,11 @@ function prepareSlots(cracResult, business, taxonomyIDs, resourceIDs, taxonomies
   finalSlots.days = [];
   finalSlots.excludedResource = [];
 
-  var businessWorkers = _$1.filter(business.resources, function (r) {
+  var businessWorkers = filter(business.resources, function (r) {
     return r.status === 'ACTIVE' && resourceIDs.indexOf(r.id) > -1;
   });
 
-  var businessTaxonomies = _$1.filter(business.taxonomies, function (t) {
+  var businessTaxonomies = filter(business.taxonomies, function (t) {
     return t.active && taxonomyIDs.indexOf(t.id) > -1;
   });
 
@@ -2239,7 +2239,7 @@ function prepareSlots(cracResult, business, taxonomyIDs, resourceIDs, taxonomies
 
     taxonomyIDs.forEach(function (tId) {
       serviceRoomVectors[tId] = {};
-      var room = _$1.find(taxonomiesRooms, { taxonomy: tId });
+      var room = find(taxonomiesRooms, { taxonomy: tId });
       var roomBitSet = room ? bitSets.rooms[room.room] : [];
       resourceIDs.forEach(function (rId) {
         serviceRoomVectors[tId][rId] = getServiceRoomVector(bitSets.resources[rId], rId, roomBitSet, totalServicesDurationByWorker[rId], serviceDurationByWorker[tId], SLOT_SIZE);
@@ -2306,7 +2306,7 @@ var ScheduleBusySlotsCutter = function (_ScheduleSlotsCutter) {
       if (serviceId.toLowerCase() === 'multiservicebooking') {
         taxonomy = multiServices[0];
       } else {
-        taxonomy = _(businessData.business.taxonomies).find({ id: '' + serviceId });
+        taxonomy = _.find(businessData.business.taxonomies, { id: '' + serviceId });
       }
 
       this.taxDuration = getServiceDuration(taxonomy, worker);
@@ -2383,7 +2383,7 @@ function getServiceDiscount(service, time) {
     return d.active && d.days.indexOf(days[time.day()]) !== -1 && moment$1.utc(d.start).isBefore(time) && moment$1.utc(d.start).startOf('w').add('w', d.weeklyRepeat).isAfter(time);
   });
   var discounts = activeDiscountsItems.map(function (d) {
-    var slot = _$1.find(d.slots, function (slot) {
+    var slot = find(d.slots, function (slot) {
       var slotStart = moment$1(time).startOf('day').add('m', slot.time.start);
       var slotEnd = moment$1(time).startOf('day').add('m', slot.time.end - 1);
       return moment$1.range(slotStart, slotEnd).contains(time);
@@ -2392,7 +2392,7 @@ function getServiceDiscount(service, time) {
   }).filter(function (d) {
     return d;
   });
-  return _$1.first(discounts);
+  return first(discounts);
 }
 
 //recursively checks for parent's (ancestor's) discounts
@@ -2488,7 +2488,7 @@ function getServiceDiscountsAndExceptions(bData, service, time, campaignProvider
   }
 
   //Checking for Campaign & Regular Discounts, Regular Discounts has lower priority than Campaign Discounts
-  if (_$1.isUndefined(slot.discount) && typeof service.discounts.regular !== 'undefined') {
+  if (isUndefined(slot.discount) && typeof service.discounts.regular !== 'undefined') {
     service.discounts.regular.forEach(function (discount) {
       var end = moment$1(discount.start).add(discount.weeklyRepeat, 'weeks');
       if (discount.active && (time.isAfter(discount.start) && time.isBefore(end) || discount.unlimWeeklyRepeat)) {
@@ -2663,7 +2663,7 @@ var ScheduleBusySlotsCutterV1 = function (_ScheduleBusySlotsCut) {
             (function () {
               var tempSlot = void 0;
               self.multiServices.forEach(function (service) {
-                var foundService = _(self.businessData.business.taxonomies).find({ id: '' + service.id });
+                var foundService = _.find(self.businessData.business.taxonomies, { id: '' + service.id });
                 tempSlot = getServiceDiscountsAndExceptions(self.businessData, foundService, actualSlot);
                 if (!tempSlot || !slot.discount && tempSlot.discount || tempSlot.discount && slot.discount && tempSlot.discount > slot.discount) {
                   slot = tempSlot;
@@ -2684,7 +2684,7 @@ var ScheduleBusySlotsCutterV1 = function (_ScheduleBusySlotsCut) {
             (function () {
               var tempSlot = void 0;
               multiServices.forEach(function (service) {
-                var foundService = _(self.businessData.business.taxonomies).find({ id: '' + service.id });
+                var foundService = _.find(self.businessData.business.taxonomies, { id: '' + service.id });
                 tempSlot = getServiceDiscountsAndExceptions(self.businessData, foundService, actualSlot);
                 if (!tempSlot || !slot.discount && tempSlot.discount || tempSlot.discount && slot.discount && tempSlot.discount > slot.discount) {
                   slot = tempSlot;
@@ -2800,9 +2800,9 @@ var ScheduleBusySlotsCutterV2 = function (_ScheduleBusySlotsCut) {
     value: function cutSlots(busySlotsDay, now) {
       var slots = [];
       var self = this;
-      var taxiParkUser = !_$1.isUndefined(self.logedInProfile) && !_$1.isUndefined(self.logedInProfile.yandexTaxiParkType);
+      var taxiParkUser = !isUndefined(self.logedInProfile) && !isUndefined(self.logedInProfile.yandexTaxiParkType);
       busySlotsDay.slots.forEach(function (slot) {
-        if (!_$1.isUndefined(slot.busy) && slot.busy && (_$1.isUndefined(slot.space_left) || slot.space_left <= 0)) {
+        if (!isUndefined(slot.busy) && slot.busy && (isUndefined(slot.space_left) || slot.space_left <= 0)) {
           return;
         }
 
@@ -2810,7 +2810,7 @@ var ScheduleBusySlotsCutterV2 = function (_ScheduleBusySlotsCut) {
         var overQuota = false;
         if (taxiParkUser) {
           var slotAppointmentCount = slot_time.format("DD.MM.YYYY");
-          if (!_$1.isUndefined(self.appointmentCount) && !_$1.isUndefined(self.appointmentCount[slotAppointmentCount]) && self.appointmentCount[slotAppointmentCount] >= self.logedInProfile.yandexTaxiParkDayLimitation) {
+          if (!isUndefined(self.appointmentCount) && !isUndefined(self.appointmentCount[slotAppointmentCount]) && self.appointmentCount[slotAppointmentCount] >= self.logedInProfile.yandexTaxiParkDayLimitation) {
             overQuota = true;
           }
         }
@@ -2822,7 +2822,7 @@ var ScheduleBusySlotsCutterV2 = function (_ScheduleBusySlotsCut) {
 
         var duration = slot.duration || self.slotSize;
         var spaceLeft;
-        if (!_$1.isUndefined(slot.space_left)) {
+        if (!isUndefined(slot.space_left)) {
           spaceLeft = slot.space_left;
           if (spaceLeft === 1 && self.maxSlotCapacity > 0) {
             spaceLeft = self.maxSlotCapacity;
@@ -3489,7 +3489,7 @@ var WorkloadWeightIndex = function (_WeightIndex) {
       }
 
       var index = 0;
-      return _$1(weights).sortBy(sortCriteria).reduce(function (ret, item) {
+      return sortBy(weights, sortCriteria).reduce(function (ret, item) {
         item.index = ++index;
         item.value = item.weight;
         ret[item.resource] = item;
@@ -3520,7 +3520,7 @@ var MostFreeWeightIndex = function (_WeightIndex2) {
       };
 
       var index = 0;
-      return _$1(freeDates).sortBy(sortCriteria).reduce(function (ret, item) {
+      return sortBy(freeDates, sortCriteria).reduce(function (ret, item) {
         item.index = ++index;
         item.value = item.date;
         ret[item.resource] = item;
@@ -3543,12 +3543,12 @@ MostFreeWeightIndex.ZeroDate = "0001-01-01T00:00:00Z";
 function getSortedWorkers(workers, index) {
   var weights = index.getIndex();
   // use sorting by "order" worker property by default
-  if (weights === null) return _$1.sortBy(workers, function (res) {
+  if (weights === null) return sortBy(workers, function (res) {
     return res.order;
   });
 
   var indexOfNotWeights = workers.length;
-  return _$1.sortBy(workers, function (res) {
+  return sortBy(workers, function (res) {
     return weights[res.id] ? weights[res.id].index : ++indexOfNotWeights;
   });
 }
@@ -3603,8 +3603,8 @@ function filterWorkersByTaxonomies(businessData, services, options) {
   if (services.length > 1) {
     return resources.filter(function (resource) {
       // worker should execute all services
-      var intersection = _$1.intersection(resource.taxonomies, services);
-      return intersection && intersection.length === services.length;
+      var intersection$1 = intersection(resource.taxonomies, services);
+      return intersection$1 && intersection$1.length === services.length;
     });
   }
 
@@ -3630,16 +3630,16 @@ function prepareWorkers($scope, workers, cabinets, options) {
   options.showInactiveWorkers = options.showInactiveWorkers || false;
   options.cabinetsEnabled = options.cabinetsEnabled || false;
 
-  var activeWorkers = options.showInactiveWorkers ? workers : _$1.filter(workers, { 'status': 'ACTIVE' });
-  var hasOrder = _$1.all(activeWorkers, 'order');
+  var activeWorkers = options.showInactiveWorkers ? workers : filter(workers, { 'status': 'ACTIVE' });
+  var hasOrder = all(activeWorkers, 'order');
 
   var sortedWorkers = void 0;
   if (options.sortByFn) {
-    sortedWorkers = _$1.sortBy(activeWorkers, options.sortByFn);
+    sortedWorkers = sortBy(activeWorkers, options.sortByFn);
   } else if (options.weightIndex) {
     sortedWorkers = getSortedWorkers(workers, options.weightIndex);
   } else {
-    sortedWorkers = _$1.sortBy(activeWorkers, hasOrder ? 'order' : 'name');
+    sortedWorkers = sortBy(activeWorkers, hasOrder ? 'order' : 'name');
   }
 
   $scope.workers = sortedWorkers;
@@ -3650,11 +3650,11 @@ function prepareWorkers($scope, workers, cabinets, options) {
   }
 
   if (options.cabinetsEnabled) {
-    var activeCabinets = _$1.filter(cabinets, function (cab) {
+    var activeCabinets = filter(cabinets, function (cab) {
       return cab.active && !cab.isSpecial;
     });
-    var tmp = _$1.sortBy(activeCabinets, 'name');
-    var specCabinet = _$1.find(cabinets, function (cab) {
+    var tmp = sortBy(activeCabinets, 'name');
+    var specCabinet = find(cabinets, function (cab) {
       return cab.isSpecial;
     });
 
@@ -3874,9 +3874,9 @@ function isoDateForDayOff$1(date) {
 function resourceTaxonomyDuration(businessWorker, businessTaxonomy) {
   var duration = businessTaxonomy.duration;
   if (businessWorker.taxonomyLevels && businessWorker.taxonomyLevels.length > 0) {
-    var taxonomyLevel = _$1.find(businessWorker.taxonomyLevels, { id: businessTaxonomy.id });
+    var taxonomyLevel = find(businessWorker.taxonomyLevels, { id: businessTaxonomy.id });
     if (taxonomyLevel) {
-      var additionalDuration = _$1.find(businessTaxonomy.additionalDurations, { level: taxonomyLevel.level });
+      var additionalDuration = find(businessTaxonomy.additionalDurations, { level: taxonomyLevel.level });
       if (additionalDuration && additionalDuration.duration) {
         duration = additionalDuration.duration;
       }
@@ -3926,7 +3926,7 @@ function getSlotDurationByWorker(ServiceDurationByWorker, taxonomies, resources)
 function getRoomCapacityByService$1(taxonomyTreeCapacity, taxonomiesRooms) {
   var capacity = {};
   taxonomiesRooms.forEach(function (t) {
-    var treeCapacity = _$1.find(taxonomyTreeCapacity, { parent_id: t.room });
+    var treeCapacity = find(taxonomyTreeCapacity, { parent_id: t.room });
     var tCapacity = treeCapacity && treeCapacity.capacity ? treeCapacity.capacity : 0;
     capacity[t.taxonomy] = tCapacity;
   });
@@ -3946,7 +3946,7 @@ function getBitSetsFromCracSlots$1(cracSlot, roomCapacityByService, taxonomies, 
   bitSets.resources = {};
   bitSets.rooms = {};
   resources.forEach(function (r) {
-    var cracResource = _$1.find(cracSlot.resources, { resourceId: r });
+    var cracResource = find(cracSlot.resources, { resourceId: r });
     if (cracResource) {
       bitSets.resources[r] = cracValueToBits(cracResource.bitset).reverse();
     } else {
@@ -3956,12 +3956,12 @@ function getBitSetsFromCracSlots$1(cracSlot, roomCapacityByService, taxonomies, 
 
   taxonomies.forEach(function (tId) {
     var capacity = roomCapacityByService[tId];
-    var room = _$1.find(taxonomiesRooms, { taxonomy: tId });
+    var room = find(taxonomiesRooms, { taxonomy: tId });
     if (room && !bitSets.rooms[room.room]) {
       var roomId = room.room;
       bitSets.rooms[roomId] = [];
       for (var i = 0; i < capacity; i++) {
-        var cracRoom = _$1.find(cracSlot.rooms, { roomId: roomId + "_" + i });
+        var cracRoom = find(cracSlot.rooms, { roomId: roomId + "_" + i });
         if (cracRoom) {
           bitSets.rooms[roomId][i] = cracValueToBits(cracRoom.bitset).reverse();
         } else {
@@ -4198,10 +4198,10 @@ function prepareSlots$1(cracResult, business, taxonomies, resources, taxonomiesR
   finalSlots.days = [];
   finalSlots.excludedResource = [];
 
-  var businessTaxonomies = _$1.filter(business.taxonomies, function (t) {
+  var businessTaxonomies = filter(business.taxonomies, function (t) {
     return t.active && taxonomies.indexOf(t.id) > -1;
   });
-  var businessWorkers = _$1.filter(business.resources, function (r) {
+  var businessWorkers = filter(business.resources, function (r) {
     return r.status == 'ACTIVE' && resources.indexOf(r.id) > -1;
   });
 
@@ -4220,7 +4220,7 @@ function prepareSlots$1(cracResult, business, taxonomies, resources, taxonomiesR
 
     taxonomies.forEach(function (tId) {
       serviceRoomVectors[tId] = {};
-      var room = _$1.find(taxonomiesRooms, { taxonomy: tId });
+      var room = find(taxonomiesRooms, { taxonomy: tId });
       var roomBitSet = room ? bitSets.rooms[room.room] : [];
       resources.forEach(function (rId) {
         serviceRoomVectors[tId][rId] = getServiceRoomVector$1(bitSets.resources[rId], rId, roomBitSet, totalServicesDurationByWorker[rId], serviceDurationByWorker[tId]);
@@ -4281,11 +4281,11 @@ function toBusySlots$1(cracSlots, business, taxonomyIDs) {
   }
 
   if (taxonomyIDs && taxonomyIDs.length) {
-    var taxonomies = _$1.filter(business.taxonomies, function (tt) {
+    var taxonomies = filter(business.taxonomies, function (tt) {
       return taxonomyIDs.indexOf(String(tt.id)) >= 0;
     });
 
-    var maxTaxonomyDuration = _$1.max(taxonomies, 'duration');
+    var maxTaxonomyDuration = max(taxonomies, 'duration');
     if (maxTaxonomyDuration) {
       maxSlotDuration = maxTaxonomyDuration.duration;
     }
@@ -4304,7 +4304,7 @@ function toBusySlots$1(cracSlots, business, taxonomyIDs) {
     maxSlotCapacity: 1,
     daysOff: daysOff,
     excludedResources: excludedResources,
-    days: _$1.map(cracSlots, function (cracSlot) {
+    days: map(cracSlots, function (cracSlot) {
       var date = cracSlot.date;
 
       var dayBounds;

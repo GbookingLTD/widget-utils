@@ -1,6 +1,6 @@
 'use strict';
 
-import _ from 'lodash';
+import * as _ from 'lodash';
 import moment from 'moment-timezone';
 import {newFreeBitset, prepareBitset, getCracVectorSlotSize, getFirstLastMinutes, setAnd} from 'crac-utils/src';
 

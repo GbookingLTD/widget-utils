@@ -17,7 +17,7 @@
  * $scope.workers = getSortedWorkers(workers, sorter);
  */
 
-import _ from 'lodash';
+import * as _ from 'lodash';
 
 /**
  * Класс для сортировки без контекста услуги, а так же базовый класс для остальных индексов.
@@ -63,7 +63,7 @@ export class WorkloadWeightIndex extends WeightIndex {
     }
 
     let index = 0;
-    return _(weights).sortBy(sortCriteria).reduce(function (ret, item) {
+    return _.sortBy(weights, sortCriteria).reduce(function (ret, item) {
       item.index = ++index;
       item.value = item.weight;
       ret[item.resource] = item;
@@ -87,7 +87,7 @@ export class MostFreeWeightIndex extends WeightIndex {
     };
   
     let index = 0;
-    return _(freeDates).sortBy(sortCriteria).reduce(function(ret, item) {
+    return _.sortBy(freeDates, sortCriteria).reduce(function(ret, item) {
       item.index = ++index;
       item.value = item.date;
       ret[item.resource] = item;

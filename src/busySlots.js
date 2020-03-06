@@ -1,4 +1,4 @@
-import _ from 'lodash';
+import * as _ from 'lodash';
 import Moment from 'moment-timezone';
 import { getDateLikeUTC, setBusinessDateTZ } from './dateTime';
 import { extendMoment } from 'moment-range';
@@ -229,12 +229,12 @@ export function isDateForbidden(widgetConfiguration, date, ignoreStartDate) {
  * @param busySlots
  */
 export function alignmentBusySlotsByTaxonomyDuration(startDate, taxonomyDuration, slotSize, busySlots) {
-  _(busySlots).each(function(busySlot) {
+  _.each(busySlots, function(busySlot) {
     busySlot.duration = taxonomyDuration;
   });
 
   var duration = slotSize || taxonomyDuration;
-  _(busySlots).each(function(busySlot) {
+  _.each(busySlots, function(busySlot) {
     var busyTimeMin = moment.utc(busySlot.time).diff(moment.utc(startDate), 'minute');
     var alignBusyTimeMin = Math.floor(busyTimeMin / duration) * duration;
     if (busyTimeMin !== alignBusyTimeMin) {

@@ -1,6 +1,6 @@
 "use strict";
 
-import _ from 'lodash';
+import * as _ from 'lodash';
 import moment from 'moment-timezone';
 import {getServiceDiscountsAndExceptions} from "../discounts";
 import {ScheduleBusySlotsCutter} from "./scheduleBusySlotsCutter";

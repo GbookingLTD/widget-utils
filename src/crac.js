@@ -4,7 +4,7 @@
  NOTICE! This file is deprecated. Need to remove this one after migrate to schedule component.
 */
 
-import _ from 'lodash';
+import * as _ from 'lodash';
 import moment from 'moment-timezone';
 
 
