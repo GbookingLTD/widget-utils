@@ -21,6 +21,7 @@
     "gulp-sourcemaps": "1.6.0",
     "gulp-util": "3.0.7",
     "gulp-watch": "4.3.11",
+    "merge-stream": "^2.0.0",
     "mocha": "^5.2.0",
     "moment": "^2.22.2",
     "moment-timezone": "^0.5.21",
