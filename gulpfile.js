@@ -21,9 +21,8 @@ const compilationTargets = [
     // concrete file, even though it's "widget-utils"'s implementation detail
     outputPath: 'dist/index.js',
     rollupOptions: {
-      format: 'umd',
-      moduleName: 'WidgetUtils',
       output: {
+        format: 'umd',
         name: 'WidgetUtils',
         globals: {
           lodash: '_',
@@ -50,7 +49,6 @@ gulp.task('compile', function() {
     rollupStream({
       input: 'src/index.js',
       external: ['lodash', 'moment-range', 'moment-timezone'],
-      sourceMap: false,
       plugins: [
         rollupPluginNodeResolve(),
         babel({
@@ -60,6 +58,11 @@ gulp.task('compile', function() {
       ],
       cache: compilationCache.get(target),
       ...target.rollupOptions,
+
+      output: {
+        sourcemap: false,
+        ...target.rollupOptions.output,
+      },
     })
     .on('bundle', bundle => {
       compilationCache.set(target, bundle);
