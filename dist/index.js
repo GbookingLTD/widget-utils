@@ -1,7 +1,7 @@
 (function (global, factory) {
   typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory(require('lodash'), require('moment-timezone'), require('moment-range')) :
   typeof define === 'function' && define.amd ? define(['lodash', 'moment-timezone', 'moment-range'], factory) :
-  (global = global || self, global.WidgetUtils = factory(global._$1, global.moment$3, global.momentRange));
+  (global = global || self, global.WidgetUtils = factory(global._, global.moment, global.momentRange));
 }(this, (function (_$1, moment$3, momentRange) { 'use strict';
 
   moment$3 = moment$3 && Object.prototype.hasOwnProperty.call(moment$3, 'default') ? moment$3['default'] : moment$3;
