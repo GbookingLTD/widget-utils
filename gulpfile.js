@@ -17,11 +17,13 @@ var babel = require('rollup-plugin-babel');
 
 const compilationTargets = [
   {
-    // TODO: move to `dist/cjs/index.js` when we ensure nobody relies on this
+    // TODO: move to `dist/umd/index.js` when we ensure nobody relies on this
     // concrete file, even though it's "widget-utils"'s implementation detail
     outputPath: 'dist/index.js',
     rollupOptions: {
-      output: { format: 'cjs' },
+      format: 'umd',
+      moduleName: 'WidgetUtils',
+      output: { name: 'WidgetUtils' },
     },
   },
   {
