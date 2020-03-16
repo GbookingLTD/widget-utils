@@ -23,7 +23,14 @@ const compilationTargets = [
     rollupOptions: {
       format: 'umd',
       moduleName: 'WidgetUtils',
-      output: { name: 'WidgetUtils' },
+      output: {
+        name: 'WidgetUtils',
+        globals: {
+          lodash: '_',
+          'moment-timezone': 'moment',
+          'moment-range': 'momentRange',
+        },
+      },
     },
   },
   {
