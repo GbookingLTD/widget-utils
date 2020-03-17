@@ -4,7 +4,7 @@
  This is wrapper for some crac-utils functions.
 */
 
-// import {calcCRACSlotIntermediate} from '../bower_components/crac-utils/src';
+// import {calcCRACSlotIntermediate} from 'crac-utils/src';
 
 import {cracValueToBits, setAnd, setUnion} from './crac';
 

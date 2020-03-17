@@ -1,4 +1,4 @@
-import _ from 'lodash';
+import * as _ from 'lodash';
 import moment from 'moment-timezone';
 import { alignSlotTime, getDateLikeUTC, setBusinessDateTZ } from './dateTime';
 import { isDateForbidden, checkDate } from './busySlots';
@@ -23,7 +23,7 @@ export function calendarBookingTime(businessData, busySlots, slotSize, day, isGT
   if(isGT){
     return calendarBookingTimeGT(businessData, busySlots, slotSize, day);
   }
-  var slotDay = _(busySlots.days).find(function (d) {
+  var slotDay = _.find(busySlots.days, function (d) {
     return moment(d.date).isSame(day.date, 'day');
   });
   if (slotDay) {
@@ -51,7 +51,7 @@ export function calendarBookingTime(businessData, busySlots, slotSize, day, isGT
 
 function calendarBookingTimeGT(businessData, slots, slotSize, day) {
 
-  var slotDay = _(slots.days).find(function (d) {
+  var slotDay = _.find(slots.days, function (d) {
     return moment(d.date).isSame(day.date, 'day');
   });
   var selectedSlot = undefined;
@@ -83,7 +83,7 @@ export function calendarBookingTimeCRAC(cracDays, businessData, taxonomy, day) {
     return;
   }
 
-  var cracDay = _(cracDays).find(function (d) {
+  var cracDay = _.find(cracDays, function (d) {
     return moment(d.date).isSame(day.date, 'day');
   });
   if (cracDay) {

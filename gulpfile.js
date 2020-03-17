@@ -2,41 +2,77 @@
 
 var gulp = require('gulp');
 var bump = require('gulp-bump');
+var mergeStream = require('merge-stream');
+var path = require('path');
+var buffer = require('vinyl-buffer');
+var source = require('vinyl-source-stream');
 
 var $ = require('gulp-load-plugins')({
   pattern: ['gulp-*', 'del']
 });
 
-var rollupIncludePaths = require('rollup-plugin-includepaths');
+var rollupPluginNodeResolve = require('@rollup/plugin-node-resolve');
+var rollupStream = require('@rollup/stream');
 var babel = require('rollup-plugin-babel');
 
-var includePathOptions = {
-    paths: ['../../bower_components/crac-utils/src/vector', 'src/']
-};
+const compilationTargets = [
+  {
+    // TODO: move to `dist/umd/index.js` when we ensure nobody relies on this
+    // concrete file, even though it's "widget-utils"'s implementation detail
+    outputPath: 'dist/index.js',
+    rollupOptions: {
+      output: {
+        format: 'umd',
+        name: 'WidgetUtils',
+        globals: {
+          lodash: '_',
+          'moment-timezone': 'moment',
+          'moment-range': 'momentRange',
+        },
+      },
+    },
+  },
+  {
+    outputPath: 'dist/es/index.js',
+    rollupOptions: {
+      output: { format: 'es' },
+    },
+  },
+];
+
+// How to setup caching with "@rollup/stream":
+// https://github.com/rollup/stream/tree/34bda6c45f1254cc470ea5510ae7fbbc092a023e#caching
+const compilationCache = new Map();
 
 gulp.task('compile', function() {
-  return gulp.src('src/index.js', {read: false})
-    .pipe($.rollup({
-      globals: {
-        'lodash': '_',
-        'moment-timezone': 'moment',
-        'moment-range': 'momentRange',
-      },
-      //external: ['moment-timezone'],
-      sourceMap: false,
-      format: 'umd',
-      moduleName: 'WidgetUtils',
+  return mergeStream(...compilationTargets.map(target =>
+    rollupStream({
+      input: 'src/index.js',
+      external: ['lodash', 'moment-range', 'moment-timezone'],
       plugins: [
+        rollupPluginNodeResolve(),
         babel({
           "babelrc": false,
           "presets": ["es2015-rollup"],
         }),
-        rollupIncludePaths(includePathOptions)
-      ]
-    }))
+      ],
+      cache: compilationCache.get(target),
+      ...target.rollupOptions,
+
+      output: {
+        sourcemap: false,
+        ...target.rollupOptions.output,
+      },
+    })
+    .on('bundle', bundle => {
+      compilationCache.set(target, bundle);
+    })
+    .pipe(source(path.basename(target.outputPath)))
+    .pipe(buffer())
     .on('error', $.util.log)
     //.pipe($.sourcemaps.write('.'))
-    .pipe(gulp.dest('dist'));
+    .pipe(gulp.dest(path.dirname(target.outputPath)))
+  ));
 });
 
 gulp.task('watch', function() {

@@ -13,7 +13,7 @@ export class ScheduleBusySlotsCutter extends ScheduleSlotsCutter {
       taxonomy = multiServices[0];
     }
     else {
-      taxonomy = _(businessData.business.taxonomies).find({id: ''+serviceId});
+      taxonomy = _.find(businessData.business.taxonomies, {id: ''+serviceId});
     }
     
     this.taxDuration = getServiceDuration(taxonomy, worker);
