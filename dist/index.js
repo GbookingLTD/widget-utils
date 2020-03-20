@@ -87,6 +87,7 @@
     date = getBusinessDateLikeUTC(date, businessData);
     var minBookingTime = getBusinessDateLikeUTC(moment.utc(), businessData);
     businessData.business.general_info.min_booking_time && minBookingTime.add('hours', businessData.business.general_info.min_booking_time);
+    businessData.business.general_info.align_min_booking_time && minBookingTime.endOf('day');
 
     if (date < minBookingTime) {
       date = minBookingTime;
@@ -150,6 +151,7 @@ var DateTime = Object.freeze({
     if (businessNowLikeUTC.isSame(day.date, 'day')) {
       if (businessData.business.general_info.min_booking_time) {
         finish.add(-businessData.business.general_info.min_booking_time, 'hours');
+        businessData.business.general_info.align_min_booking_time && finish.endOf('day');
       }
     }
 
@@ -1591,6 +1593,7 @@ var taxonomies = Object.freeze({
     var slotSize = forceSlotSize ? widgetConfiguration.displaySlotSize : taxDuration;
     var cutSlots = widgetConfiguration.hideGraySlots ? cutSlotsWithoutBusy : cutSlots;
     var now = business.general_info && business.general_info.min_booking_time ? moment.utc().add(business.general_info.min_booking_time, 'h') : moment.utc();
+    business.general_info.align_min_booking_time && now.endOf('day');
     var businessNow = getBusinessDateLikeUTC(now, { business: business }).toDate();
     var res = cracDay.resources.find(function (res) {
       return res.id === workerID;
@@ -1916,6 +1919,7 @@ var taxonomies = Object.freeze({
         startTime = alignSlotTime(startTime, slotSize, businessNow, true);
       }
       businessData.business.general_info.min_booking_time && startTime.add('hours', businessData.business.general_info.min_booking_time);
+      businessData.business.general_info.align_min_booking_time && startTime.endOf('day');
 
       for (var slot_time = startTime; slot_time.isBefore(endTime);) {
         var dateCheck = checkDate(slotDay.slots, slot_time);
@@ -2449,6 +2453,7 @@ var Booking = Object.freeze({
         this.slotSize = this.forceSlotSize ? widgetConfiguration.displaySlotSize : busySlots.slot_size || this.taxDuration;
         this.maxSlotCapacity = busySlots.maxSlotCapacity;
         this.minTimeBooking = businessData.business.general_info.min_booking_time;
+        this.alignMinTimeBooking = businessData.business.general_info.align_min_booking_time;
         // https://app.asana.com/0/search/364482197206303/141502515363228
         // this fix is for decreasing affected clients
         if (businessData.business.backofficeType === 'MB' && !_.isUndefined(displaySlotSize) && displaySlotSize !== this.taxDuration) {
@@ -2830,6 +2835,7 @@ var Discounts = Object.freeze({
           if (!busy) {
             if (self.minTimeBooking && self.minTimeBooking > 0) {
               businessNowLikeUTC.add(self.minTimeBooking, 'hour');
+              self.alignMinTimeBooking && businessNowLikeUTC.endOf('day');
             }
             busy = businessNowLikeUTC.isAfter(actualSlot) || space === 0 || busySlotsDay.forceAllSlotsBusy;
           }
@@ -2933,6 +2939,7 @@ var Discounts = Object.freeze({
           var workTime = moment(now);
           if (self.minTimeBooking && self.minTimeBooking > 0) {
             workTime.add(self.minTimeBooking, 'hour');
+            self.alignMinTimeBooking && workTime.endOf('day');
           }
 
           var duration = slot.duration || self.slotSize;
