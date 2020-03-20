@@ -177,6 +177,7 @@ export class ScheduleBusySlotsCutterV1 extends ScheduleBusySlotsCutter {
       if (!busy) {
         if (self.minTimeBooking && self.minTimeBooking > 0) {
           businessNowLikeUTC.add(self.minTimeBooking, 'hour');
+          self.alignMinTimeBooking && businessNowLikeUTC.endOf('day')
         }
         busy = businessNowLikeUTC.isAfter(actualSlot) || space === 0 || busySlotsDay.forceAllSlotsBusy;
       }
