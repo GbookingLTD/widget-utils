@@ -38,7 +38,9 @@ export function calendarBookingTime(businessData, busySlots, slotSize, day, isGT
       startTime = alignSlotTime(startTime, slotSize, businessNow, true);
     }
     businessData.business.general_info.min_booking_time && startTime.add('hours', businessData.business.general_info.min_booking_time);
-
+    businessData.business.general_info.align_min_booking_time && startTime.endOf('day');
+    
+    
     for (var slot_time = startTime; slot_time.isBefore(endTime);) {
       var dateCheck = checkDate(slotDay.slots, slot_time);
       if (dateCheck[0] !== 0) {

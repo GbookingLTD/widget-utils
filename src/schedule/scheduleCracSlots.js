@@ -260,6 +260,7 @@ export function getSlotsFromBusinessAndCRACWithDuration(cracDay, business, worke
   let cutSlots = widgetConfiguration.hideGraySlots ? cutSlotsWithoutBusy : cutSlots;
   let now = business.general_info && business.general_info.min_booking_time ?
             moment.utc().add(business.general_info.min_booking_time, 'h') : moment.utc();
+  business.general_info.align_min_booking_time && now.endOf('day')
   let businessNow = getBusinessDateLikeUTC(now, {business}).toDate();
   let res = cracDay.resources.find((res) => res.id === workerID);
   if (res && res.durations.length) {
