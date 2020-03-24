@@ -3797,7 +3797,13 @@ var Resources = Object.freeze({
 
   var SLOT_SIZE$1 = 5;
   var VECTOR_SIZE$1 = 24 * 60 / SLOT_SIZE$1;
-  function getDayBoundsFromCracSlot$1(date, slot) {
+  function getDayBoundsFromCracSlot$1(date, slot, widgetConfig) {
+    var now = moment();
+    widgetConfig.min_booking_time && now.add('hours', widgetConfig.min_booking_time);
+    widgetConfig.align_min_booking_time && now.endOf('day');
+    if (moment(date).isBefore(now)) {
+      return null;
+    }
     var allDayBounds = null;
     var bitmask = cracValueToBits(slot.bitset);
     var bitmaskTaxonomy = cracValueToBits(slot.taxonomyBitset || "");
@@ -4435,7 +4441,7 @@ var Resources = Object.freeze({
 
         var dayBounds;
         //dayBounds = getDayBoundsFromAllTimetables(date, resourceTimetables,resourceEvenOddTimeTable,timetableType);
-        dayBounds = getDayBoundsFromCracSlot$1(date, cracSlot);
+        dayBounds = getDayBoundsFromCracSlot$1(date, cracSlot, business.general_info);
 
         if (!dayBounds) {
           var dayOffDate = isoDateForDayOff$1(date);
