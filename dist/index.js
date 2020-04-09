@@ -3800,8 +3800,7 @@ var Resources = Object.freeze({
   function getDayBoundsFromCracSlot$1(date, slot, widgetConfig) {
     var now = moment();
     widgetConfig.min_booking_time && now.add('hours', widgetConfig.min_booking_time);
-    widgetConfig.align_min_booking_time && now.endOf('day');
-    if (moment(date).isBefore(now)) {
+    if (widgetConfig.align_min_booking_time && moment(date).isBefore(now)) {
       return null;
     }
     var allDayBounds = null;
