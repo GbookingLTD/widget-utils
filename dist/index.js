@@ -381,16 +381,16 @@ var BusySlots = Object.freeze({
   var TAXONOMY_COMMON = 'COMMON';
 
   /**
-   * 
+   *
    * @param {Array<{id, additionalDurations, duration}>} taxonomy
    * @param {Array<{taxonomyLevels}>} resource
    * @return {*}
    */
   function getServiceDuration(taxonomy, resource) {
     if (resource) {
-      var taxLevel = (_.find(resource.taxonomyLevels, { id: taxonomy.id }) || {}).level;
+      var taxLevel = (_$1.find(resource.taxonomyLevels, { id: taxonomy.id }) || {}).level;
       if (typeof taxLevel !== 'undefined') {
-        var level = _.find(taxonomy.additionalDurations, { level: taxLevel });
+        var level = _$1.find(taxonomy.additionalDurations, { level: taxLevel });
         if (level) {
           return level.duration ? level.duration : taxonomy.duration;
         }
@@ -401,9 +401,9 @@ var BusySlots = Object.freeze({
 
   /**
    * Возвращает минимальную длительность из всех услуг.
-   * 
+   *
    * Необходимо, например, для получения ближайшего доступного для записи по услуге(-ам) дня.
-   * 
+   *
    * @param taxonomies
    * @param resources
    */
@@ -959,7 +959,7 @@ var taxonomies = Object.freeze({
           }
         }
 
-        if (endBoundIndex || endBoundIndex === 0) break;
+        if (endBoundIndex) break;
       }
     }
 

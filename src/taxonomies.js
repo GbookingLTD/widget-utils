@@ -1,11 +1,13 @@
 'use strict';
 
+import _ from 'lodash';
+
 var TAXONOMY_CHILDREN = 'CHILDREN';
 var TAXONOMY_ADULT = 'PARENT';
 var TAXONOMY_COMMON = 'COMMON';
 
 /**
- * 
+ *
  * @param {Array<{id, additionalDurations, duration}>} taxonomy
  * @param {Array<{taxonomyLevels}>} resource
  * @return {*}
@@ -25,9 +27,9 @@ export function getServiceDuration(taxonomy, resource) {
 
 /**
  * Возвращает минимальную длительность из всех услуг.
- * 
+ *
  * Необходимо, например, для получения ближайшего доступного для записи по услуге(-ам) дня.
- * 
+ *
  * @param taxonomies
  * @param resources
  */
