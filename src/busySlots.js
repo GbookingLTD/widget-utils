@@ -30,6 +30,7 @@ export function calculateDaySlotsV1(day, taxonomy, slotSize, busySlots, business
   if (businessNowLikeUTC.isSame(day.date, 'day')) {
     if (businessData.business.general_info.min_booking_time) {
       finish.add(-businessData.business.general_info.min_booking_time, 'hours');
+      businessData.business.general_info.align_min_booking_time && finish.endOf('day');
     }
   }
 

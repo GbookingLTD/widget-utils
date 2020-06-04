@@ -34,6 +34,7 @@ export class ScheduleBusySlotsCutterV2 extends ScheduleBusySlotsCutter {
       var workTime = moment(now);
       if (self.minTimeBooking && self.minTimeBooking > 0) {
         workTime.add(self.minTimeBooking, 'hour');
+        self.alignMinTimeBooking && workTime.endOf('day');
       }
 
       var duration = slot.duration || self.slotSize;

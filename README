@@ -1,9 +1,18 @@
+Building
+
+[sudo] npm install -g dts-gen
+[sudo] npm link // <-- in the root widget-utils directory
+
+make build
+
+----
+
 for deployment
 sudo bower --allow-root update widget-utils
 
 ----
 
-for development 
+for development
 
 in widget-utils project root folder
 bower link

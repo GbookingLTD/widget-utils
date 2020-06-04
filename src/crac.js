@@ -110,7 +110,12 @@ function getDayBoundsFromEvenOddTimetable (date, timetable){
   var dayBounds = getDayBoundsFromShedule(daySchedule, dateMoment);
   return dayBounds;
 }
-function getDayBoundsFromCracSlot(date,slot){
+function getDayBoundsFromCracSlot(date,slot,widgetConfig){
+  var now = moment();
+  widgetConfig.min_booking_time && now.add('hours', widgetConfig.min_booking_time);
+  if (widgetConfig.align_min_booking_time  && moment(date).isBefore(now)){
+    return null
+  }
   let allDayBounds = null;
   var bitmask = cracValueToBits(slot.bitset);
   var bitmaskTaxonomy = cracValueToBits(slot.taxonomyBitset ||"");
@@ -792,7 +797,7 @@ export function toBusySlots(cracSlots, business, taxonomyIDs, resourceIds = []) 
       const { date } = cracSlot;
       var dayBounds;
       //dayBounds = getDayBoundsFromAllTimetables(date, resourceTimetables,resourceEvenOddTimeTable,timetableType);
-      dayBounds = getDayBoundsFromCracSlot(date,cracSlot);
+      dayBounds = getDayBoundsFromCracSlot(date,cracSlot,business.general_info);
 
 
       if (!dayBounds) {

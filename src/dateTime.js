@@ -83,6 +83,8 @@ export function busySlotsInterval(date, businessData, daysToFetch) {
   var minBookingTime = getBusinessDateLikeUTC(moment.utc(), businessData);
   businessData.business.general_info.min_booking_time &&
     minBookingTime.add('hours', businessData.business.general_info.min_booking_time);
+  businessData.business.general_info.align_min_booking_time &&
+    minBookingTime.endOf('day');
 
   if (date < minBookingTime) {
     date = minBookingTime;
