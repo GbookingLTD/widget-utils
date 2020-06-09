@@ -1386,7 +1386,7 @@ var taxonomies = Object.freeze({
       value: function _initializeDayBounds() {
         var bounds = getFirstLastMinutes(this.bitset, this.vectorSlotSize);
         var start = this.options.strictSlotCutting ? 0 : bounds.start || 0;
-        this.dayBounds = { start: bounds.start || 0, end: bounds.end || 0 };
+        this.dayBounds = { start: start, end: bounds.end || 0 };
       }
 
       /**
