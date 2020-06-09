@@ -132,4 +132,37 @@ describe('ScheduleCracSlotsIterator (with cutSlotsWithoutBusyBounds)', function(
     });
     should(iterator.nextSlot()).be.equal(null);
   });
+  it('should strict slot cut', function() {
+    // 111 100 000 011 111
+    const str = stringCracVector('1'.repeat(4) + '0'.repeat(6) + '1'.repeat(5));
+    const bitset = prepareBitset(str, 5);
+    const options = {strictSlotCutting: true};
+    const iterator = new Schedule.ScheduleCracSlotsIterator(bitset, 5, 15, 15, options);
+    iterator.nextSlot().should.have.properties({
+      start: 0,
+      end: 15,
+      available: true
+    });
+    iterator.nextSlot().should.have.properties({
+      start: 15,
+      end: 30,
+      available: false
+    });
+    iterator.nextSlot().should.have.properties({
+      start: 30,
+      end: 45,
+      available: false
+    });
+    iterator.nextSlot().should.have.properties({
+      start: 45,
+      end: 60,
+      available: false
+    });
+    iterator.nextSlot().should.have.properties({
+      start: 60,
+      end: 75,
+      available: true
+    });
+    should(iterator.nextSlot()).be.equal(null);
+  });
 });

@@ -959,7 +959,7 @@ var taxonomies = Object.freeze({
           }
         }
 
-        if (endBoundIndex) break;
+        if (endBoundIndex || endBoundIndex === 0) break;
       }
     }
 
@@ -977,11 +977,11 @@ var taxonomies = Object.freeze({
   }
 
   /**
-   * Находит позицию первой 1 в векторе. 
+   * Находит позицию первой 1 в векторе.
    * Направление битов - слева направо (от старших к младшим разрядам), поэтому возможно использовать clz внутри числа.
-   * 
+   *
    * Если не найдено 1 - возвращаем отрицательное число.
-   * 
+   *
    * @param {{i:number, b:number}} p
    * @param vector
    * @return {*}
@@ -1006,9 +1006,9 @@ var taxonomies = Object.freeze({
   }
 
   /**
-   * Производит поиск 0 бита в обратном направлении. 
+   * Производит поиск 0 бита в обратном направлении.
    * Возвращает количество бит, на которое нужно было сместиться назад.
-   * 
+   *
    * @param vector crac-vector
    * @param p      позиция на векторе, с которой начинается поиск
    * @param count  количество бит, в которых производится поиск
@@ -1039,18 +1039,18 @@ var taxonomies = Object.freeze({
 
   /**
    * Маски левых (старших) единиц от 0 до 32-х (33 элемента в массиве).
-   * 
+   *
    * 0-й элемент соответствует нулю единиц слева, начиная от 32-й позиции.
    * 1-й элемент соответствует одной единице слева на 32-й позиции и тд. до 32-х.
    * 32-й элемент соответствует 32-м единицам от 32-й до крайней правой позиции.
-   * 
+   *
    * @type {{}}
    */
   var mask_left1 = [0, 2147483648, 3221225472, 3758096384, 4026531840, 4160749568, 4227858432, 4261412864, 4278190080, 4286578688, 4290772992, 4292870144, 4293918720, 4294443008, 4294705152, 4294836224, 4294901760, 4294934528, 4294950912, 4294959104, 4294963200, 4294965248, 4294966272, 4294966784, 4294967040, 4294967168, 4294967232, 4294967264, 4294967280, 4294967288, 4294967292, 4294967294, 4294967295];
 
   /**
    * Маски правых (младших) единиц от 0 до 32-х (33 элемента в массиве).
-   * 
+   *
    * @type {{}}
    */
   var mask_right1 = [0, 1, 3, 7, 15, 31, 63, 127, 255, 511, 1023, 2047, 4095, 8191, 16383, 32767, 65535, 131071, 262143, 524287, 1048575, 2097151, 4194303, 8388607, 16777215, 33554431, 67108863, 134217727, 268435455, 536870911, 1073741823, 2147483647, 4294967295];
@@ -1069,7 +1069,7 @@ var taxonomies = Object.freeze({
 
   /**
    * Заполнение результирующего вектора 1.
-   * 
+   *
    * @param bitset crac-вектор
    * @param i    начальное смещение элементов массива
    * @param b    начальное смещение в битах в элементе массива
@@ -1089,7 +1089,7 @@ var taxonomies = Object.freeze({
 
   /**
    * Checking slot availability
-   * 
+   *
    * @param bitset CRAC bitset
    * @param start start time in minutes
    * @param end end time in minutes (not inclusive)
@@ -1118,20 +1118,20 @@ var taxonomies = Object.freeze({
   }
 
   /**
-   * Возвращаем вектор, в котором 1 означает возможность записи на это время с учётом 
+   * Возвращаем вектор, в котором 1 означает возможность записи на это время с учётом
    * переданной длительности.
-   * 
-   * Переходим на первый свободный бит. Очевидно, что все биты до него заняты. 
-   * Находим первый занятый бит, идущий за свободным. 
+   *
+   * Переходим на первый свободный бит. Очевидно, что все биты до него заняты.
+   * Находим первый занятый бит, идущий за свободным.
    * Все биты, которые отстоят от этого занятого на расстояние duration будут свободны.
    *
    * Операция "найти первый свободный бит" оптимизирована с помощью операции Math.clz32.
    * Операции заполнения битов используют битовые маски.
-   * 
+   *
    * Функция имеет сложность O(n), n - количество элементов в массиве (не бит, в отличие от простого итерирования по CRAC-вектору).
-   * 
+   *
    * @link https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/clz32
-   * 
+   *
    * @param bitset
    * @param offset смещение в crac-векторе
    * @param sz
@@ -1151,7 +1151,7 @@ var taxonomies = Object.freeze({
       // Если достигнут конец входного вектора, то возвращаем результирующий вектор.
       if (_find1(p, bitset) < 0) return r;
 
-      // Все биты до него заняты. 
+      // Все биты до него заняты.
       // Вектор r и так заполнен 0, поэтому заполнения 0 не требуется.
 
       // Находим первый 0 ("занятый" бит), начиная с текущей позиции.
@@ -1347,13 +1347,16 @@ var taxonomies = Object.freeze({
        * @param {number} vectorSlotSize
        * @param {number} duration
        * @param {number} scheduleSlotSize
+       * @param {object} options
+       * @param {Boolean} options.strictSlotCutting strict slot cutting starting from 00:00 with {@link scheduleSlotSize} duration
        * @param {function|null} enhanceSlotFn функция для изменения формата слота/добавления дополнительных данных для него
        */
 
     }]);
 
     function ScheduleCracSlotsIterator(bitset, vectorSlotSize, duration, scheduleSlotSize) {
-      var enhanceSlotFn = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : null;
+      var options = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : {};
+      var enhanceSlotFn = arguments.length > 5 && arguments[5] !== undefined ? arguments[5] : null;
       classCallCheck(this, ScheduleCracSlotsIterator);
 
       var _this = possibleConstructorReturn(this, (ScheduleCracSlotsIterator.__proto__ || Object.getPrototypeOf(ScheduleCracSlotsIterator)).call(this));
@@ -1362,6 +1365,7 @@ var taxonomies = Object.freeze({
       _this.vectorSlotSize = vectorSlotSize;
       _this.duration = duration;
       _this.slotSize = scheduleSlotSize;
+      _this.options = options;
       _this.enhanceSlotFn = enhanceSlotFn;
       _this.nowMinutes = -1;
       _this.curSlot = null;
@@ -1381,6 +1385,7 @@ var taxonomies = Object.freeze({
       key: "_initializeDayBounds",
       value: function _initializeDayBounds() {
         var bounds = getFirstLastMinutes(this.bitset, this.vectorSlotSize);
+        var start = this.options.strictSlotCutting ? 0 : bounds.start || 0;
         this.dayBounds = { start: bounds.start || 0, end: bounds.end || 0 };
       }
 
@@ -1410,7 +1415,7 @@ var taxonomies = Object.freeze({
 
         var available = isSlotAvailable(this.bitset, start, start + this.duration, this.vectorSlotSize);
 
-        if (!available) {
+        if (!available && !this.options.strictSlotCutting) {
           // Необходимо проверить конечный бит - если это 1, то пройтись по вектору, найдя первый 0 бит.
           // Следующая за ним позиция и будет искомой.
           // Затем проверим, будет ли в новой позиции слот доступным для записи.
@@ -1472,16 +1477,20 @@ var taxonomies = Object.freeze({
      *
      * @param {CRACResourcesAndRoomsSlot} cracDay raw CRAC data
      * @param {Date} businessNow now time in business timezone (in tz_like_utc representation)
+     * @param {object} options
+     * @param {Boolean} options.strictSlotCutting strict slot cutting starting from 00:00 with {@link scheduleSlotSize} duration
      * @param {function(ScheduleSlotsIterator)} cutSlotsFn
      * @param {function(ScheduleSlotsIterator)} cutSlotsThisDayFn
      */
     function ScheduleCRACDaySlots(cracDay, businessNow) {
-      var cutSlotsFn = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : cutSlots$1;
-      var cutSlotsThisDayFn = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : cutSlotsWithoutStartBusy;
+      var options = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
+      var cutSlotsFn = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : cutSlots$1;
+      var cutSlotsThisDayFn = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : cutSlotsWithoutStartBusy;
       classCallCheck(this, ScheduleCRACDaySlots);
 
       this.cracDay = cracDay;
       this.businessNow = businessNow;
+      this.options = options;
       this.cutSlotsFn = cutSlotsFn;
       this.cutSlotsThisDayFn = cutSlotsThisDayFn;
     }
@@ -1528,7 +1537,7 @@ var taxonomies = Object.freeze({
         var bitset = ANY === resourceID ? cracDay.getResourceUnionBitset() : cracDay.getResourceBitset(resourceID);
         if (bitset) {
           var vectorSlotSize = getCracVectorSlotSize(bitset);
-          var iterator = new ScheduleCracSlotsIterator(bitset, vectorSlotSize, duration, slotSize, enhanceSlotFn && enhanceSlotFn.bind(cracDay));
+          var iterator = new ScheduleCracSlotsIterator(bitset, vectorSlotSize, duration, slotSize, this.options, enhanceSlotFn && enhanceSlotFn.bind(cracDay));
           // Если текущий день, то необходимо не учитывать слоты времени, которое уже истекло
           if (this.isThisDay()) {
             iterator.nowMinutes = getMinutesFromStartOfDay(this.businessNow);
@@ -1584,12 +1593,15 @@ var taxonomies = Object.freeze({
 
   function getSlotsFromBusinessAndCRACWithDuration(cracDay, business, workerID, taxDuration, enhanceSlotFn) {
     assert(cracDay instanceof CRACResourcesAndRoomsSlot, 'cracDay should be instance of CRACResourcesAndRoomsSlot');
-    var widgetConfiguration = business.widget_configuration;
+    var widgetConfiguration = business.widget_configuration || {};
     var isForbidden = isDateForbidden(widgetConfiguration, cracDay.date);
     if (isForbidden) {
       return [];
     }
-    var forceSlotSize = widgetConfiguration && widgetConfiguration.displaySlotSize && widgetConfiguration.displaySlotSize < taxDuration;
+    var options = {
+      strictSlotCutting: widgetConfiguration.strictSlotCutting
+    };
+    var forceSlotSize = widgetConfiguration.displaySlotSize && widgetConfiguration.displaySlotSize < taxDuration;
     var slotSize = forceSlotSize ? widgetConfiguration.displaySlotSize : taxDuration;
     var cutSlots = widgetConfiguration.hideGraySlots ? cutSlotsWithoutBusy : cutSlots;
     var now = business.general_info && business.general_info.min_booking_time ? moment.utc().add(business.general_info.min_booking_time, 'h') : moment.utc();
@@ -1602,7 +1614,7 @@ var taxonomies = Object.freeze({
       // supported only one taxonomy
       slotSize = res.durations[0] || slotSize;
     }
-    var scheduleCRACSlots = new ScheduleCRACDaySlots(cracDay, businessNow, cutSlotsWithoutStartFinishBusy, cutSlotsWithoutStartFinishBusy);
+    var scheduleCRACSlots = new ScheduleCRACDaySlots(cracDay, businessNow, options, cutSlotsWithoutStartFinishBusy, cutSlotsWithoutStartFinishBusy);
     return scheduleCRACSlots.cutSlots(workerID, taxDuration, slotSize, enhanceSlotFn);
   }
 
