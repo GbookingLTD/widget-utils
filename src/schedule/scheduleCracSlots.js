@@ -47,14 +47,17 @@ export class ScheduleCracSlotsIterator extends ScheduleSlotsIterator {
    * @param {number} vectorSlotSize
    * @param {number} duration
    * @param {number} scheduleSlotSize
+   * @param {object} options
+   * @param {Boolean} options.strictSlotCutting strict slot cutting starting from 00:00 with {@link scheduleSlotSize} duration
    * @param {function|null} enhanceSlotFn функция для изменения формата слота/добавления дополнительных данных для него
    */
-  constructor(bitset, vectorSlotSize, duration, scheduleSlotSize, enhanceSlotFn = null) {
+  constructor(bitset, vectorSlotSize, duration, scheduleSlotSize, options = {}, enhanceSlotFn = null) {
     super();
     this.bitset = bitset;
     this.vectorSlotSize = vectorSlotSize;
     this.duration = duration;
     this.slotSize = scheduleSlotSize;
+    this.options = options;
     this.enhanceSlotFn = enhanceSlotFn;
     this.nowMinutes = -1;
     this.curSlot = null;
@@ -69,7 +72,8 @@ export class ScheduleCracSlotsIterator extends ScheduleSlotsIterator {
    */
   _initializeDayBounds() {
     let bounds = getFirstLastMinutes(this.bitset, this.vectorSlotSize);
-    this.dayBounds = {start: bounds.start || 0, end: bounds.end || 0};
+    let start = this.options.strictSlotCutting ? 0 : bounds.start || 0;
+    this.dayBounds = {start: start, end: bounds.end || 0};
   }
 
   /**
@@ -97,7 +101,7 @@ export class ScheduleCracSlotsIterator extends ScheduleSlotsIterator {
         start + this.duration,
         this.vectorSlotSize);
 
-    if (!available) {
+    if (!available && !this.options.strictSlotCutting) {
       // Необходимо проверить конечный бит - если это 1, то пройтись по вектору, найдя первый 0 бит.
       // Следующая за ним позиция и будет искомой.
       // Затем проверим, будет ли в новой позиции слот доступным для записи.
@@ -155,12 +159,15 @@ export class ScheduleCRACDaySlots {
    *
    * @param {CRACResourcesAndRoomsSlot} cracDay raw CRAC data
    * @param {Date} businessNow now time in business timezone (in tz_like_utc representation)
+   * @param {object} options
+   * @param {Boolean} options.strictSlotCutting strict slot cutting starting from 00:00 with {@link scheduleSlotSize} duration
    * @param {function(ScheduleSlotsIterator)} cutSlotsFn
    * @param {function(ScheduleSlotsIterator)} cutSlotsThisDayFn
    */
-  constructor(cracDay, businessNow, cutSlotsFn = cutSlots, cutSlotsThisDayFn = cutSlotsWithoutStartBusy) {
+  constructor(cracDay, businessNow, options = {}, cutSlotsFn = cutSlots, cutSlotsThisDayFn = cutSlotsWithoutStartBusy) {
     this.cracDay = cracDay;
     this.businessNow = businessNow;
+    this.options = options;
     this.cutSlotsFn = cutSlotsFn;
     this.cutSlotsThisDayFn = cutSlotsThisDayFn;
   }
@@ -197,7 +204,8 @@ export class ScheduleCRACDaySlots {
       cracDay.getResourceBitset(resourceID);
     if (bitset) {
       const vectorSlotSize = getCracVectorSlotSize(bitset);
-      const iterator = new ScheduleCracSlotsIterator(bitset, vectorSlotSize, duration, slotSize, enhanceSlotFn && enhanceSlotFn.bind(cracDay));
+      const iterator = new ScheduleCracSlotsIterator(bitset, vectorSlotSize, duration, slotSize, this.options,
+        enhanceSlotFn && enhanceSlotFn.bind(cracDay));
       // Если текущий день, то необходимо не учитывать слоты времени, которое уже истекло
       if (this.isThisDay()) {
         iterator.nowMinutes = getMinutesFromStartOfDay(this.businessNow);
@@ -249,13 +257,15 @@ export function getSlotsFromBusinessAndCRAC(cracDay, business, taxonomy, worker,
 
 export function getSlotsFromBusinessAndCRACWithDuration(cracDay, business, workerID, taxDuration, enhanceSlotFn) {
   assert(cracDay instanceof CRACResourcesAndRoomsSlot, 'cracDay should be instance of CRACResourcesAndRoomsSlot');
-  const widgetConfiguration = business.widget_configuration;
+  const widgetConfiguration = business.widget_configuration || {};
   const isForbidden = isDateForbidden(widgetConfiguration, cracDay.date);
   if(isForbidden){
     return [];
   }
-  let forceSlotSize = widgetConfiguration && widgetConfiguration.displaySlotSize &&
-      widgetConfiguration.displaySlotSize < taxDuration;
+  const options = {
+    strictSlotCutting: widgetConfiguration.strictSlotCutting
+  };
+  const forceSlotSize = widgetConfiguration.displaySlotSize && widgetConfiguration.displaySlotSize < taxDuration;
   let slotSize = forceSlotSize ? widgetConfiguration.displaySlotSize : taxDuration;
   let cutSlots = widgetConfiguration.hideGraySlots ? cutSlotsWithoutBusy : cutSlots;
   let now = business.general_info && business.general_info.min_booking_time ?
@@ -267,7 +277,7 @@ export function getSlotsFromBusinessAndCRACWithDuration(cracDay, business, worke
     // supported only one taxonomy
     slotSize = res.durations[0] || slotSize;
   }
-  const scheduleCRACSlots = new ScheduleCRACDaySlots(cracDay, businessNow, cutSlotsWithoutStartFinishBusy, cutSlotsWithoutStartFinishBusy);
+  const scheduleCRACSlots = new ScheduleCRACDaySlots(cracDay, businessNow, options, cutSlotsWithoutStartFinishBusy, cutSlotsWithoutStartFinishBusy);
   return scheduleCRACSlots.cutSlots(workerID, taxDuration, slotSize, enhanceSlotFn);
 }
 
