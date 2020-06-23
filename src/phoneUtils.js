@@ -131,13 +131,13 @@ function defaultStringMaker(p) {
         },
         phoneExtractorWidget: function (value) {
           if (value[0] === '0') {
-            return [value.substring(1, 3), value.substring(3)];
+            return [value.substring(1, 3), value.substring(3).replace(/\D/g, '')];
           }
           return ['', ''];
         },
         phoneExtractor: function (value) {
           if (value[0] === '0' && value.length === 10) {
-            return ['', '972', value.substring(1, 3), value.substring(3), ''];
+            return ['', '972', value.substring(1, 3), value.substring(3).replace(/\D/g, ''), ''];
           }
           return ['', '972', '', '', ''];
         },
