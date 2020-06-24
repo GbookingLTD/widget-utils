@@ -136,7 +136,7 @@ function defaultStringMaker(p) {
           return ['', ''];
         },
         phoneExtractor: function (value) {
-          if (value[0] === '0' && value.length === 10) {
+          if (value[0] === '0') {
             return ['', '972', value.substring(1, 3), value.substring(3).replace(/\D/g, ''), ''];
           }
           return ['', '972', '', '', ''];
