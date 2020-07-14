@@ -35,7 +35,7 @@
     "vinyl-source-stream": "^2.0.0"
   },
   "dependencies": {
-    "crac-utils": "http://git.dev.gbooking.ru/gbooking/crac-utils/repository/archive.tar.gz?ref=v1.3.11",
+    "crac-utils":"https://github.com/GbookingLTD/crac-utils/archive/v1.3.11.tar.gz",
     "gulp-bump": "^3.1.1",
     "supports-color": "^5.4.0"
   }
