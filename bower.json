@@ -20,6 +20,6 @@
     "tests"
   ],
   "dependencies": {
-    "crac-utils": "http://git.dev.gbooking.ru/gbooking/crac-utils/repository/archive.tar.gz?ref=v1.3.11"
+    "crac-utils": "https://github.com/GbookingLTD/crac-utils/archive/v1.3.11.tar.gz"
     }
 }
