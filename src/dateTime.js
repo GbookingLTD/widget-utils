@@ -74,6 +74,27 @@ export function getBusinessDateLikeUTC(date, businessData) {
   return getDateLikeUTC(date);
 }
 
+/**
+ * Add add min booking time setting duration
+ *
+ * @param date
+ * @param businessData
+ * @return {*|Date}
+ */
+export function applyMinBookingTime(date, businessData) {
+  const tzDate = getBusinessDateLikeUTC(date, businessData);
+  const minBookingTime = businessData.business.general_info.min_booking_time;
+  if (minBookingTime) {
+    tzDate.add('hours', minBookingTime);
+
+    const alignMinBookingTime = businessData.business.general_info.align_min_booking_time;
+    if (alignMinBookingTime) {
+      tzDate.endOf('day');
+    }
+  }
+  return tzDate.toDate();
+}
+
 export function busySlotsInterval(date, businessData, daysToFetch) {
   if (!date) {
     date = moment.utc();

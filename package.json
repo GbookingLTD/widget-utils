@@ -1,6 +1,6 @@
 {
   "name": "widget-utils",
-  "version": "0.8.69",
+  "version": "0.8.70",
   "scripts": {
     "test": "npm run build && node_modules/.bin/mocha test/**/*",
     "dev": "./node_modules/.bin/gulp dev",
@@ -35,7 +35,7 @@
     "vinyl-source-stream": "^2.0.0"
   },
   "dependencies": {
-    "crac-utils":"https://github.com/GbookingLTD/crac-utils/archive/v1.3.11.tar.gz",
+    "crac-utils": "https://github.com/GbookingLTD/crac-utils/archive/v1.3.11.tar.gz",
     "gulp-bump": "^3.1.1",
     "supports-color": "^5.4.0"
   }

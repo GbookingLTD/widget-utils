@@ -4,6 +4,7 @@
   (global = global || self, global.WidgetUtils = factory(global._, global.moment, global.momentRange));
 }(this, (function (_$1, moment$3, momentRange) { 'use strict';
 
+  var _$1__default = 'default' in _$1 ? _$1['default'] : _$1;
   moment$3 = moment$3 && Object.prototype.hasOwnProperty.call(moment$3, 'default') ? moment$3['default'] : moment$3;
 
   function setBusinessDateTZ(businessData, date) {
@@ -78,6 +79,27 @@
     return getDateLikeUTC(date);
   }
 
+  /**
+   * Add add min booking time setting duration
+   *
+   * @param date
+   * @param businessData
+   * @return {*|Date}
+   */
+  function applyMinBookingTime(date, businessData) {
+    var tzDate = getBusinessDateLikeUTC(date, businessData);
+    var minBookingTime = businessData.business.general_info.min_booking_time;
+    if (minBookingTime) {
+      tzDate.add('hours', minBookingTime);
+
+      var alignMinBookingTime = businessData.business.general_info.align_min_booking_time;
+      if (alignMinBookingTime) {
+        tzDate.endOf('day');
+      }
+    }
+    return tzDate.toDate();
+  }
+
   function busySlotsInterval(date, businessData, daysToFetch) {
     if (!date) {
       date = moment$3.utc();
@@ -86,6 +108,7 @@
     date = getBusinessDateLikeUTC(date, businessData);
     var minBookingTime = getBusinessDateLikeUTC(moment$3.utc(), businessData);
     businessData.business.general_info.min_booking_time && minBookingTime.add('hours', businessData.business.general_info.min_booking_time);
+    businessData.business.general_info.align_min_booking_time && minBookingTime.endOf('day');
 
     if (date < minBookingTime) {
       date = minBookingTime;
@@ -118,6 +141,7 @@
     startBusinessTZDay: startBusinessTZDay,
     getDateLikeUTC: getDateLikeUTC,
     getBusinessDateLikeUTC: getBusinessDateLikeUTC,
+    applyMinBookingTime: applyMinBookingTime,
     busySlotsInterval: busySlotsInterval,
     alignTimeByQuantum: alignTimeByQuantum,
     alignSlotTime: alignSlotTime
@@ -150,6 +174,7 @@
     if (businessNowLikeUTC.isSame(day.date, 'day')) {
       if (businessData.business.general_info.min_booking_time) {
         finish.add(-businessData.business.general_info.min_booking_time, 'hours');
+        businessData.business.general_info.align_min_booking_time && finish.endOf('day');
       }
     }
 
@@ -380,16 +405,16 @@
   var TAXONOMY_COMMON = 'COMMON';
 
   /**
-   * 
+   *
    * @param {Array<{id, additionalDurations, duration}>} taxonomy
    * @param {Array<{taxonomyLevels}>} resource
    * @return {*}
    */
   function getServiceDuration(taxonomy, resource) {
     if (resource) {
-      var taxLevel = (_.find(resource.taxonomyLevels, { id: taxonomy.id }) || {}).level;
+      var taxLevel = (_$1__default.find(resource.taxonomyLevels, { id: taxonomy.id }) || {}).level;
       if (typeof taxLevel !== 'undefined') {
-        var level = _.find(taxonomy.additionalDurations, { level: taxLevel });
+        var level = _$1__default.find(taxonomy.additionalDurations, { level: taxLevel });
         if (level) {
           return level.duration ? level.duration : taxonomy.duration;
         }
@@ -400,9 +425,9 @@
 
   /**
    * Возвращает минимальную длительность из всех услуг.
-   * 
+   *
    * Необходимо, например, для получения ближайшего доступного для записи по услуге(-ам) дня.
-   * 
+   *
    * @param taxonomies
    * @param resources
    */
@@ -1234,13 +1259,16 @@
        * @param {number} vectorSlotSize
        * @param {number} duration
        * @param {number} scheduleSlotSize
+       * @param {object} options
+       * @param {Boolean} options.strictSlotCutting strict slot cutting starting from 00:00 with {@link scheduleSlotSize} duration
        * @param {function|null} enhanceSlotFn функция для изменения формата слота/добавления дополнительных данных для него
        */
 
     }]);
 
     function ScheduleCracSlotsIterator(bitset, vectorSlotSize, duration, scheduleSlotSize) {
-      var enhanceSlotFn = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : null;
+      var options = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : {};
+      var enhanceSlotFn = arguments.length > 5 && arguments[5] !== undefined ? arguments[5] : null;
       classCallCheck(this, ScheduleCracSlotsIterator);
 
       var _this = possibleConstructorReturn(this, (ScheduleCracSlotsIterator.__proto__ || Object.getPrototypeOf(ScheduleCracSlotsIterator)).call(this));
@@ -1249,6 +1277,7 @@
       _this.vectorSlotSize = vectorSlotSize;
       _this.duration = duration;
       _this.slotSize = scheduleSlotSize;
+      _this.options = options;
       _this.enhanceSlotFn = enhanceSlotFn;
       _this.nowMinutes = -1;
       _this.curSlot = null;
@@ -1268,7 +1297,8 @@
       key: "_initializeDayBounds",
       value: function _initializeDayBounds() {
         var bounds = getFirstLastMinutes(this.bitset, this.vectorSlotSize);
-        this.dayBounds = { start: bounds.start || 0, end: bounds.end || 0 };
+        var start = this.options.strictSlotCutting ? 0 : bounds.start || 0;
+        this.dayBounds = { start: start, end: bounds.end || 0 };
       }
 
       /**
@@ -1297,7 +1327,7 @@
 
         var available = isSlotAvailable(this.bitset, start, start + this.duration, this.vectorSlotSize);
 
-        if (!available) {
+        if (!available && !this.options.strictSlotCutting) {
           // Необходимо проверить конечный бит - если это 1, то пройтись по вектору, найдя первый 0 бит.
           // Следующая за ним позиция и будет искомой.
           // Затем проверим, будет ли в новой позиции слот доступным для записи.
@@ -1359,16 +1389,20 @@
      *
      * @param {CRACResourcesAndRoomsSlot} cracDay raw CRAC data
      * @param {Date} businessNow now time in business timezone (in tz_like_utc representation)
+     * @param {object} options
+     * @param {Boolean} options.strictSlotCutting strict slot cutting starting from 00:00 with {@link scheduleSlotSize} duration
      * @param {function(ScheduleSlotsIterator)} cutSlotsFn
      * @param {function(ScheduleSlotsIterator)} cutSlotsThisDayFn
      */
     function ScheduleCRACDaySlots(cracDay, businessNow) {
-      var cutSlotsFn = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : cutSlots$1;
-      var cutSlotsThisDayFn = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : cutSlotsWithoutStartBusy;
+      var options = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
+      var cutSlotsFn = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : cutSlots$1;
+      var cutSlotsThisDayFn = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : cutSlotsWithoutStartBusy;
       classCallCheck(this, ScheduleCRACDaySlots);
 
       this.cracDay = cracDay;
       this.businessNow = businessNow;
+      this.options = options;
       this.cutSlotsFn = cutSlotsFn;
       this.cutSlotsThisDayFn = cutSlotsThisDayFn;
     }
@@ -1415,7 +1449,7 @@
         var bitset = ANY === resourceID ? cracDay.getResourceUnionBitset() : cracDay.getResourceBitset(resourceID);
         if (bitset) {
           var vectorSlotSize = getCracVectorSlotSize(bitset);
-          var iterator = new ScheduleCracSlotsIterator(bitset, vectorSlotSize, duration, slotSize, enhanceSlotFn && enhanceSlotFn.bind(cracDay));
+          var iterator = new ScheduleCracSlotsIterator(bitset, vectorSlotSize, duration, slotSize, this.options, enhanceSlotFn && enhanceSlotFn.bind(cracDay));
           // Если текущий день, то необходимо не учитывать слоты времени, которое уже истекло
           if (this.isThisDay()) {
             iterator.nowMinutes = getMinutesFromStartOfDay(this.businessNow);
@@ -1471,15 +1505,19 @@
 
   function getSlotsFromBusinessAndCRACWithDuration(cracDay, business, workerID, taxDuration, enhanceSlotFn) {
     assert$1(cracDay instanceof CRACResourcesAndRoomsSlot, 'cracDay should be instance of CRACResourcesAndRoomsSlot');
-    var widgetConfiguration = business.widget_configuration;
+    var widgetConfiguration = business.widget_configuration || {};
     var isForbidden = isDateForbidden(widgetConfiguration, cracDay.date);
     if (isForbidden) {
       return [];
     }
-    var forceSlotSize = widgetConfiguration && widgetConfiguration.displaySlotSize && widgetConfiguration.displaySlotSize < taxDuration;
+    var options = {
+      strictSlotCutting: widgetConfiguration.strictSlotCutting
+    };
+    var forceSlotSize = widgetConfiguration.displaySlotSize && widgetConfiguration.displaySlotSize < taxDuration;
     var slotSize = forceSlotSize ? widgetConfiguration.displaySlotSize : taxDuration;
     var cutSlots = widgetConfiguration.hideGraySlots ? cutSlotsWithoutBusy : cutSlots;
     var now = business.general_info && business.general_info.min_booking_time ? moment$3.utc().add(business.general_info.min_booking_time, 'h') : moment$3.utc();
+    business.general_info.align_min_booking_time && now.endOf('day');
     var businessNow = getBusinessDateLikeUTC(now, { business: business }).toDate();
     var res = cracDay.resources.find(function (res) {
       return res.id === workerID;
@@ -1488,7 +1526,7 @@
       // supported only one taxonomy
       slotSize = res.durations[0] || slotSize;
     }
-    var scheduleCRACSlots = new ScheduleCRACDaySlots(cracDay, businessNow, cutSlotsWithoutStartFinishBusy, cutSlotsWithoutStartFinishBusy);
+    var scheduleCRACSlots = new ScheduleCRACDaySlots(cracDay, businessNow, options, cutSlotsWithoutStartFinishBusy, cutSlotsWithoutStartFinishBusy);
     return scheduleCRACSlots.cutSlots(workerID, taxDuration, slotSize, enhanceSlotFn);
   }
 
@@ -1805,6 +1843,7 @@
         startTime = alignSlotTime(startTime, slotSize, businessNow, true);
       }
       businessData.business.general_info.min_booking_time && startTime.add('hours', businessData.business.general_info.min_booking_time);
+      businessData.business.general_info.align_min_booking_time && startTime.endOf('day');
 
       for (var slot_time = startTime; slot_time.isBefore(endTime);) {
         var dateCheck = checkDate(slotDay.slots, slot_time);
@@ -2337,6 +2376,7 @@
         this.slotSize = this.forceSlotSize ? widgetConfiguration.displaySlotSize : busySlots.slot_size || this.taxDuration;
         this.maxSlotCapacity = busySlots.maxSlotCapacity;
         this.minTimeBooking = businessData.business.general_info.min_booking_time;
+        this.alignMinTimeBooking = businessData.business.general_info.align_min_booking_time;
         // https://app.asana.com/0/search/364482197206303/141502515363228
         // this fix is for decreasing affected clients
         if (businessData.business.backofficeType === 'MB' && !_.isUndefined(displaySlotSize) && displaySlotSize !== this.taxDuration) {
@@ -2719,6 +2759,7 @@
           if (!busy) {
             if (self.minTimeBooking && self.minTimeBooking > 0) {
               businessNowLikeUTC.add(self.minTimeBooking, 'hour');
+              self.alignMinTimeBooking && businessNowLikeUTC.endOf('day');
             }
             busy = businessNowLikeUTC.isAfter(actualSlot) || space === 0 || busySlotsDay.forceAllSlotsBusy;
           }
@@ -2822,6 +2863,7 @@
           var workTime = moment$3(now);
           if (self.minTimeBooking && self.minTimeBooking > 0) {
             workTime.add(self.minTimeBooking, 'hour');
+            self.alignMinTimeBooking && workTime.endOf('day');
           }
 
           var duration = slot.duration || self.slotSize;
@@ -3069,13 +3111,13 @@
       },
       phoneExtractorWidget: function phoneExtractorWidget(value) {
         if (value[0] === '0') {
-          return [value.substring(1, 3), value.substring(3)];
+          return [value.substring(1, 3), value.substring(3).replace(/\D/g, '')];
         }
         return ['', ''];
       },
       phoneExtractor: function phoneExtractor(value) {
-        if (value[0] === '0' && value.length === 10) {
-          return ['', '972', value.substring(1, 3), value.substring(3), ''];
+        if (value[0] === '0') {
+          return ['', '972', value.substring(1, 3), value.substring(3).replace(/\D/g, ''), ''];
         }
         return ['', '972', '', '', ''];
       },
@@ -3680,7 +3722,12 @@
 
   var SLOT_SIZE$1 = 5;
   var VECTOR_SIZE = 24 * 60 / SLOT_SIZE$1;
-  function getDayBoundsFromCracSlot$1(date, slot) {
+  function getDayBoundsFromCracSlot$1(date, slot, widgetConfig) {
+    var now = moment$3();
+    widgetConfig.min_booking_time && now.add('hours', widgetConfig.min_booking_time);
+    if (widgetConfig.align_min_booking_time && moment$3(date).isBefore(now)) {
+      return null;
+    }
     var allDayBounds = null;
     var bitmask = cracValueToBits(slot.bitset);
     var bitmaskTaxonomy = cracValueToBits(slot.taxonomyBitset || "");
@@ -4313,7 +4360,7 @@
 
         var dayBounds;
         //dayBounds = getDayBoundsFromAllTimetables(date, resourceTimetables,resourceEvenOddTimeTable,timetableType);
-        dayBounds = getDayBoundsFromCracSlot$1(date, cracSlot);
+        dayBounds = getDayBoundsFromCracSlot$1(date, cracSlot, business.general_info);
 
         if (!dayBounds) {
           var dayOffDate = isoDateForDayOff$1(date);
