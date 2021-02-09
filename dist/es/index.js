@@ -1511,11 +1511,7 @@ function getSlotsFromBusinessAndCRACWithDuration(cracDay, business, workerID, ta
   var forceSlotSize = widgetConfiguration.displaySlotSize && widgetConfiguration.displaySlotSize < taxDuration;
   var slotSize = forceSlotSize ? widgetConfiguration.displaySlotSize : taxDuration;
   var cutSlots = widgetConfiguration.hideGraySlots ? cutSlotsWithoutBusy : cutSlots;
-  var businessNow = moment$3.utc();
-  setBusinessDateTZ({ business: business }, businessNow);
-  business.general_info.min_booking_time && businessNow.add(business.general_info.min_booking_time, 'h');
-  business.general_info.align_min_booking_time && businessNow.endOf('day');
-  var businessNowDate = getDateLikeUTC(businessNow).toDate();
+  var businessNow = applyMinBookingTime(moment$3.utc(), { business: business });
   var res = cracDay.resources.find(function (res) {
     return res.id === workerID;
   });
@@ -1523,7 +1519,7 @@ function getSlotsFromBusinessAndCRACWithDuration(cracDay, business, workerID, ta
     // supported only one taxonomy
     slotSize = res.durations[0] || slotSize;
   }
-  var scheduleCRACSlots = new ScheduleCRACDaySlots(cracDay, businessNowDate, options, cutSlotsWithoutStartFinishBusy, cutSlotsWithoutStartFinishBusy);
+  var scheduleCRACSlots = new ScheduleCRACDaySlots(cracDay, businessNow, options, cutSlotsWithoutStartFinishBusy, cutSlotsWithoutStartFinishBusy);
   return scheduleCRACSlots.cutSlots(workerID, taxDuration, slotSize, enhanceSlotFn);
 }
 

@@ -3,7 +3,7 @@
 import * as _ from 'lodash';
 import {isDateForbidden} from "../busySlots"
 import moment from 'moment-timezone';
-import { setBusinessDateTZ, getDateLikeUTC } from "../dateTime";
+import { applyMinBookingTime } from "../dateTime";
 import {getServiceDuration} from "../taxonomies";
 import {
   ScheduleSlotsIterator,
@@ -268,17 +268,13 @@ export function getSlotsFromBusinessAndCRACWithDuration(cracDay, business, worke
   const forceSlotSize = widgetConfiguration.displaySlotSize && widgetConfiguration.displaySlotSize < taxDuration;
   let slotSize = forceSlotSize ? widgetConfiguration.displaySlotSize : taxDuration;
   let cutSlots = widgetConfiguration.hideGraySlots ? cutSlotsWithoutBusy : cutSlots;
-  const businessNow = moment.utc();
-  setBusinessDateTZ({ business }, businessNow);
-  business.general_info.min_booking_time && businessNow.add(business.general_info.min_booking_time, 'h');
-  business.general_info.align_min_booking_time && businessNow.endOf('day');
-  const businessNowDate = getDateLikeUTC(businessNow).toDate();
+  const businessNow = applyMinBookingTime(moment.utc(), { business });
   let res = cracDay.resources.find((res) => res.id === workerID);
   if (res && res.durations.length) {
     // supported only one taxonomy
     slotSize = res.durations[0] || slotSize;
   }
-  const scheduleCRACSlots = new ScheduleCRACDaySlots(cracDay, businessNowDate, options, cutSlotsWithoutStartFinishBusy, cutSlotsWithoutStartFinishBusy);
+  const scheduleCRACSlots = new ScheduleCRACDaySlots(cracDay, businessNow, options, cutSlotsWithoutStartFinishBusy, cutSlotsWithoutStartFinishBusy);
   return scheduleCRACSlots.cutSlots(workerID, taxDuration, slotSize, enhanceSlotFn);
 }
 
