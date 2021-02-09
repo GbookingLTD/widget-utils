@@ -1,9 +1,19 @@
-Building
+## Building
 
 [sudo] npm install -g dts-gen
 [sudo] npm link // <-- in the root widget-utils directory
 
+```
 make build
+```
+
+or
+
+```
+npm run build
+npm i -g .
+dts-gen -m widget-utils -o -f dist/index.d.ts
+```
 
 ----
 

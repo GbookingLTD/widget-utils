@@ -2,9 +2,9 @@
 
 const should = require('should');
 const {Schedule} = require('../../dist/index');
-const {busyBitSets, newBusyBitset, prepareBitset} = 
+const {busyBitSets, newBusyBitset, prepareBitset} =
   require('crac-utils/dist/cjs/vector');
-const {mask_left1} = 
+const {mask_left1} =
   require('crac-utils/dist/cjs/utils');
 
 const cracVectorOrder = 'reverse';

@@ -51,6 +51,8 @@ export namespace DateTime {
 
     function alignTimeByQuantum(minutes: any, quantum: any): any;
 
+    function applyMinBookingTime(date: any, businessData: any): any;
+
     function businessTimezoneUtcOffset(businessData: any): any;
 
     function busySlotsInterval(date: any, businessData: any, daysToFetch: any): any;
