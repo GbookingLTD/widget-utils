@@ -1516,9 +1516,7 @@
     var forceSlotSize = widgetConfiguration.displaySlotSize && widgetConfiguration.displaySlotSize < taxDuration;
     var slotSize = forceSlotSize ? widgetConfiguration.displaySlotSize : taxDuration;
     var cutSlots = widgetConfiguration.hideGraySlots ? cutSlotsWithoutBusy : cutSlots;
-    var now = business.general_info && business.general_info.min_booking_time ? moment$3.utc().add(business.general_info.min_booking_time, 'h') : moment$3.utc();
-    business.general_info.align_min_booking_time && now.endOf('day');
-    var businessNow = getBusinessDateLikeUTC(now, { business: business }).toDate();
+    var businessNow = applyMinBookingTime(moment$3.utc(), { business: business });
     var res = cracDay.resources.find(function (res) {
       return res.id === workerID;
     });
