@@ -30,7 +30,7 @@ function stringCracVector(str, cracVectorSize) {
 }
 describe('CRACResourcesAndRoomsSlot', function() {
   it('', function() {
-
+    
   });
 });
 describe('ScheduleCracSlotsIterator (with cutSlotsWithoutBusyBounds)', function() {
