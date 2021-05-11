@@ -13,6 +13,7 @@ import {
   cutSlotsWithoutStartFinishBusy,
   GCD,
 } from "./scheduleSlots";
+import {getStrictSlots} from "./scheduleStrictCracSlots"
 import {getCracVectorSlotSize, _findBack0, getFirstLastMinutes,
   isSlotAvailable} from 'crac-utils/src';
 import {CRACResourcesAndRoomsSlot} from "./CRACResponse";
@@ -299,6 +300,10 @@ export function getSlotsFromBusinessAndCRACWithAdjacent(cracDay, business, resou
   let ATTreshold = business.backoffice_configuration.adjacentTaxonomiesTreshold || 0;
   let gcd = 0;
   let DIFF_SLOTS_VARIABLE = 5;
+  const strictSlots = (business.widget_configuration || {}).cracStrictSlots || false;
+  if(strictSlots) {
+    return getStrictSlots(cracDay, business, resourceId, enhanceSlotFn)
+  }
   if(taxonomy.adjacentTaxonomies && taxonomy.adjacentTaxonomies.length){
     taxonomy.adjacentTaxonomies.sort((a,b) => {
       return a.order > b.order ? 1 : -1;
@@ -556,3 +561,4 @@ function checkAdjacentSameTimeSlot(adjasentTaxonomies, time, step, gcd) {
     adjasentStart: adjasentTaxonomies.map(t => time)
   };
 }
+
