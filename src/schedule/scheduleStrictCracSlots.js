@@ -73,18 +73,62 @@ export class ScheduleCracStrictSlotsIterator extends ScheduleSlotsIterator {
     return this.enhanceSlotFn ? this.enhanceSlotFn(slot) : slot;
   }
 
+  getNextSingleSlot() {
+    const curSlot = this.slots[this.curSlotIndex];
+    if (curSlot) {
+      let [start, end] = this.slots[this.curSlotIndex];
+      this.curSlotIndex += 1;
+      return this.createSlot(start, end);
+    }
+    return this.createSlot(-1, -1);
+  }
+  getNextSlot() {
+    const nextSlot = this.slots[this.curSlotIndex];
+    this.curSlotIndex += 1;
+    if (!nextSlot) {
+      return [-1, -1];
+    }
+
+    return nextSlot;
+  }
+  findNextMultiSlot(startSlot, endPreviousSlot) {
+    let [start, end] = this.getNextSlot();
+    if (start == -1 && end == -1) {
+      return this.createSlot(-1, -1);
+    } else if (start != endPreviousSlot) {
+      //start build slot from scratch 
+      return this.findNextMultiSlot(start, end);
+    } else if (end - startSlot >= this.options.slotSize) {
+      return this.createSlot(startSlot, end);
+    }
+    // continut build slot
+    return this.findNextMultiSlot(startSlot, end);
+  }
+  getNextSlotForAllSlots() {
+    const curSlot = this.slots[this.curSlotIndex];
+    if (curSlot) {
+      let [start, end] = this.slots[this.curSlotIndex];
+      this.curSlotIndex += 1;
+      if (end - start >= this.options.slotSize) {
+        return this.createSlot(start, end);
+      }
+      return this.findNextMultiSlot(start, end);
+    }
+    return this.createSlot(-1, -1);
+  }
+
   nextSlot() {
     // first call or next one
     if (this.curSlotIndex === null) {
       this.curSlotIndex = 0;
     }
-    const curSlot = this.slots[this.curSlotIndex];
-    if (curSlot) {
-      let [ start, end ] = this.slots[this.curSlotIndex];
-      this.curSlotIndex += 1;
-      return this.createSlot(start, end);
+    switch (this.options.appointmentCreateDuration) {
+      case "ALL_SLOTS":
+        return this.getNextSlotForAllSlots();
+
+      default:
+        return this.getNextSingleSlot();
     }
-    return this.createSlot(-1, -1);
   }
 
   isSlotAvailable() {
@@ -179,6 +223,12 @@ export function getStrictSlots(cracDay, business, workerID, enhanceSlotFn, optio
   if(isForbidden){
     return [];
   }
+  const appointmentCreateDurationOption =
+    (business.integration_data.mis.options||[]).find(
+      (o) => o.name == 'appointmentCreateDuration'
+    );
+  const appointmentCreateDuration = appointmentCreateDurationOption ? appointmentCreateDurationOption.value : 'ONE_SLOT';
+  options.appointmentCreateDuration = appointmentCreateDuration;
   let cutSlots = widgetConfiguration.hideGraySlots ? cutSlotsWithoutBusy : cutSlots;
   const businessNow = applyMinBookingTime(moment.utc(), { business });
   
