@@ -227,7 +227,7 @@ export function getStrictSlots(cracDay, business, workerID, enhanceSlotFn, optio
     (business.integration_data.mis.options||[]).find(
       (o) => o.name == 'appointmentCreateDuration'
     );
-  const appointmentCreateDuration = appointmentCreateDurationOption ? appointmentCreateDurationOption.value : 'ONE_SLOT';
+  const appointmentCreateDuration = appointmentCreateDurationOption ? appointmentCreateDurationOption.value : business.widget_configuration.appointmentCreateDuration;
   options.appointmentCreateDuration = appointmentCreateDuration;
   let cutSlots = widgetConfiguration.hideGraySlots ? cutSlotsWithoutBusy : cutSlots;
   const businessNow = applyMinBookingTime(moment.utc(), { business });
