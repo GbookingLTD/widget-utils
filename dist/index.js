@@ -1218,6 +1218,14 @@
         }, newBusyBitset());
       }
     }, {
+      key: 'getResourceStrictSlots',
+      value: function getResourceStrictSlots(resourceID) {
+        var res = this.resources.find(function (r) {
+          return r.id == resourceID;
+        });
+        return res ? res.strictSlots : [];
+      }
+    }, {
       key: 'getResourceUnionSlots',
       value: function getResourceUnionSlots() {
         var slotsMap = this.resources.reduce(function (ret, res) {
@@ -1504,7 +1512,7 @@
         var enhanceSlotFn = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : null;
 
         var cracDay = this.cracDay;
-        var slots = ANY === resourceID ? cracDay.getResourceUnionSlots() : cracDay.resources[0].strictSlots;
+        var slots = ANY === resourceID ? cracDay.getResourceUnionSlots() : cracDay.getResourceStrictSlots(resourceID);
         if (Array.isArray(slots)) {
           var iterator = new ScheduleCracStrictSlotsIterator(slots, this.options, enhanceSlotFn && enhanceSlotFn.bind(cracDay));
           // Если текущий день, то необходимо не учитывать слоты времени, которое уже истекло

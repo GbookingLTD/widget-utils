@@ -193,7 +193,7 @@ export class ScheduleCRACDayStrictSlots {
     let slots =
       ANY === resourceID
         ? cracDay.getResourceUnionSlots()
-        : cracDay.resources[0].strictSlots;
+        : cracDay.getResourceStrictSlots(resourceID);
     if (Array.isArray(slots)) {
       const iterator = new ScheduleCracStrictSlotsIterator(
         slots,
