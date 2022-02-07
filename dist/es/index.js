@@ -1536,7 +1536,7 @@ function getStrictSlots(cracDay, business, workerID, enhanceSlotFn) {
   if (isForbidden) {
     return [];
   }
-  var appointmentCreateDurationOption = (business.integration_data.mis.options || []).find(function (o) {
+  var appointmentCreateDurationOption = (business.integration_data && business.integration_data.mis && business.integration_data.mis.options || []).find(function (o) {
     return o.name == 'appointmentCreateDuration';
   });
   var slotsConfig = business.widget_configuration.slotsConfig || { appointmentCreateDuration: 'CALCULATE_DURATION' };
