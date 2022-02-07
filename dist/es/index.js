@@ -1539,7 +1539,8 @@ function getStrictSlots(cracDay, business, workerID, enhanceSlotFn) {
   var appointmentCreateDurationOption = (business.integration_data.mis.options || []).find(function (o) {
     return o.name == 'appointmentCreateDuration';
   });
-  var appointmentCreateDuration = appointmentCreateDurationOption ? appointmentCreateDurationOption.value : business.widget_configuration.appointmentCreateDuration;
+  var slotsConfig = business.widget_configuration.slotsConfig || { appointmentCreateDuration: 'CALCULATE_DURATION' };
+  var appointmentCreateDuration = appointmentCreateDurationOption ? appointmentCreateDurationOption.value : slotsConfig.appointmentCreateDuration;
   options.appointmentCreateDuration = appointmentCreateDuration;
   var cutSlots = widgetConfiguration.hideGraySlots ? cutSlotsWithoutBusy : cutSlots;
   var businessNow = applyMinBookingTime(moment$3.utc(), { business: business });
