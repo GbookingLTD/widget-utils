@@ -70,6 +70,11 @@ export class CRACResourcesAndRoomsSlot {
     }, newBusyBitset());
   }
   
+  getResourceStrictSlots(resourceID) {
+    const res = this.resources.find(r=>r.id==resourceID);
+    return res ? res.strictSlots : []
+  }
+  
   getResourceUnionSlots() {
     const slotsMap = this.resources.reduce((ret, res) => {
       return (res.strictSlots || []).reduce((slots, slot) => {

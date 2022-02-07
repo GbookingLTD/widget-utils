@@ -1218,6 +1218,14 @@
         }, newBusyBitset());
       }
     }, {
+      key: 'getResourceStrictSlots',
+      value: function getResourceStrictSlots(resourceID) {
+        var res = this.resources.find(function (r) {
+          return r.id == resourceID;
+        });
+        return res ? res.strictSlots : [];
+      }
+    }, {
       key: 'getResourceUnionSlots',
       value: function getResourceUnionSlots() {
         var slotsMap = this.resources.reduce(function (ret, res) {
@@ -1350,12 +1358,8 @@
         return this.enhanceSlotFn ? this.enhanceSlotFn(slot) : slot;
       }
     }, {
-      key: "nextSlot",
-      value: function nextSlot() {
-        // first call or next one
-        if (this.curSlotIndex === null) {
-          this.curSlotIndex = 0;
-        }
+      key: "getNextSingleSlot",
+      value: function getNextSingleSlot() {
         var curSlot = this.slots[this.curSlotIndex];
         if (curSlot) {
           var _slots$curSlotIndex = slicedToArray(this.slots[this.curSlotIndex], 2),
@@ -1366,6 +1370,68 @@
           return this.createSlot(start, end);
         }
         return this.createSlot(-1, -1);
+      }
+    }, {
+      key: "getNextSlot",
+      value: function getNextSlot() {
+        var nextSlot = this.slots[this.curSlotIndex];
+        this.curSlotIndex += 1;
+        if (!nextSlot) {
+          return [-1, -1];
+        }
+
+        return nextSlot;
+      }
+    }, {
+      key: "findNextMultiSlot",
+      value: function findNextMultiSlot(startSlot, endPreviousSlot) {
+        var _getNextSlot = this.getNextSlot(),
+            _getNextSlot2 = slicedToArray(_getNextSlot, 2),
+            start = _getNextSlot2[0],
+            end = _getNextSlot2[1];
+
+        if (start == -1 && end == -1) {
+          return this.createSlot(-1, -1);
+        } else if (start != endPreviousSlot) {
+          //start build slot from scratch 
+          return this.findNextMultiSlot(start, end);
+        } else if (end - startSlot >= this.options.slotSize) {
+          return this.createSlot(startSlot, end);
+        }
+        // continut build slot
+        return this.findNextMultiSlot(startSlot, end);
+      }
+    }, {
+      key: "getNextSlotForAllSlots",
+      value: function getNextSlotForAllSlots() {
+        var curSlot = this.slots[this.curSlotIndex];
+        if (curSlot) {
+          var _slots$curSlotIndex2 = slicedToArray(this.slots[this.curSlotIndex], 2),
+              start = _slots$curSlotIndex2[0],
+              end = _slots$curSlotIndex2[1];
+
+          this.curSlotIndex += 1;
+          if (end - start >= this.options.slotSize) {
+            return this.createSlot(start, end);
+          }
+          return this.findNextMultiSlot(start, end);
+        }
+        return this.createSlot(-1, -1);
+      }
+    }, {
+      key: "nextSlot",
+      value: function nextSlot() {
+        // first call or next one
+        if (this.curSlotIndex === null) {
+          this.curSlotIndex = 0;
+        }
+        switch (this.options.appointmentCreateDuration) {
+          case "ALL_SLOTS":
+            return this.getNextSlotForAllSlots();
+
+          default:
+            return this.getNextSingleSlot();
+        }
       }
     }, {
       key: "isSlotAvailable",
@@ -1446,7 +1512,7 @@
         var enhanceSlotFn = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : null;
 
         var cracDay = this.cracDay;
-        var slots = ANY === resourceID ? cracDay.getResourceUnionSlots() : cracDay.resources[0].strictSlots;
+        var slots = ANY === resourceID ? cracDay.getResourceUnionSlots() : cracDay.getResourceStrictSlots(resourceID);
         if (Array.isArray(slots)) {
           var iterator = new ScheduleCracStrictSlotsIterator(slots, this.options, enhanceSlotFn && enhanceSlotFn.bind(cracDay));
           // Если текущий день, то необходимо не учитывать слоты времени, которое уже истекло
@@ -1475,6 +1541,12 @@
     if (isForbidden) {
       return [];
     }
+    var appointmentCreateDurationOption = (business.integration_data && business.integration_data.mis && business.integration_data.mis.options || []).find(function (o) {
+      return o.name == 'appointmentCreateDuration';
+    });
+    var slotsConfig = business.widget_configuration.slotsConfig || { appointmentCreateDuration: 'CALCULATE_DURATION' };
+    var appointmentCreateDuration = appointmentCreateDurationOption ? appointmentCreateDurationOption.value : slotsConfig.appointmentCreateDuration;
+    options.appointmentCreateDuration = appointmentCreateDuration;
     var cutSlots = widgetConfiguration.hideGraySlots ? cutSlotsWithoutBusy : cutSlots;
     var businessNow = applyMinBookingTime(moment$3.utc(), { business: business });
 
@@ -1807,7 +1879,7 @@
     var DIFF_SLOTS_VARIABLE = 5;
     var strictSlots = (business.widget_configuration || {}).cracStrictSlots || false;
     if (strictSlots) {
-      return getStrictSlots(cracDay, business, resourceId, enhanceSlotFn);
+      return getStrictSlots(cracDay, business, resourceId, enhanceSlotFn, { slotSize: slotSize });
     }
     if (taxonomy.adjacentTaxonomies && taxonomy.adjacentTaxonomies.length) {
       taxonomy.adjacentTaxonomies.sort(function (a, b) {

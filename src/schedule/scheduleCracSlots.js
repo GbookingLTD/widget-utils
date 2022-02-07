@@ -302,7 +302,13 @@ export function getSlotsFromBusinessAndCRACWithAdjacent(cracDay, business, resou
   let DIFF_SLOTS_VARIABLE = 5;
   const strictSlots = (business.widget_configuration || {}).cracStrictSlots || false;
   if(strictSlots) {
-    return getStrictSlots(cracDay, business, resourceId, enhanceSlotFn)
+    return getStrictSlots(
+      cracDay,
+      business,
+      resourceId,
+      enhanceSlotFn,
+      {slotSize}
+    );
   }
   if(taxonomy.adjacentTaxonomies && taxonomy.adjacentTaxonomies.length){
     taxonomy.adjacentTaxonomies.sort((a,b) => {
