@@ -96,7 +96,7 @@ export class ScheduleCracStrictSlotsIterator extends ScheduleSlotsIterator {
     if (start == -1 && end == -1) {
       return this.createSlot(-1, -1);
     } else if (start != endPreviousSlot) {
-      //start build slot from scratch 
+      //start build slot from scratch
       return this.findNextMultiSlot(start, end);
     } else if (end - startSlot >= this.options.slotSize) {
       return this.createSlot(startSlot, end);
@@ -124,6 +124,7 @@ export class ScheduleCracStrictSlotsIterator extends ScheduleSlotsIterator {
     }
     switch (this.options.appointmentCreateDuration) {
       case "ALL_SLOTS":
+      case "APP_DURATION":
         return this.getNextSlotForAllSlots();
 
       default:
@@ -223,16 +224,11 @@ export function getStrictSlots(cracDay, business, workerID, enhanceSlotFn, optio
   if(isForbidden){
     return [];
   }
-  const appointmentCreateDurationOption =
-    (business.integration_data && business.integration_data.mis && business.integration_data.mis.options||[]).find(
-      (o) => o.name == 'appointmentCreateDuration'
-    );
   const slotsConfig = business.widget_configuration.slotsConfig || {appointmentCreateDuration:'CALCULATE_DURATION'}
-  const appointmentCreateDuration = appointmentCreateDurationOption ? appointmentCreateDurationOption.value : slotsConfig.appointmentCreateDuration;
-  options.appointmentCreateDuration = appointmentCreateDuration;
+  options.appointmentCreateDuration = slotsConfig.appointmentCreateDuration;
   let cutSlots = widgetConfiguration.hideGraySlots ? cutSlotsWithoutBusy : cutSlots;
   const businessNow = applyMinBookingTime(moment.utc(), { business });
-  
+
   const scheduleCRACStrictSlots = new ScheduleCRACDayStrictSlots(cracDay, businessNow, options, cutSlotsWithoutStartFinishBusy, cutSlotsWithoutStartFinishBusy);
   return scheduleCRACStrictSlots.cutSlots(workerID, enhanceSlotFn);
 }

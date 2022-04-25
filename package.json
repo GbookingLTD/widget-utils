@@ -26,8 +26,8 @@
     "merge-stream": "^2.0.0",
     "mocha": "^5.2.0",
     "moment": "^2.22.2",
-    "moment-timezone": "^0.5.21",
     "moment-range": "^3.0.3",
+    "moment-timezone": "^0.5.21",
     "rollup": "^1.32.1",
     "rollup-plugin-babel": "2.7.1",
     "should": "^13.2.3",
@@ -37,6 +37,11 @@
   "dependencies": {
     "crac-utils": "https://github.com/GbookingLTD/crac-utils/archive/v1.3.11.tar.gz",
     "gulp-bump": "^3.1.1",
+    "lodash-es": "^4.17.21",
     "supports-color": "^5.4.0"
+  },
+  "volta": {
+    "node": "11.15.0",
+    "yarn": "1.22.18"
   }
 }

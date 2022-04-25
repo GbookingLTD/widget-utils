@@ -1388,7 +1388,7 @@ var ScheduleCracStrictSlotsIterator = function (_ScheduleSlotsIterato) {
       if (start == -1 && end == -1) {
         return this.createSlot(-1, -1);
       } else if (start != endPreviousSlot) {
-        //start build slot from scratch 
+        //start build slot from scratch
         return this.findNextMultiSlot(start, end);
       } else if (end - startSlot >= this.options.slotSize) {
         return this.createSlot(startSlot, end);
@@ -1422,6 +1422,7 @@ var ScheduleCracStrictSlotsIterator = function (_ScheduleSlotsIterato) {
       }
       switch (this.options.appointmentCreateDuration) {
         case "ALL_SLOTS":
+        case "APP_DURATION":
           return this.getNextSlotForAllSlots();
 
         default:
@@ -1536,12 +1537,8 @@ function getStrictSlots(cracDay, business, workerID, enhanceSlotFn) {
   if (isForbidden) {
     return [];
   }
-  var appointmentCreateDurationOption = (business.integration_data && business.integration_data.mis && business.integration_data.mis.options || []).find(function (o) {
-    return o.name == 'appointmentCreateDuration';
-  });
   var slotsConfig = business.widget_configuration.slotsConfig || { appointmentCreateDuration: 'CALCULATE_DURATION' };
-  var appointmentCreateDuration = appointmentCreateDurationOption ? appointmentCreateDurationOption.value : slotsConfig.appointmentCreateDuration;
-  options.appointmentCreateDuration = appointmentCreateDuration;
+  options.appointmentCreateDuration = slotsConfig.appointmentCreateDuration;
   var cutSlots = widgetConfiguration.hideGraySlots ? cutSlotsWithoutBusy : cutSlots;
   var businessNow = applyMinBookingTime(moment$3.utc(), { business: business });
 
