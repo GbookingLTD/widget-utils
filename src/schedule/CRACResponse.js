@@ -31,11 +31,18 @@ export class CRACResourcesAndRoomsSlot {
     for (const res of cracSlot.resources || []) {
       assert(res.resourceId, 'resource should have id');
       bitsetAssert(res.bitset);
+      let strictSlots = [];
+      if(res.strictSlots) {
+        try{
+          strictSlots = JSON.parse(res.strictSlots);
+        } catch(err){}
+      }
       // bitsetAssert(res.taxonomyBitSet);
       let resource = {
         id: res.resourceId,
         durations: res.durations || [],
-        bitset: prepareBitset(res.bitset, getCracVectorSlotSize(res.bitset))
+        bitset: prepareBitset(res.bitset, getCracVectorSlotSize(res.bitset)),
+        strictSlots,
       };
       
       try {
@@ -61,6 +68,22 @@ export class CRACResourcesAndRoomsSlot {
       let bitset = res.taxonomyBitSet ? setUnion(res.bitset, res.taxonomyBitSet) : res.bitset;
       return setUnion(ret, bitset);
     }, newBusyBitset());
+  }
+  
+  getResourceStrictSlots(resourceID) {
+    const res = this.resources.find(r=>r.id==resourceID);
+    return res ? res.strictSlots : []
+  }
+  
+  getResourceUnionSlots() {
+    const slotsMap = this.resources.reduce((ret, res) => {
+      return (res.strictSlots || []).reduce((slots, slot) => {
+        if (!slots[slot[0]]) {
+          slots[slot[0]] = slot;
+        }
+      }, ret);
+    }, {});
+    return Object.values(slotsMap).sort();
   }
 }
 
