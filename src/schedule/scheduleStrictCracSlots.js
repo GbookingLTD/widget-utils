@@ -124,7 +124,7 @@ export class ScheduleCracStrictSlotsIterator extends ScheduleSlotsIterator {
     }
     switch (this.options.appointmentCreateDuration) {
       case "ALL_SLOTS":
-      case "APP_DURATION":
+      case "CALCULATE_DURATION":
         return this.getNextSlotForAllSlots();
 
       default:

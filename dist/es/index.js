@@ -1422,7 +1422,7 @@ var ScheduleCracStrictSlotsIterator = function (_ScheduleSlotsIterato) {
       }
       switch (this.options.appointmentCreateDuration) {
         case "ALL_SLOTS":
-        case "APP_DURATION":
+        case "CALCULATE_DURATION":
           return this.getNextSlotForAllSlots();
 
         default:
