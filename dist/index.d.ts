@@ -186,6 +186,8 @@ export namespace Schedule {
 
     function applyOpeningTimeMinutes(slotsData: any, widgetConf: any, generalInfo: any): any;
 
+    function checkOpeningTimeMinutes(date: any, widgetConf: any, generalInfo: any): any;
+
     function cutSlots(iterator: any): any;
 
     function cutSlotsWithoutBusy(iterator: any): any;

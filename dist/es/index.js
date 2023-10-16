@@ -3254,6 +3254,68 @@ var moment$3 = extendMoment(moment$4);
  */
 
 /**
+ * Returns FALSE when need to hide day according the "openingTimeMinutes" option, otherwise TRUE.
+ *
+ * @param {Date|string} date
+ * @param {WidgetConf} widgetConf
+ * @param {BusinessInfo} generalInfo
+ * @return boolean
+ */
+function checkOpeningTimeMinutes(date, widgetConf, generalInfo) {
+    if (widgetConf.calendarMode) {
+        return true;
+    }
+
+    // When enabled option "openingTimeMinutes" in widgetConf.
+    // Check if now spending time is less than openingTimeMinutes in the business timezone.
+    // If less when remove new day from availableSlots.
+
+    // Uncomment next line for tests
+    // widgetConf.openingTimeMinutes = 13 * 60 + 40;
+    if (!widgetConf.openingTimeMinutes) {
+        return true;
+    }
+
+    // Day opens at 00:00 UTC by default.
+    // If the "openingTimeMinutes" option is enabled need to hide the new day slots until this time appears.
+    // For that lets convert business time to UTC (businessNow) and compare the result with openingTimeMinutes.
+    // If businessNow was not achieve to openingTimeMinutes need to remove new day slots.
+    // To find
+    // For example, lets say that in Berlin business 7:00AM and openingTimeMinutes=7:00AM
+    // 7:00AM in Berlin equals to 5:00AM UTC. It is less than 7:00AM, so we shouldn't show new day (last item of
+    // availableSlots).
+
+    if (!generalInfo.timezone) {
+        // tslint:disable-next-line:no-console
+        console.error("The \"widgetConf.openingTimeMinutes\" option isn't working due to it required \"widgetConf.timezone\"");
+
+        return true;
+    }
+
+    var bookableDateRangesEnabled = widgetConf.bookableDateRanges && widgetConf.bookableDateRanges.enabled && widgetConf.bookableDateRanges.end;
+
+    if (!bookableDateRangesEnabled && !widgetConf.bookableMonthsCount && !widgetConf.daysForward) {
+        // tslint:disable-next-line:no-console
+        console.error("The \"widgetConf.openingTimeMinutes\" option isn't working due to it required " + "\"widgetConf.bookableDateRanges\", \"widgetConf.bookableMonthsCount\" or \"widgetConf.daysForward\"");
+
+        return true;
+    }
+
+    var businessNowMinutes = minutesSinceStartOfDayInTimezone(generalInfo.timezone);
+    var hideNewDay = businessNowMinutes < widgetConf.openingTimeMinutes;
+
+    if (hideNewDay) {
+        var lastScheduleDay = getLastScheduleDay(widgetConf, generalInfo);
+        // console.log("applyOpeningTimeMinutes date", newDayDate.toISOString())
+
+        var isSameDay = moment$3(date).isSame(lastScheduleDay, 'day');
+        if (isSameDay) return false;
+    }
+
+    return true;
+}
+
+/**
  * Hide new day until working hours (the "openingTimeMinutes" option).
  *
  * There are complaints that users spam new day at night hours before work day started.
@@ -3316,12 +3378,7 @@ function applyOpeningTimeMinutes(slotsData, widgetConf, generalInfo) {
         // src/mappers/TimeSlotMapper.ts:252
         // Due to correct compare you should add timezone offset to correct date again (or remove from item.date).
 
-        var newDayDate = bookableMonthCountLastDay(widgetConf) || (bookableDateRangesEnabled ? moment$3.utc(widgetConf.bookableDateRanges.end) : moment$3.utc().add(widgetConf.daysForward, 'days'));
-
-        // @see here https://momentjs.com/timezone/docs/#/zone-object/
-        var tzOffsetMinutes = momentTz.tz.zone(generalInfo.timezone).utcOffset(Date.now());
-        newDayDate.add(-tzOffsetMinutes, 'minutes');
-
+        var newDayDate = getLastScheduleDay(widgetConf, generalInfo);
         // console.log("applyOpeningTimeMinutes date", newDayDate.toISOString())
         var newDay = slotsData.find(function (item) {
             return moment$3(item.date).isSame(newDayDate, 'day');
@@ -3330,6 +3387,18 @@ function applyOpeningTimeMinutes(slotsData, widgetConf, generalInfo) {
             newDay.data = [];
         }
     }
+}
+
+function getLastScheduleDay(widgetConf, generalInfo) {
+    var bookableDateRangesEnabled = widgetConf.bookableDateRanges && widgetConf.bookableDateRanges.enabled && widgetConf.bookableDateRanges.end;
+
+    var lastScheduleDay = bookableMonthCountLastDay(widgetConf) || (bookableDateRangesEnabled ? moment$3.utc(widgetConf.bookableDateRanges.end) : moment$3.utc().add(widgetConf.daysForward, 'days'));
+
+    // @see here https://momentjs.com/timezone/docs/#/zone-object/
+    var tzOffsetMinutes = momentTz.tz.zone(generalInfo.timezone).utcOffset(Date.now());
+    lastScheduleDay.add(-tzOffsetMinutes, 'minutes');
+
+    return lastScheduleDay;
 }
 
 /**
@@ -3394,6 +3463,7 @@ var Schedule = /*#__PURE__*/Object.freeze({
   getSlotsFromBusinessAndCRAC: getSlotsFromBusinessAndCRAC,
   getSlotsFromBusinessAndCRACWithDuration: getSlotsFromBusinessAndCRACWithDuration,
   getSlotsFromBusinessAndCRACWithAdjacent: getSlotsFromBusinessAndCRACWithAdjacent,
+  checkOpeningTimeMinutes: checkOpeningTimeMinutes,
   applyOpeningTimeMinutes: applyOpeningTimeMinutes
 });
 
