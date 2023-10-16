@@ -2,13 +2,13 @@
   typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory(require('lodash'), require('moment-timezone'), require('moment-range')) :
   typeof define === 'function' && define.amd ? define(['lodash', 'moment-timezone', 'moment-range'], factory) :
   (global = global || self, global.WidgetUtils = factory(global._, global.moment, global.momentRange));
-}(this, (function (_$1, moment$3, momentRange) { 'use strict';
+}(this, (function (_$1, moment$4, momentRange) { 'use strict';
 
   var _$1__default = 'default' in _$1 ? _$1['default'] : _$1;
-  moment$3 = moment$3 && Object.prototype.hasOwnProperty.call(moment$3, 'default') ? moment$3['default'] : moment$3;
+  moment$4 = moment$4 && Object.prototype.hasOwnProperty.call(moment$4, 'default') ? moment$4['default'] : moment$4;
 
   function setBusinessDateTZ(businessData, date) {
-    var timeOffset = businessData.business.general_info.timezone ? parseInt(businessData.business.general_info.timezone, 10) : utcOffset(moment$3());
+    var timeOffset = businessData.business.general_info.timezone ? parseInt(businessData.business.general_info.timezone, 10) : utcOffset(moment$4());
 
     if (isNaN(timeOffset)) {
       date.tz(businessData.business.general_info.timezone);
@@ -24,7 +24,7 @@
   };
 
   function businessTimezoneUtcOffset(businessData) {
-    var curDate = setBusinessDateTZ(businessData, moment$3.utc());
+    var curDate = setBusinessDateTZ(businessData, moment$4.utc());
     return utcOffset(curDate);
   }
 
@@ -61,7 +61,7 @@
   }
 
   function getDateLikeUTC(date) {
-    return moment$3.utc(date).add(utcOffset(date), 'minute');
+    return moment$4.utc(date).add(utcOffset(date), 'minute');
   }
 
   var busySlotsDate = function busySlotsDate(date) {
@@ -102,11 +102,11 @@
 
   function busySlotsInterval(date, businessData, daysToFetch) {
     if (!date) {
-      date = moment$3.utc();
+      date = moment$4.utc();
     }
 
     date = getBusinessDateLikeUTC(date, businessData);
-    var minBookingTime = getBusinessDateLikeUTC(moment$3.utc(), businessData);
+    var minBookingTime = getBusinessDateLikeUTC(moment$4.utc(), businessData);
     businessData.business.general_info.min_booking_time && minBookingTime.add('hours', businessData.business.general_info.min_booking_time);
     businessData.business.general_info.align_min_booking_time && minBookingTime.endOf('day');
 
@@ -114,7 +114,7 @@
       date = minBookingTime;
     }
 
-    var then = moment$3(date).add('days', daysToFetch);
+    var then = moment$4(date).add('days', daysToFetch);
     return {
       startDate: busySlotsDate(date),
       endDate: busySlotsDate(then)
@@ -147,7 +147,7 @@
     alignSlotTime: alignSlotTime
   });
 
-  var moment = momentRange.extendMoment(moment$3);
+  var moment = momentRange.extendMoment(moment$4);
   /**
    * Calculates whether the busy day.
    *
@@ -1481,7 +1481,7 @@
     }, {
       key: "isDayBefore",
       value: function isDayBefore() {
-        return moment$3.utc(this.cracDay.date).isBefore(moment$3.utc(this.businessNow).startOf('day'));
+        return moment$4.utc(this.cracDay.date).isBefore(moment$4.utc(this.businessNow).startOf('day'));
       }
 
       /**
@@ -1548,7 +1548,7 @@
     var appointmentCreateDuration = appointmentCreateDurationOption ? appointmentCreateDurationOption.value : slotsConfig.appointmentCreateDuration;
     options.appointmentCreateDuration = appointmentCreateDuration;
     var cutSlots = widgetConfiguration.hideGraySlots ? cutSlotsWithoutBusy : cutSlots;
-    var businessNow = applyMinBookingTime(moment$3.utc(), { business: business });
+    var businessNow = applyMinBookingTime(moment$4.utc(), { business: business });
 
     var scheduleCRACStrictSlots = new ScheduleCRACDayStrictSlots(cracDay, businessNow, options, cutSlotsWithoutStartFinishBusy, cutSlotsWithoutStartFinishBusy);
     return scheduleCRACStrictSlots.cutSlots(workerID, enhanceSlotFn);
@@ -1744,7 +1744,7 @@
     }, {
       key: "isDayBefore",
       value: function isDayBefore() {
-        return moment$3.utc(this.cracDay.date).isBefore(moment$3.utc(this.businessNow).startOf('day'));
+        return moment$4.utc(this.cracDay.date).isBefore(moment$4.utc(this.businessNow).startOf('day'));
       }
 
       /**
@@ -1845,7 +1845,7 @@
     var forceSlotSize = widgetConfiguration.displaySlotSize && widgetConfiguration.displaySlotSize < taxDuration;
     var slotSize = forceSlotSize ? widgetConfiguration.displaySlotSize : taxDuration;
     var cutSlots = widgetConfiguration.hideGraySlots ? cutSlotsWithoutBusy : cutSlots;
-    var businessNow = applyMinBookingTime(moment$3.utc(), { business: business });
+    var businessNow = applyMinBookingTime(moment$4.utc(), { business: business });
     var res = cracDay.resources.find(function (res) {
       return res.id === workerID;
     });
@@ -2160,15 +2160,15 @@
       return calendarBookingTimeGT(businessData, busySlots, slotSize, day);
     }
     var slotDay = _$1.find(busySlots.days, function (d) {
-      return moment$3(d.date).isSame(day.date, 'day');
+      return moment$4(d.date).isSame(day.date, 'day');
     });
     if (slotDay) {
-      var startTime = moment$3.utc(slotDay.start_time);
-      var endTime = moment$3.utc(slotDay.end_time);
+      var startTime = moment$4.utc(slotDay.start_time);
+      var endTime = moment$4.utc(slotDay.end_time);
 
-      var now = moment$3.utc();
-      var businessOffset = moment$3.tz(now, businessData.business.general_info.timezone);
-      var businessNow = moment$3.utc().add(businessOffset._offset, 'm');
+      var now = moment$4.utc();
+      var businessOffset = moment$4.tz(now, businessData.business.general_info.timezone);
+      var businessNow = moment$4.utc().add(businessOffset._offset, 'm');
 
       if (businessNow.isSame(startTime, 'day') && businessNow > startTime) {
         startTime = alignSlotTime(startTime, slotSize, businessNow, true);
@@ -2189,14 +2189,14 @@
   function calendarBookingTimeGT(businessData, slots, slotSize, day) {
 
     var slotDay = _$1.find(slots.days, function (d) {
-      return moment$3(d.date).isSame(day.date, 'day');
+      return moment$4(d.date).isSame(day.date, 'day');
     });
     var selectedSlot = undefined;
     if (slotDay && slotDay.slots && slotDay.slots.length > 0) {
       for (var i = 0; i < slotDay.slots.length; i++) {
         if (slotDay.slots[i].space_left > 0) {
-          var checkSlot = moment$3.utc(slotDay.date).add(slotDay.slots[i].time, 'm');
-          if (checkSlot > getBusinessDateLikeUTC(moment$3(), businessData)) {
+          var checkSlot = moment$4.utc(slotDay.date).add(slotDay.slots[i].time, 'm');
+          if (checkSlot > getBusinessDateLikeUTC(moment$4(), businessData)) {
             selectedSlot = checkSlot;
             break;
           }
@@ -2221,7 +2221,7 @@
     }
 
     var cracDay = _$1.find(cracDays, function (d) {
-      return moment$3(d.date).isSame(day.date, 'day');
+      return moment$4(d.date).isSame(day.date, 'day');
     });
     if (cracDay) {
       for (var index in cracDay.resources) {
@@ -2231,7 +2231,7 @@
             return slot.available;
           });
           if (slots.length) {
-            return moment$3.utc(cracDay.date).add(slots[0].start, 'm');
+            return moment$4.utc(cracDay.date).add(slots[0].start, 'm');
           }
         }
       }
@@ -2248,8 +2248,8 @@
     var cracSlotSize = getCracVectorSlotSize(bitset);
     bitset = prepareBitset(bitset, cracSlotSize);
     var dayBounds = getFirstLastMinutes(bitset, cracSlotSize);
-    dayBounds.start_time = moment$3(date).add(dayBounds.start, 'minutes').toISOString();
-    dayBounds.end_time = moment$3(date).add(dayBounds.end, 'minutes').toISOString();
+    dayBounds.start_time = moment$4(date).add(dayBounds.start, 'minutes').toISOString();
+    dayBounds.end_time = moment$4(date).add(dayBounds.end, 'minutes').toISOString();
     return dayBounds;
   }
 
@@ -2273,7 +2273,7 @@
 
   // Special fix for `$scope.getEmptyDayLabel()` in `desktopwidget` app.
   function isoDateForDayOff(date) {
-    return moment$3(date).toISOString().replace('.000Z', 'Z');
+    return moment$4(date).toISOString().replace('.000Z', 'Z');
   }
 
   /**
@@ -2606,7 +2606,7 @@
     cracResult.forEach(function (cracSlot) {
       var bitSets = getBitSetsFromCracSlots(cracSlot, roomCapacityByService, taxonomyIDs, resourceIDs, taxonomiesRooms);
       var daySlots = {};
-      daySlots.date = moment$3(cracSlot.date).utc().startOf('day').toISOString();
+      daySlots.date = moment$4(cracSlot.date).utc().startOf('day').toISOString();
       daySlots.resources = [];
       daySlots.slots = [];
       var serviceRoomVectors = {};
@@ -2726,7 +2726,7 @@
     return ScheduleBusySlotsCutter;
   }(ScheduleSlotsCutter);
 
-  var moment$1 = momentRange.extendMoment(moment$3);
+  var moment$1 = momentRange.extendMoment(moment$4);
 
   var days = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
   var weekDaysMap = {
@@ -2907,7 +2907,7 @@
     getServiceDiscountsAndExceptions: getServiceDiscountsAndExceptions
   });
 
-  var moment$2 = momentRange.extendMoment(moment$3);
+  var moment$2 = momentRange.extendMoment(moment$4);
 
   /**
    * Ожидается набор слотов в формате busySlots.
@@ -3182,7 +3182,7 @@
             return;
           }
 
-          var slot_time = moment$3.utc(busySlotsDay.date).add(slot.time, 'm');
+          var slot_time = moment$4.utc(busySlotsDay.date).add(slot.time, 'm');
           var overQuota = false;
           if (taxiParkUser) {
             var slotAppointmentCount = slot_time.format("DD.MM.YYYY");
@@ -3191,7 +3191,7 @@
             }
           }
 
-          var workTime = moment$3(now);
+          var workTime = moment$4(now);
           if (self.minTimeBooking && self.minTimeBooking > 0) {
             workTime.add(self.minTimeBooking, 'hour');
             self.alignMinTimeBooking && workTime.endOf('day');
@@ -3208,7 +3208,7 @@
             spaceLeft = self.maxSlotCapacity;
           }
 
-          var actualSlot = moment$3(slot_time);
+          var actualSlot = moment$4(slot_time);
           var slotDiscount = getServiceDiscountsAndExceptions(self.businessData, self.taxonomy, actualSlot);
           slots.push({
             actualSlot: actualSlot,
@@ -3229,6 +3229,149 @@
     }]);
     return ScheduleBusySlotsCutterV2;
   }(ScheduleBusySlotsCutter);
+
+  var momentTz = moment$4;
+  var moment$3 = momentRange.extendMoment(moment$4);
+
+  /**
+   * @typedef {{
+   *  calendarMode: number,
+   *  openingTimeMinutes: number,
+   *  bookableDateRanges: {
+   *    start: string, end: string, enabled: boolean
+   *  },
+   *  bookableMonthsCount: number,
+   *  daysForward: number,
+   * }} WidgetConf
+   */
+
+  /**
+   * @typedef {{
+   *   timezone: string
+   * }} BusinessInfo
+   */
+
+  /**
+   * @typedef {{
+   *   date: Date|string
+   *   data: object[]
+   * }} SlotsData
+   */
+
+  /**
+   * Hide new day until working hours (the "openingTimeMinutes" option).
+   *
+   * There are complaints that users spam new day at night hours before work day started.
+   * This option should fix it. New day slots should appear when starting working day.
+   *
+   * @param {Array<SlotsData>} slotsData
+   * @param {WidgetConf} widgetConf
+   * @param {BusinessInfo} generalInfo
+   * @private
+   */
+  function applyOpeningTimeMinutes(slotsData, widgetConf, generalInfo) {
+      if (widgetConf.calendarMode) {
+          return;
+      }
+
+      // When enabled option "openingTimeMinutes" in widgetConf.
+      // Check if now spending time is less than openingTimeMinutes in the business timezone.
+      // If less when remove new day from availableSlots.
+
+      // Uncomment next line for tests
+      // widgetConf.openingTimeMinutes = 13 * 60 + 40;
+      if (!widgetConf.openingTimeMinutes) {
+          return;
+      }
+
+      // Day opens at 00:00 UTC by default.
+      // If the "openingTimeMinutes" option is enabled need to hide the new day slots until this time appears.
+      // For that lets convert business time to UTC (businessNow) and compare the result with openingTimeMinutes.
+      // If businessNow was not achieve to openingTimeMinutes need to remove new day slots.
+      // To find
+      // For example, lets say that in Berlin business 7:00AM and openingTimeMinutes=7:00AM
+      // 7:00AM in Berlin equals to 5:00AM UTC. It is less than 7:00AM, so we shouldn't show new day (last item of
+      // availableSlots).
+
+      if (!generalInfo.timezone) {
+          // tslint:disable-next-line:no-console
+          console.error("The \"widgetConf.openingTimeMinutes\" option isn't working due to it required \"widgetConf.timezone\"");
+
+          return;
+      }
+
+      var bookableDateRangesEnabled = widgetConf.bookableDateRanges && widgetConf.bookableDateRanges.enabled && widgetConf.bookableDateRanges.end;
+
+      if (!bookableDateRangesEnabled && !widgetConf.bookableMonthsCount && !widgetConf.daysForward) {
+          // tslint:disable-next-line:no-console
+          console.error("The \"widgetConf.openingTimeMinutes\" option isn't working due to it required " + "\"widgetConf.bookableDateRanges\", \"widgetConf.bookableMonthsCount\" or \"widgetConf.daysForward\"");
+
+          return;
+      }
+
+      var businessNowMinutes = minutesSinceStartOfDayInTimezone(generalInfo.timezone);
+      var hideNewDay = businessNowMinutes < widgetConf.openingTimeMinutes;
+
+      if (hideNewDay) {
+          // Find new day item and clean slots there.
+          // item.date has really business time in UTC.
+          // For instance, "2020-10-17T02:34:52Z" is the time without "Z" in business timezone.
+          // For business in Berlin it equals to "2020-10-17T02:34:52+02:00".
+          // It reads as a utc date here
+          // src/mappers/TimeSlotMapper.ts:252
+          // Due to correct compare you should add timezone offset to correct date again (or remove from item.date).
+
+          var newDayDate = bookableMonthCountLastDay(widgetConf) || (bookableDateRangesEnabled ? moment$3.utc(widgetConf.bookableDateRanges.end) : moment$3.utc().add(widgetConf.daysForward, 'days'));
+
+          // @see here https://momentjs.com/timezone/docs/#/zone-object/
+          var tzOffsetMinutes = momentTz.tz.zone(generalInfo.timezone).utcOffset(Date.now());
+          newDayDate.add(-tzOffsetMinutes, 'minutes');
+
+          // console.log("applyOpeningTimeMinutes date", newDayDate.toISOString())
+          var newDay = slotsData.find(function (item) {
+              return moment$3(item.date).isSame(newDayDate, 'day');
+          });
+          if (newDay) {
+              newDay.data = [];
+          }
+      }
+  }
+
+  /**
+   * Returns last day of in which available booking according "widgetConf.bookableMonthCount" option
+   *
+   * @param widgetConf
+   * @private
+   */
+  function bookableMonthCountLastDay(widgetConf) {
+      if (!widgetConf.bookableMonthsCount) {
+          return undefined;
+      }
+
+      var end = void 0;
+      if (widgetConf.bookableMonthsCount < 1) {
+          var weeks = Math.round(widgetConf.bookableMonthsCount / 0.24);
+          end = moment$3.utc().add(weeks, 'week');
+      } else {
+          end = moment$3.utc().add(widgetConf.bookableMonthsCount, 'month');
+      }
+
+      //end.add(-1, 'day');
+      return end;
+  }
+
+  /**
+   * Calculates the number of minutes since the start of the day in the specified timezone.
+   *
+   * @param {string} timezone - The timezone to calculate the minutes since start of day for.
+   * @return {number} The number of minutes since the start of the day in the specified timezone.
+   */
+  function minutesSinceStartOfDayInTimezone(timezone) {
+      var now = momentTz.tz(timezone);
+      var midnight = now.clone().startOf('day');
+
+      return now.diff(midnight, 'minutes');
+  }
 
 
 
@@ -3255,7 +3398,8 @@
     getSlotsFromBusinessAndCRACMultiServices: getSlotsFromBusinessAndCRACMultiServices,
     getSlotsFromBusinessAndCRAC: getSlotsFromBusinessAndCRAC,
     getSlotsFromBusinessAndCRACWithDuration: getSlotsFromBusinessAndCRACWithDuration,
-    getSlotsFromBusinessAndCRACWithAdjacent: getSlotsFromBusinessAndCRACWithAdjacent
+    getSlotsFromBusinessAndCRACWithAdjacent: getSlotsFromBusinessAndCRACWithAdjacent,
+    applyOpeningTimeMinutes: applyOpeningTimeMinutes
   });
 
   function roundNumberUsingRule(input, businessData, noCommas) {
@@ -4054,9 +4198,9 @@
   var SLOT_SIZE$1 = 5;
   var VECTOR_SIZE = 24 * 60 / SLOT_SIZE$1;
   function getDayBoundsFromCracSlot$1(date, slot, widgetConfig) {
-    var now = moment$3();
+    var now = moment$4();
     widgetConfig.min_booking_time && now.add('hours', widgetConfig.min_booking_time);
-    if (widgetConfig.align_min_booking_time && moment$3(date).isBefore(now)) {
+    if (widgetConfig.align_min_booking_time && moment$4(date).isBefore(now)) {
       return null;
     }
     var allDayBounds = null;
@@ -4086,13 +4230,13 @@
     if (firstActiveBit !== null && firstActiveBit != lastActiveBit) {
       allDayBounds = {};
       allDayBounds.start = (bitmask.length - 1 - firstActiveBit) * cracSlotSize;
-      allDayBounds.start_time = moment$3(date).add(allDayBounds.start, 'minutes').toISOString();
+      allDayBounds.start_time = moment$4(date).add(allDayBounds.start, 'minutes').toISOString();
       if (lastActiveBit == 1) {
         allDayBounds.end = bitmask.length * cracSlotSize;
       } else {
         allDayBounds.end = (bitmask.length - lastActiveBit) * cracSlotSize;
       }
-      allDayBounds.end_time = moment$3(date).add(allDayBounds.end, 'minutes').toISOString();
+      allDayBounds.end_time = moment$4(date).add(allDayBounds.end, 'minutes').toISOString();
     }
     return allDayBounds;
   }
@@ -4133,7 +4277,7 @@
     var reverseOffset = bitmask.length - 1;
     var startBitIndex = typeof startMinutes === 'undefined' ? 0 : Math.floor(startMinutes / cracSlotSize);
     var endBitIndex = typeof endMinutes === 'undefined' ? reverseOffset : Math.floor(endMinutes / cracSlotSize);
-    var resultDate = moment$3.utc(date);
+    var resultDate = moment$4.utc(date);
 
     var currentSlot = void 0;
     function commitSlot() {
@@ -4214,7 +4358,7 @@
       }
 
       if (startSlot) {
-        start_time = moment$3.utc(date).startOf('day').add(startSlot.end, 'minutes').toISOString();
+        start_time = moment$4.utc(date).startOf('day').add(startSlot.end, 'minutes').toISOString();
       }
     }
 
@@ -4245,7 +4389,7 @@
 
   // Special fix for `$scope.getEmptyDayLabel()` in `desktopwidget` app.
   function isoDateForDayOff$1(date) {
-    return moment$3(date).toISOString().replace('.000Z', 'Z');
+    return moment$4(date).toISOString().replace('.000Z', 'Z');
   }
 
   /**
@@ -4594,7 +4738,7 @@
     cracResult.forEach(function (cracSlot) {
       var bitSets = getBitSetsFromCracSlots$1(cracSlot, roomCapacityByService, taxonomies, resources, taxonomiesRooms);
       var daySlots = {};
-      daySlots.date = moment$3(cracSlot.date).utc().startOf('day').toISOString();
+      daySlots.date = moment$4(cracSlot.date).utc().startOf('day').toISOString();
       daySlots.resources = [];
       daySlots.slots = [];
       var serviceRoomVectors = {};

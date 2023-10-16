@@ -11,3 +11,4 @@ export * from './scheduleBusySlotsCutterV2';
 export * from './CRACResponse';
 export * from './scheduleSlots';
 export * from './scheduleCracSlots';
+export * from './openingTimeMinutes';

@@ -98,7 +98,11 @@ export namespace Schedule {
 
         getResourceBitset(resourceID: any): any;
 
+        getResourceStrictSlots(resourceID: any): any;
+
         getResourceUnionBitset(): any;
+
+        getResourceUnionSlots(): any;
 
         prepare(cracSlot: any): void;
 
@@ -179,6 +183,8 @@ export namespace Schedule {
     }
 
     function GCD(A: any): any;
+
+    function applyOpeningTimeMinutes(slotsData: any, widgetConf: any, generalInfo: any): any;
 
     function cutSlots(iterator: any): any;
 
